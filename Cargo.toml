@@ -1,0 +1,24 @@
+[package]
+name = "bevy_fast_tilemap"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = "0.7.0"
+rand = "*"
+ndarray = "*"
+num = "*"
+approx_eq = "*"
+byteorder = "*"
+console_error_panic_hook = "0.1"
+
+[lib]
+name = "bevy_fast_tilemap"
+path = "src/lib.rs"
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
+
