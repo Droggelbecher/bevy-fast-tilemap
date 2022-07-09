@@ -2,8 +2,6 @@ use bevy::{prelude::*, sprite::Material2dPlugin};
 use crate::map::{MapLayerMaterial, MapReadyEvent, check_map_ready_events};
 use crate::material::{TILEMAP_SHADER_HANDLE, TILEMAP_SHADER};
 
-// TODO: shaders should not be in assets dir
-
 pub struct FastTileMapPlugin;
 
 impl Default for FastTileMapPlugin {

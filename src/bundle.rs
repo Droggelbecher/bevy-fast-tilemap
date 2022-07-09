@@ -47,7 +47,8 @@ impl FastTileMapDescriptor {
         };
 
         for tiles_texture in self.tiles_textures.iter() {
-            let mut map_image = Image::new(
+
+           let mut map_image = Image::new(
                 Extent3d {
                     width: self.map_size.x as u32,
                     height: self.map_size.y as u32,
@@ -90,7 +91,8 @@ impl FastTileMapDescriptor {
             let layer_entity = commands.spawn_bundle((
                 layer.material.clone(),
                 layer,
-                Transform::default(),
+                // TODO: z-coordinate (higher is nearer) should be different for different layers
+                Transform::from_xyz(0.0, 0.0, 0.0),
                 GlobalTransform::default(),
                 Visibility::default(),
                 ComputedVisibility::default(),

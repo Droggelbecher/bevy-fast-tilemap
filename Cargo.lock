@@ -377,7 +377,6 @@ dependencies = [
  "approx_eq",
  "bevy",
  "byteorder",
- "console_error_panic_hook",
  "ndarray",
  "num",
  "rand",

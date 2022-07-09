@@ -1,6 +1,6 @@
 use bevy::{
     math::{vec2, ivec2},
-    prelude::*, reflect::TypeUuid
+    prelude::*, reflect::TypeUuid,
 };
 use std::ops::{Index, IndexMut};
 
@@ -37,8 +37,12 @@ impl Map {
     }
 
     pub fn world_to_index(&self, world: Vec2) -> Vec2 {
-        // TODO: Where to get tile size, should we maybe just set it on map level?
+        // TODO: This could be a matrix that we precompute
         world / self.tile_size * vec2(1., -1.) + self.size.as_vec2() / 2.
+    }
+
+    pub fn index_to_world(&self, index: Vec2) -> Vec2 {
+        (index - self.size.as_vec2() / 2.) * vec2(1., -1.) * self.tile_size
     }
 
     /// Get mutable access to map layers via a `MapIndexer`.
@@ -152,6 +156,9 @@ impl<'a> IndexMut<IVec2> for LayerIndexer<'a> {
 }
 
 
+/// May layer material, this is whats cares for the actual rendering on the screen.
+/// Holds handles to images that store the actual map data and tiles.
+/// TODO: Move to material.rs?
 #[derive(Debug, Clone, TypeUuid)]
 #[uuid = "0797341e-ddc5-11ec-ac9f-00155d74ab53"]
 pub struct MapLayerMaterial {
@@ -175,7 +182,7 @@ pub struct MapReadyEvent {
 pub fn check_map_ready_events(
     mut ev_asset: EventReader<AssetEvent<Image>>,
     mut materials: ResMut<Assets<MapLayerMaterial>>,
-    images: ResMut<Assets<Image>>,
+    mut images: ResMut<Assets<Image>>,
     mut send_map_ready_event: EventWriter<MapReadyEvent>,
     mut maps: Query<(&Map, Entity, &Children)>,
     mut map_layers: Query<&mut MapLayer>,
@@ -202,11 +209,20 @@ pub fn check_map_ready_events(
                             || handle.id == material.tint_texture.id
                             || handle.id == material.tiles_texture.id =>
                     {
+
+                        // TODO: When bevy supports mipmapping again, this might be a good place to
+                        // configure it.
+                        //if let Some(tiles_texture) = images.get_mut(material.tiles_texture.clone()) {
+                            //tiles_texture.texture_descriptor.mip_level_count = 3;
+                            //tiles_texture.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
+                        //}
+
+
                         if images.get(material.map_texture.clone()).is_some()
                             && images.get(material.tint_texture.clone()).is_some()
                             && images.get(material.tiles_texture.clone()).is_some()
                         {
-                            let tiles_texture = images.get(material.tiles_texture.clone()).unwrap();
+                            let tiles_texture = images.get_mut(material.tiles_texture.clone()).unwrap();
                             let s = tiles_texture.size() / map.tile_size;
                             material.tile_ids = s.x as u32 * s.y as u32;
 

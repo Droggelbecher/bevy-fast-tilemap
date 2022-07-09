@@ -12,9 +12,6 @@ mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
-    #[cfg(target_arch = "wasm32")]
-    console_error_panic_hook::set_once();
-
     App::new()
         .insert_resource(WindowDescriptor {
             width: 1820.,
@@ -51,7 +48,7 @@ fn startup(
         ],
         tile_size: vec2(16., 16.),
     }
-    .spawn(commands, &mut images, &mut meshes, &mut materials);
+    .spawn(&mut commands, &mut images, &mut meshes, &mut materials);
 }
 
 fn generate_map(
@@ -72,9 +69,9 @@ fn generate_map(
 
         // Set all tiles in layer 0 to index 4
 
-        for y in 0..map.map_size.y {
-            for x in 0..map.map_size.x {
-                m[(0, ivec2(x, y))] = ((x + y) % 4 + 1) as u16;
+        for y in 0..map.size().y {
+            for x in 0..map.size().x {
+                m[0][ivec2(x, y)] = ((x + y) % 4 + 1) as u16;
             }
         }
 
@@ -82,24 +79,23 @@ fn generate_map(
 
         let k = 10;
 
-        let y_min = map.map_size.y / 2 - k;
-        let x_min = map.map_size.x / 2 - k;
-        let y_max = map.map_size.y / 2 + k + 1;
-        let x_max = map.map_size.x / 2 + k + 1;
+        let y_min = map.size().y / 2 - k;
+        let x_min = map.size().x / 2 - k;
+        let y_max = map.size().y / 2 + k + 1;
+        let x_max = map.size().x / 2 + k + 1;
 
         for y in y_min..y_max {
             for x in x_min..x_max {
 
                 // Set tile in layer 1 to index 11
-                m[(1, ivec2(x, y))] = 11;
+                m[1][ivec2(x, y)] = 11;
 
                 // Set RGBA tint of tile in layer 1.
                 // RGBA values get multiplied, i.e. A channel can directly be used to control
                 // transparency.
                 // In this example x position influences the green channel.
                 // Default tint is [1.0, 1.0, 1.0, 1.0].
-                m.set_tint(
-                    1,
+                m[1].set_tint(
                     ivec2(x, y),
                     [
                         1.0,

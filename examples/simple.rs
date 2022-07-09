@@ -13,9 +13,6 @@ mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
-    #[cfg(target_arch = "wasm32")]
-    console_error_panic_hook::set_once();
-
     App::new()
         .insert_resource(WindowDescriptor {
             width: 1820.,
@@ -49,7 +46,7 @@ fn startup(
         tiles_textures: vec![asset_server.load("simple_tiles_64.png")],
         tile_size: vec2(64., 64.),
     }
-    .spawn(commands, &mut images, &mut meshes, &mut materials);
+    .spawn(&mut commands, &mut images, &mut meshes, &mut materials);
 }
 
 /// Update random patches of tile indices in the map
@@ -69,8 +66,8 @@ fn change_map(
         };
 
         let k = rng.gen_range(5..50);
-        let x_min = rng.gen_range(0..map.map_size.x - k);
-        let y_min = rng.gen_range(0..map.map_size.y - k);
+        let x_min = rng.gen_range(0..map.size().x - k);
+        let y_min = rng.gen_range(0..map.size().y - k);
         let i = rng.gen_range(1..8);
 
         let tint = [
@@ -82,8 +79,8 @@ fn change_map(
 
         for y in y_min .. y_min + k {
             for x in x_min .. x_min + k {
-                m[(0, ivec2(x, y))] = i;
-                m.set_tint(0, ivec2(x, y), tint);
+                m[0][ivec2(x, y)] = i;
+                m[0].set_tint(ivec2(x, y), tint);
             }
         }
     }
