@@ -1,6 +1,3 @@
-//#import bevy_pbr::mesh_view_bind_group
-//#import bevy_pbr::mesh_struct
-
 struct Mesh {
 	model: mat4x4<f32>;
 };
@@ -57,7 +54,6 @@ fn vertex(v: Vertex) -> VertexOutput {
 
 [[stage(fragment)]]
 fn fragment(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-	//return textureSample(tiles_texture, tiles_sampler, in.uv);
 
 	var map_size = textureDimensions(map_texture);
 	var n_tiles = tilemap_material.tilemap_size.x * tilemap_material.tilemap_size.y; // TODO: Maybe Move this mult to CPU side
@@ -84,5 +80,4 @@ fn fragment(in: VertexOutput) -> [[location(0)]] vec4<f32> {
 		tiles_texture, tiles_sampler,
 		(vec2<f32>(index_x, index_y) + offset) / tilemap_material.tilemap_size
 	) * tint_color;
-	//return vec4<f32>(0., 0., 0., 0.);
 }
