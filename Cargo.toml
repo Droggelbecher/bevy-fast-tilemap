@@ -13,11 +13,8 @@ repository = "https://github.com/Droggelbecher/bevy-fast-tilemap"
 bevy = "0.10.1"
 bevy-inspector-egui = "0.18.3"
 
-rand = "*"
-ndarray = "*"
-num = "*"
-approx_eq = "*"
-byteorder = "*"
+rand = "0.8.*"
+num = "0.4.*"
 
 [lib]
 name = "bevy_fast_tilemap"
