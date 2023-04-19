@@ -1,6 +1,24 @@
-use bevy::{prelude::*, sprite::Material2dPlugin};
-use crate::map::{MapLayerMaterial, MapReadyEvent, check_map_ready_events};
-use crate::material::{TILEMAP_SHADER_HANDLE, TILEMAP_SHADER};
+use crate::{
+    map::{check_map_ready_events, MapReadyEvent},
+    pipeline::FastTileMapPipeline,
+};
+use bevy::{
+    core_pipeline::core_2d::Transparent2d,
+    prelude::*,
+    render::{
+        render_asset::PrepareAssetSet,
+        render_phase::AddRenderCommand, 
+        render_resource::SpecializedRenderPipelines,
+        RenderApp, RenderSet,
+    },
+};
+
+use crate::{
+    extract::extract_fast_tilemap,
+    prepare::prepare_fast_tilemap,
+    queue::{queue_fast_tilemap, DrawFastTileMap},
+    shader::{SHADER_CODE, SHADER_HANDLE},
+};
 
 pub struct FastTileMapPlugin;
 
@@ -12,15 +30,23 @@ impl Default for FastTileMapPlugin {
 
 impl Plugin for FastTileMapPlugin {
     fn build(&self, app: &mut App) {
-        let mut shaders = app.world.resource_mut::<Assets<Shader>>();
-        shaders.set_untracked(
-            TILEMAP_SHADER_HANDLE,
-            Shader::from_wgsl(TILEMAP_SHADER),
-        );
-
-        app.add_plugin(Material2dPlugin::<MapLayerMaterial>::default())
-            .add_event::<MapReadyEvent>()
+        app.add_event::<MapReadyEvent>()
             .add_system(check_map_ready_events);
+
+        let mut shaders = app.world.resource_mut::<Assets<Shader>>();
+        shaders.set_untracked(SHADER_HANDLE, Shader::from_wgsl(SHADER_CODE));
+
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .init_resource::<FastTileMapPipeline>()
+            .init_resource::<SpecializedRenderPipelines<FastTileMapPipeline>>()
+            .add_render_command::<Transparent2d, DrawFastTileMap>()
+            .add_system(extract_fast_tilemap.in_schedule(ExtractSchedule))
+            .add_system(
+                prepare_fast_tilemap
+                    .in_set(RenderSet::Prepare)
+                    .after(PrepareAssetSet::PreAssetPrepare),
+            )
+            .add_system(queue_fast_tilemap.in_set(RenderSet::Queue));
     }
 }
-

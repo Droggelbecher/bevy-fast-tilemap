@@ -1,3 +1,10 @@
+
+/// Analog to https://github.com/StarArawn/bevy_ecs_tilemap/blob/main/examples/bench.rs
+/// Note that we offer much less in terms of features compared to bevy_ecs_tilemap,
+/// so the comparison might rightfully be considered unfair.
+/// In terms of raw speed this should be quite a bit faster though at time of this writing.
+/// Also, we set PresentMode::Immediate so we can measure a FPS above the VSync rate.
+
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::{ivec2, vec2},
@@ -5,7 +12,7 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_fast_tilemap::{
-    bundle::FastTileMapDescriptor, map::MapLayerMaterial, plugin::FastTileMapPlugin,
+    bundle::FastTileMapDescriptor, plugin::FastTileMapPlugin,
 };
 
 mod mouse_controls_camera;
@@ -16,29 +23,30 @@ fn startup(
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<MapLayerMaterial>>,
 ) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn(Camera2dBundle::default());
 
     // Create map with (10 * 128) ^ 2 tiles or 1,638,400 tiles.
     FastTileMapDescriptor {
         map_size: ivec2(1280, 1280),
-        tiles_textures: vec![asset_server.load("tiles.png")],
         tile_size: vec2(16., 16.),
+        tiles_texture: asset_server.load("tiles.png"),
+        transform: default()
     }
-    .spawn(&mut commands, &mut images, &mut meshes, &mut materials);
+    .spawn(&mut commands, &mut images, &mut meshes);
 }
 
 fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            width: 1270.0,
-            height: 720.0,
-            title: String::from("Benchmark Example"),
-            present_mode: PresentMode::Immediate,
-            ..Default::default()
-        })
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: String::from("Benchmark Example"),
+                resolution: (1270.0, 720.0).into(),
+                present_mode: PresentMode::Immediate,
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(FastTileMapPlugin::default())

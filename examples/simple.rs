@@ -1,12 +1,15 @@
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{ivec2, vec2};
-use bevy::prelude::*;
-use bevy::window::PresentMode;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::{ivec2, vec2},
+    prelude::*,
+    window::PresentMode,
+};
 use bevy_fast_tilemap::{
     bundle::FastTileMapDescriptor,
-    map::{Map, MapLayer, MapLayerMaterial},
+    map::Map,
     plugin::FastTileMapPlugin,
 };
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 
 mod mouse_controls_camera;
@@ -14,19 +17,21 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            width: 1820.,
-            height: 920.,
-            // disable vsync so we can see the raw FPS speed
-            present_mode: PresentMode::Immediate,
-            title: String::from("Fast Tilemap example"),
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: String::from("Fast Tilemap example"),
+                resolution: (1820., 920.).into(),
+                // disable vsync so we can see the raw FPS speed
+                present_mode: PresentMode::Immediate,
+                ..default()
+            }),
             ..default()
-        })
-        .add_plugins(DefaultPlugins)
+        }))
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
+        .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(FastTileMapPlugin::default())
+        .add_plugin(MouseControlsCameraPlugin::default())
         .add_startup_system(startup)
         .add_system(change_map)
         .run();
@@ -37,31 +42,33 @@ fn startup(
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<MapLayerMaterial>>,
 ) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn(Camera2dBundle::default());
+
+    let tiles_texture = asset_server.load("simple_tiles_64.png");
 
     FastTileMapDescriptor {
         map_size: ivec2(1024, 1024),
-        tiles_textures: vec![asset_server.load("simple_tiles_64.png")],
         tile_size: vec2(64., 64.),
+        tiles_texture,
+        transform: default(),
     }
-    .spawn(&mut commands, &mut images, &mut meshes, &mut materials);
+    .spawn(&mut commands, &mut images, &mut meshes);
 }
 
 /// Update random patches of tile indices in the map
 fn change_map(
-    mut materials: ResMut<Assets<MapLayerMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    mut maps: Query<&Map>,
-    mut map_layers: Query<&mut MapLayer>,
+    mut maps: Query<&mut Map>,
 ) {
     let mut rng = rand::thread_rng();
 
-    for map in maps.iter_mut() {
-
-        let mut m = match map.get_mut(&mut map_layers, &mut *materials, &mut *images) {
-            Err(_) => continue,
+    for mut map in maps.iter_mut() {
+        let mut m = match map.get_mut(&mut *images) {
+            Err(e) => {
+                warn!("no map: {:?}", e);
+                continue
+            }
             Ok(x) => x,
         };
 
@@ -70,17 +77,9 @@ fn change_map(
         let y_min = rng.gen_range(0..map.size().y - k);
         let i = rng.gen_range(1..8);
 
-        let tint = [
-            rng.gen_range(0.5 .. 1.) as f32,
-            rng.gen_range(0.5 .. 1.) as f32,
-            rng.gen_range(0.5 .. 1.) as f32,
-            1.0
-        ];
-
         for y in y_min .. y_min + k {
             for x in x_min .. x_min + k {
-                m[0][ivec2(x, y)] = i;
-                m[0].set_tint(ivec2(x, y), tint);
+                m[ivec2(x, y)] = i;
             }
         }
     }
