@@ -47,7 +47,7 @@ fn startup(
         map_size: ivec2(51, 51),
         tile_size: vec2(16., 16.),
         tiles_texture: asset_server.load("pixel_tiles_16.png"),
-        transform: default(),
+        ..default()
     }
     .spawn(&mut commands, &mut images, &mut meshes);
 
@@ -56,6 +56,7 @@ fn startup(
         tile_size: vec2(16., 16.),
         tiles_texture: asset_server.load("pixel_tiles_16.png"),
         transform: Transform::default().with_translation(vec3(0., 0., 1.)),
+        ..default()
     }
     .spawn(&mut commands, &mut images, &mut meshes);
 }

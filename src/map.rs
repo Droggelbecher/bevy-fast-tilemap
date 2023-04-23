@@ -1,5 +1,4 @@
 use bevy::{
-    math::vec2,
     prelude::*,
     render::{
         render_resource::{SamplerDescriptor, FilterMode},
@@ -15,16 +14,28 @@ use std::num::NonZeroU32;
 #[derive(Debug, Component, Clone)]
 pub struct Map {
     /// Size of the map, in tiles.
-    pub(crate) size: IVec2,
+    pub size: IVec2,
 
     /// Size of each tile, in pixels.
-    pub(crate) tile_size: Vec2,
+    pub tile_size: Vec2,
 
     /// Texture containing the tile IDs (one per each pixel)
     pub map_texture: Handle<Image>,
 
     /// Atlas texture with the individual tiles
     pub tiles_texture: Handle<Image>,
+
+    /// fractional 2d map index -> world pos
+    pub projection: Mat2,
+
+    /// world pos -> fractional 2d map index
+    pub inverse_projection: Mat2,
+
+    /// Offset of the projected map in world coordinates
+    pub world_offset: Vec2,
+
+    /// relative anchor point position in a tile (in [0..1]^2)
+    pub tile_anchor_point: Vec2,
 
     pub ready: bool,
 }
@@ -35,13 +46,12 @@ impl Map {
         self.size
     }
 
-    pub fn world_to_index(&self, world: Vec2) -> Vec2 {
-        // TODO: This could be a matrix that we precompute
-        world / self.tile_size * vec2(1., -1.) + self.size.as_vec2() / 2.
+    pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
+        (self.projection * map_position) * self.tile_size + self.world_offset
     }
 
-    pub fn index_to_world(&self, index: Vec2) -> Vec2 {
-        (index - self.size.as_vec2() / 2.) * vec2(1., -1.) * self.tile_size
+    pub fn world_to_map(&self, world: Vec2) -> Vec2 {
+        self.inverse_projection * ((world - self.world_offset) / self.tile_size)
     }
 
     // Get mutable access to map layers via a `MapIndexer`.
@@ -66,6 +76,10 @@ impl Map {
 pub struct MapIndexer<'a> {
     image: &'a mut Image,
     size: IVec2,
+}
+
+impl<'a> MapIndexer<'a> {
+    pub fn size(&self) -> IVec2 { self.size }
 }
 
 impl<'a> Index<IVec2> for MapIndexer<'a> {

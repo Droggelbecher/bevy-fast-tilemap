@@ -51,7 +51,7 @@ fn startup(
         map_size: ivec2(1024, 1024),
         tile_size: vec2(64., 64.),
         tiles_texture,
-        transform: default(),
+        ..default()
     }
     .spawn(&mut commands, &mut images, &mut meshes);
 }

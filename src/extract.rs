@@ -1,37 +1,13 @@
 
 use bevy::{
     prelude::*,
-    render::Extract
+    render::Extract,
 };
 
 use crate::map::Map;
 
-#[derive(Component)]
-pub struct ExtractedMap {
-    /// Size of the map, in tiles.
-    pub size: IVec2,
-
-    /// Size of each tile, in pixels.
-    pub tile_size: Vec2,
-
-    /// Texture containing the tile IDs (one per each pixel)
-    pub map_texture: Handle<Image>, //R16Uint
-
-    /// Atlas texture with the individual tiles
-    pub tiles_texture: Handle<Image>,
-}
-
-impl From<&Map> for ExtractedMap {
-    fn from(map: &Map) -> Self {
-        Self {
-            size: map.size,
-            tile_size: map.tile_size,
-            map_texture: map.map_texture.clone(),
-            tiles_texture: map.tiles_texture.clone(),
-        }
-    }
-}
-
+#[derive(Debug, Component, Clone)]
+pub struct ExtractedMap(pub Map);
 
 /// Extract map data from the main world and copy it to the render world.
 ///
@@ -53,7 +29,7 @@ pub fn extract_fast_tilemap(
         if !computed_visibility.is_visible() {
             continue;
         }
-        values.push((entity, ExtractedMap::from(map)));
+        values.push((entity, ExtractedMap(map.clone())));
     }
     *previous_len = values.len();
     commands.insert_or_spawn_batch(values);
