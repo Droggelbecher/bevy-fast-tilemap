@@ -27,7 +27,7 @@ tiles at the correct position.
 
 Thus each map layer works with two textures: One with integer data type, constructed and maintained
 internally for storing for each tile position which tile index should be displayed there. And one
-that contains all the tiles which should be provided by you (see `[assets/](assets/)`).
+that contains all the tiles which should be provided by you (see [assets/](assets/)).
 
 ## Limitations
 
