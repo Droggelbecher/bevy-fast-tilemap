@@ -20,6 +20,8 @@ use crate::{
     shader::{SHADER_CODE, SHADER_HANDLE},
 };
 
+/// Plugin for fast tilemap.
+/// Add this to you app and then spawn one or multiple maps use `FastTileMapDescriptor`.
 pub struct FastTileMapPlugin;
 
 impl Default for FastTileMapPlugin {

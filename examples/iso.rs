@@ -50,11 +50,11 @@ fn startup(
     commands.spawn(Camera2dBundle::default());
 
     /*
-     *         __==X==__
-     *    __===         ===__
-     * A==                   ===
-     *    ``===         ===''
-     *         ``==Y==''
+     *         __--X--__
+     *    __---         ---__
+     * A--__               __---
+     *      ---__     __---
+     *           --Y--
      *
      * (A) anchor point, vertically centered i.e. at (0.0, 0.5)
      * in relative tile cooridinates
@@ -134,9 +134,12 @@ fn highlight_hovered(
                     // generation time).
                     if let Ok(mut m) = map.get_mut(&mut *images) {
                         // The map can convert between world coordinates and map coordinates
-                        let coord = map.world_to_map(world).as_ivec2();
-                        let coord = coord.clamp(ivec2(0, 0), map.size() - ivec2(1, 1));
+                        let coord = map.world_to_map(world);
                         println!("Map coordinate: {:?}", coord);
+
+                        let coord = coord
+                            .as_ivec2()
+                            .clamp(ivec2(0, 0), map.size() - ivec2(1, 1));
 
                         reset_map(&mut m);
                         m[coord] = 3u16;

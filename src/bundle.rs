@@ -8,7 +8,15 @@ use bevy::{
 };
 use std::mem::size_of;
 
-/// Descriptor for creating a fast tilemap bundle
+/// Descriptor for creating a `FastTileMapBundle`.
+/// Implements `Default` for convenience,
+/// however you should really define at least:
+/// - `map_size`
+/// - `tile_size`
+/// - `tiles_texture`
+///
+/// For non-square map-tiles look into defining
+/// `projection` and `tile_anchor_point`.
 pub struct FastTileMapDescriptor {
     /// Size of the map (in tiles)
     pub map_size: IVec2,
@@ -17,9 +25,12 @@ pub struct FastTileMapDescriptor {
     /// Images holding the texture atlases, one for each layer of the map.
     /// All atlases must have a tile size of `tile_size` and no padding.
     pub tiles_texture: Handle<Image>,
+    /// Transform of the quad holding the tilemap
     pub transform: Transform,
-
+    /// Projection matrix for converting map coordinates to world coordinates
     pub projection: Mat2,
+    /// Relative anchor point into a tile.
+    /// `(0.0, 0.0)` is top left, `(1.0, 1.0)` is bottom-right
     pub tile_anchor_point: Vec2,
 }
 
@@ -38,6 +49,7 @@ impl Default for FastTileMapDescriptor {
 
 impl FastTileMapDescriptor {
 
+    /// Spawn a `FastTileMapBundle` and return its `EntityCommands`.
     pub fn spawn<'a, 'w, 's>(
         self,
         commands: &'a mut Commands<'w, 's>,

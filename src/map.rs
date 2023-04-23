@@ -37,26 +37,49 @@ pub struct Map {
     /// relative anchor point position in a tile (in [0..1]^2)
     pub tile_anchor_point: Vec2,
 
+    /// True iff the necessary images for this map are loaded
     pub ready: bool,
 }
 
 impl Map {
-    /// Size of this map in tiles.
+    /// Dimensions of this map in tiles.
     pub fn size(&self) -> IVec2 {
         self.size
     }
 
+    /// Convert map position in `[(0.0, 0.0) .. self.size)`
+    /// to world position.
+    /// E.g. map position `(0.5, 0.5)` is in the center of the tile
+    /// at index `(0, 0)`.
     pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
         (self.projection * map_position) * self.tile_size + self.world_offset
     }
 
+    /// Convert world position to map position.
     pub fn world_to_map(&self, world: Vec2) -> Vec2 {
         self.inverse_projection * ((world - self.world_offset) / self.tile_size)
     }
 
-    // Get mutable access to map layers via a `MapIndexer`.
-    // For this needs to mutably borrow the contained `MapLayer`s
-    // and the associated `Image`s.
+    /// Get mutable access to map layers via a `MapIndexer`.
+    /// For this needs to mutably borrow the contained `MapLayer`s
+    /// and the associated `Image`s.
+    ///
+    /// ```
+    /// fn some_system(
+    ///    mut images: ResMut<Assets<Image>>,
+    ///    mut maps: Query<(&mut Map, &Transform)>,
+    ///    // ...
+    /// ) {
+    ///
+    ///   // Obtain mutable access to the underlying image structure.
+    ///   // Use this only when you intend to make modifications to avoid
+    ///   // unnecessary data transferns to the GPU.
+    ///   if let Ok(m) = map.get_mut(&mut *images) {
+    ///     // Set tile at (x, y) to tileset index 3
+    ///     m[ivec2(x, y)] = 3;
+    ///   }
+    /// }
+    /// ```
     pub fn get_mut<'a>(
         &mut self,
         images: &'a mut Assets<Image>,
@@ -69,10 +92,12 @@ impl Map {
             image,
             size: self.size,
         })
-        //} // unsafe
     } // get_mut()
 } // impl Map
 
+/// Indexer into a map.
+/// Internally holds a mutable reference to the underlying texture.
+/// See `Map.get_mut` for a usage example.
 pub struct MapIndexer<'a> {
     image: &'a mut Image,
     size: IVec2,
@@ -84,6 +109,9 @@ impl<'a> MapIndexer<'a> {
 
 impl<'a> Index<IVec2> for MapIndexer<'a> {
     type Output = u16;
+
+    /// Index the map by 2d integer coordinate.
+    /// Expected to be in `[(0, 0) .. map_size)`
     fn index(&self, i: IVec2) -> &Self::Output {
         let idx = i.y as isize * self.size.x as isize + i.x as isize;
         unsafe {
@@ -94,6 +122,9 @@ impl<'a> Index<IVec2> for MapIndexer<'a> {
 }
 
 impl<'a> IndexMut<IVec2> for MapIndexer<'a> {
+
+    /// Index the map by 2d integer coordinate.
+    /// Expected to be in `[(0, 0) .. map_size)`
     fn index_mut(&mut self, i: IVec2) -> &mut u16 {
         let idx = i.y as isize * self.size.x as isize + i.x as isize;
         unsafe {

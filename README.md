@@ -1,26 +1,62 @@
 
-Simple and fast tilemap functionality for bevy.
+# Fast Tilemap for Bevy
 
-# Project status
+[![Crates.io](https://img.shields.io/crates/v/bevy_fast_tilemap)](https://crates.io/crates/bevy_fast_tilemap)
+[![docs](https://docs.rs/bevy_fast_tilemap/badge.svg)](https://docs.rs/bevy_fast_tilemap/)
 
-As of this writing, this code runs with bevy 0.10.1 on my Windows machine to my satisfaction.
+GPU-accelerated tilemap functionality for [`bevy`](https://bevyengine.org/).
+Aims at rendering tilemaps with lightning speed by using just a single quad per map (layer)
+and offloading the actual rendering to GPU.
+This should be faster than most other bevy tilemap implementations as of this writing.
 
-That being said, I can currently not afford the time to ensure it works for everyone else or other
-platforms or with your favourite features.
+## Features
 
-You're very welcome to use this in whatever way you want (just don't claim my work as yours),
-but be warned the maturity is rather experimental. If you want to contribute, you're very welcome to
-shoot me a PR, even better lets chat about it first.
+- Very high rendering performance.
+- Tilemaps can be very large or have many "layers"
+- Rectangular and isometric tile maps.
 
-# How it works
+## Screenshots
 
-The principle is probably not new but nonetheless quite helpful: The whole tilemap (-layer) is
-rendered as a single quad and a shader cares for rendering the correct tiles at the correct
-position.
+![layers](screenshots/layers.png)
+![iso](screenshots/iso.png)
 
-# Limitations
+## How it works
 
-Currently this has only been tested on Windows, so dont expect other platforms to work. There is
-currently no support for non-square tiles (isometric/hex/etc...). It should for many cases be
-possible to simulate these by having more square tiles (& some logic) that together express your
-shapes.
+The whole tilemap (-layer) is rendered as a single quad and a shader cares for rendering the correct
+tiles at the correct position.
+
+Thus each map layer works with two textures: One with integer data type, constructed and maintained
+internally for storing for each tile position which tile index should be displayed there. And one
+that contains all the tiles which should be provided by you (see `[assets/](assets/)`).
+
+## Limitations
+
+- Only tested on Windows, no WASM support
+- Overlapping "tiles" can not be rendered due to how the shader is designed, this may be
+changed in the future.
+- No direct animation support
+
+## Related work
+
+If you dont require all of `bevy_fast_tilemap`s performance and are looking for 
+more features and maturity, take a look at 
+[bevy_ecs_tilemap](https://github.com/StarArawn/bevy_ecs_tilemap/) which (among others) inspired
+this work.
+
+## Examples
+
+Check out the [examples/](examples/) folder to get an overview.
+You can run the examples like this:
+
+```bash
+cargo run --example simple
+cargo run --example layers
+cargo run --example iso
+```
+
+## Bevy Compatibility
+
+|bevy|bevy_fast_tilemap|
+|---|---|
+|0.10.1|0.1.0|
+|0.10.1|0.2.0|
