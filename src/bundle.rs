@@ -1,4 +1,4 @@
-use crate::map::{Map, MapIndexer};
+use crate::map::{Map, MapIndexer, MapData};
 use bevy::{
     ecs::system::EntityCommands,
     math::{uvec2, mat2, vec2},
@@ -140,15 +140,17 @@ impl<F> FastTileMapDescriptor<F>
         let world_offset = Vec2::default();
 
         let mut map = Map {
-            size: self.map_size,
-            tile_size: self.tile_size,
+            map_data: MapData {
+                size: self.map_size,
+                tile_size: self.tile_size,
+                projection,
+                inverse_projection,
+                world_offset,
+                tile_anchor_point: self.projection.tile_anchor_point,
+            },
             map_texture: images.add(map_image),
             tiles_texture: self.tiles_texture.clone(),
             ready: false,
-            projection,
-            inverse_projection,
-            world_offset,
-            tile_anchor_point: self.projection.tile_anchor_point,
         };
 
         // Determine the bounding rectangle of the projected map (in order to construct the quad
@@ -162,9 +164,9 @@ impl<F> FastTileMapDescriptor<F>
         let mut low = map.map_to_world(vec2(0.0, 0.0));
         let mut high = low.clone();
         for corner in [
-            vec2(map.size.x as f32, 0.0),
-            vec2(0.0, map.size.y as f32),
-            vec2(map.size.x as f32, map.size.y as f32),
+            vec2(map.map_data.size.x as f32, 0.0),
+            vec2(0.0, map.map_data.size.y as f32),
+            vec2(map.map_data.size.x as f32, map.map_data.size.y as f32),
         ] {
             let pos = map.map_to_world(corner);
             low = low.min(pos);
@@ -177,7 +179,7 @@ impl<F> FastTileMapDescriptor<F>
         // say the top left corner (eg for an iso projection it might be vertically centered).
         // We use `low` from above to figure out how to correctly translate here.
 
-        map.world_offset = vec2(-0.5, -0.5) * size - low;
+        map.map_data.world_offset = vec2(-0.5, -0.5) * size - low;
 
         // See bevy_render/src/mesh/shape/mod.rs
         // will generate 3d position, 3d normal, and 2d UVs

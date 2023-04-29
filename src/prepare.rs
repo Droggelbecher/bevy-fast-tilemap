@@ -88,32 +88,7 @@ impl AsBindGroup for ExtractedMap {
         images: &RenderAssets<Image>,
         _fallback_image: &FallbackImage,
     ) -> Result<PreparedBindGroup<Self::Data>, AsBindGroupError> {
-        // See /home/henning/repos/bevy/crates/bevy_render/macros/src/as_bind_group.rs:262
-        let tiles_texture_size = images.get(&self.0.tiles_texture)
-            .ok_or_else(|| RetryNextUpdate)?
-            .size;
-
-        #[derive(ShaderType)]
-        struct MapData {
-            tilemap_tiles: Vec2,
-            tile_size: Vec2,
-            projection: Mat2,
-            inverse_projection: Mat2,
-            world_offset: Vec2,
-            tile_anchor_point: Vec2,
-        }
-
-        let map_data = MapData {
-            // Alas, for this calculation we need access to the tiles texture,
-            // so we can't do it in extract which forces us a bit to do it here
-            // and have this extra MapData intermediate representation.
-            tilemap_tiles: tiles_texture_size / self.0.tile_size,
-            tile_size: self.0.tile_size,
-            projection: self.0.projection,
-            inverse_projection: self.0.inverse_projection,
-            world_offset: self.0.world_offset,
-            tile_anchor_point: self.0.tile_anchor_point,
-        };
+        let map_data = &self.0.map_data;
 
         let mut map_data_buffer = UniformBuffer::new(Vec::new());
         map_data_buffer.write(&map_data).unwrap();

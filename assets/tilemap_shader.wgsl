@@ -5,7 +5,8 @@
 
 struct Map {
     // Number of tiles in the tilemap in each dimension
-    tilemap_tiles: vec2<f32>,
+    size: vec2<f32>,
+
     // Size of inidividual tile
     tile_size: vec2<f32>,
 
@@ -66,8 +67,7 @@ fn fragment(
         in.world_position.xy / 100.0
     );
 */
-
-    var map_size = textureDimensions(map_texture);
+    var tilemap_tiles = vec2<f32>(textureDimensions(tiles_texture)) / map.tile_size;
 
     // Map position incl fractional part for this position.
     var map_pos = map.inverse_projection * ((in.world_position.xy - map.world_offset) / map.tile_size);
@@ -85,12 +85,12 @@ fn fragment(
     var index = f32(textureLoad(map_texture, vec2<i32>(map_coord)).r);
 
     // Convert index to x/y tile position in tilemap
-    var index_y = floor(index / map.tilemap_tiles.x);
-    var index_x = index - index_y * map.tilemap_tiles.x;
+    var index_y = floor(index / tilemap_tiles.x);
+    var index_x = index - index_y * tilemap_tiles.x;
 
     // Sample the tilemap
     return textureSample(
         tiles_texture, tiles_sampler,
-        (vec2<f32>(index_x, index_y) + offset + map.tile_anchor_point) / map.tilemap_tiles
+        (vec2<f32>(index_x, index_y) + offset + map.tile_anchor_point) / tilemap_tiles
     );
 }

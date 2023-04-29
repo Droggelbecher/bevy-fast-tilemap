@@ -1,7 +1,7 @@
 use bevy::{
     prelude::*,
     render::{
-        render_resource::{SamplerDescriptor, FilterMode},
+        render_resource::{SamplerDescriptor, FilterMode, ShaderType},
         texture::ImageSampler
     },
 };
@@ -13,17 +13,25 @@ use std::num::NonZeroU32;
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
 pub struct Map {
-    /// Size of the map, in tiles.
-    pub size: UVec2,
-
-    /// Size of each tile, in pixels.
-    pub tile_size: Vec2,
+    pub map_data: MapData,
 
     /// Texture containing the tile IDs (one per each pixel)
     pub map_texture: Handle<Image>,
 
     /// Atlas texture with the individual tiles
     pub tiles_texture: Handle<Image>,
+
+    /// True iff the necessary images for this map are loaded
+    pub ready: bool,
+}
+
+#[derive(ShaderType, Clone, Default, Debug, Reflect)]
+pub struct MapData {
+    /// Size of the map, in tiles.
+    pub size: UVec2,
+
+    /// Size of each tile, in pixels.
+    pub tile_size: Vec2,
 
     /// fractional 2d map index -> world pos
     pub projection: Mat2,
@@ -37,14 +45,12 @@ pub struct Map {
     /// relative anchor point position in a tile (in [0..1]^2)
     pub tile_anchor_point: Vec2,
 
-    /// True iff the necessary images for this map are loaded
-    pub ready: bool,
 }
 
 impl Map {
     /// Dimensions of this map in tiles.
     pub fn size(&self) -> UVec2 {
-        self.size
+        self.map_data.size
     }
 
     /// Convert map position in `[(0.0, 0.0) .. self.size)`
@@ -52,12 +58,14 @@ impl Map {
     /// E.g. map position `(0.5, 0.5)` is in the center of the tile
     /// at index `(0, 0)`.
     pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
-        (self.projection * map_position) * self.tile_size + self.world_offset
+        let m = &self.map_data;
+        (m.projection * map_position) * m.tile_size + m.world_offset
     }
 
     /// Convert world position to map position.
     pub fn world_to_map(&self, world: Vec2) -> Vec2 {
-        self.inverse_projection * ((world - self.world_offset) / self.tile_size)
+        let m = &self.map_data;
+        m.inverse_projection * ((world - m.world_offset) / m.tile_size)
     }
 
     /// Get mutable access to map layers via a `MapIndexer`.
@@ -90,7 +98,7 @@ impl Map {
 
         Ok(MapIndexer {
             image,
-            size: self.size,
+            size: self.map_data.size,
         })
     } // get_mut()
 } // impl Map
