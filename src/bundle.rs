@@ -15,34 +15,31 @@ use std::mem::size_of;
 /// - `tile_size`
 /// - `tiles_texture`
 ///
-/// For non-square map-tiles look into defining
-/// `projection` and `tile_anchor_point`.
-pub struct FastTileMapDescriptor<F>
-    where F: FnOnce(&mut MapIndexer) -> ()
-{
+/// For non-rectangular map-tiles check out setting a different
+/// `projection` such as `AXONOMETRIC`.
+pub struct FastTileMapDescriptor {
     /// Size of the map (in tiles)
     pub map_size: UVec2,
+
     /// Size of a single tile (in pixels)
     pub tile_size: Vec2,
+
     /// Images holding the texture atlases, one for each layer of the map.
     /// All atlases must have a tile size of `tile_size` and no padding.
     pub tiles_texture: Handle<Image>,
+
     /// Transform of the quad holding the tilemap
     pub transform: Transform,
 
     /// Projection of the tilemap. Usually you want either
-    ///
+    /// IDENTITY or AXONOMETRIC
     pub projection: TileProjection,
-
-    /// Will be called once to initialize the map data using the given MapIndexer.
-    /// Prior to calling this the map will be initialized with zeros.
-    //pub initializer: Box<dyn FnOnce(MapIndexer) -> ()>,
-    pub initializer: Option<F>,
 }
 
 pub struct TileProjection {
     /// Projection matrix for converting map coordinates to world coordinates
     pub projection: Mat2,
+
     /// Relative anchor point into a tile.
     /// `(0.0, 0.0)` is top left, `(1.0, 1.0)` is bottom-right
     pub tile_anchor_point: Vec2,
@@ -86,9 +83,7 @@ pub const AXONOMETRIC: TileProjection = TileProjection {
     tile_anchor_point: vec2(0.0, 0.5),
 };
 
-impl<F> Default for FastTileMapDescriptor<F>
-    where F: FnOnce(&mut MapIndexer) -> ()
-{
+impl Default for FastTileMapDescriptor {
     fn default() -> Self {
         Self {
             map_size: uvec2(100, 100),
@@ -96,21 +91,30 @@ impl<F> Default for FastTileMapDescriptor<F>
             tiles_texture: default(),
             transform: default(),
             projection: IDENTITY,
-            //initializer: Box::new(|_| {}),
-            initializer: None,
         }
     }
 }
 
-impl<F> FastTileMapDescriptor<F>
-    where F: FnOnce(&mut MapIndexer) -> ()
-{
+impl FastTileMapDescriptor {
+
     pub fn build(
         self,
         images: &mut ResMut<Assets<Image>>,
         meshes: &mut ResMut<Assets<Mesh>>,
     ) -> FastTileMapBundle {
+        self.build_and_initialize(images, meshes, |_| {})
+    }
 
+    /// `initializer' will be called once to initialize the map data using the given MapIndexer.
+    /// Prior to calling this the map will be initialized with zeros.
+    pub fn build_and_initialize<F>(
+        self,
+        images: &mut ResMut<Assets<Image>>,
+        meshes: &mut ResMut<Assets<Mesh>>,
+        initializer: F
+    ) -> FastTileMapBundle
+        where F: FnOnce(&mut MapIndexer) -> ()
+    {
         let mut map_image = Image::new(
             Extent3d {
                 width: self.map_size.x as u32,
@@ -126,12 +130,10 @@ impl<F> FastTileMapDescriptor<F>
             | TextureUsages::TEXTURE_BINDING;
         map_image.texture_descriptor.mip_level_count = 1;
 
-        if let Some(f) = self.initializer {
-            f(&mut MapIndexer {
-                image: &mut map_image,
-                size: self.map_size,
-            });
-        }
+        initializer(&mut MapIndexer {
+            image: &mut map_image,
+            size: self.map_size,
+        });
 
         let projection = self.projection.projection;
         let inverse_projection = projection.inverse();

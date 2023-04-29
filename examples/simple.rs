@@ -1,12 +1,13 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    math::{ivec2, vec2},
+    math::{ivec2, uvec2, vec2},
     prelude::*,
     window::PresentMode,
 };
 use bevy_fast_tilemap::{
     bundle::FastTileMapDescriptor,
     map::Map,
+    MapIndexer,
     plugin::FastTileMapPlugin,
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -47,13 +48,14 @@ fn startup(
 
     let tiles_texture = asset_server.load("simple_tiles_64.png");
 
-    FastTileMapDescriptor {
-        map_size: ivec2(1024, 1024),
+    let bundle = FastTileMapDescriptor {
+        map_size: uvec2(1024, 1024),
         tile_size: vec2(64., 64.),
         tiles_texture,
         ..default()
-    }
-    .spawn(&mut commands, &mut images, &mut meshes);
+    }.build(&mut images, &mut meshes);
+
+    commands.spawn(bundle);
 }
 
 /// Update random patches of tile indices in the map
@@ -79,7 +81,7 @@ fn change_map(
 
         for y in y_min .. y_min + k {
             for x in x_min .. x_min + k {
-                m[ivec2(x, y)] = i;
+                m.set(x, y, i);
             }
         }
     }

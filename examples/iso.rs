@@ -64,13 +64,14 @@ fn startup(
         // Completely arbitrary tile size, i.e. doesnt have to be a power of two or somesuch
         map_size: uvec2(23, 57),
 
-        // Option 1 to initialize the map is to provide an initializer callback here.
-        // Option 2 is to have a system wait for a MapReadyEvent and then set the map data (see
-        // generate_map)
-        initializer: Some(reset_map),
 
         ..default()
-    }.build(&mut images, &mut meshes);
+    }
+
+    // Option 1 to initialize the map is to provide an initializer callback here.
+    // Option 2 is to have a system wait for a MapReadyEvent and then set the map data (see
+    // initialize_map)
+    .build_and_initialize(&mut images, &mut meshes, reset_map);
 
     //.spawn(&mut commands, &mut images, &mut meshes);
     commands.spawn(bundle);

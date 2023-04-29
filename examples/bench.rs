@@ -7,7 +7,7 @@
 
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    math::{ivec2, vec2},
+    math::{uvec2, vec2},
     prelude::*,
     window::PresentMode,
 };
@@ -27,13 +27,15 @@ fn startup(
     commands.spawn(Camera2dBundle::default());
 
     // Create map with (10 * 128) ^ 2 tiles or 1,638,400 tiles.
-    FastTileMapDescriptor {
-        map_size: ivec2(1280, 1280),
+    let bundle = FastTileMapDescriptor {
+        map_size: uvec2(1280, 1280),
         tile_size: vec2(16., 16.),
         tiles_texture: asset_server.load("tiles.png"),
         ..default()
     }
-    .spawn(&mut commands, &mut images, &mut meshes);
+    .build(&mut images, &mut meshes);
+
+    commands.spawn(bundle);
 }
 
 fn main() {
