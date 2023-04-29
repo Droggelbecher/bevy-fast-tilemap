@@ -1,4 +1,4 @@
-use crate::map::Map;
+use crate::map::{Map, MapIndexer};
 use bevy::{
     ecs::system::EntityCommands,
     math::{vec2, ivec2, mat2},
@@ -17,7 +17,7 @@ use std::mem::size_of;
 ///
 /// For non-square map-tiles look into defining
 /// `projection` and `tile_anchor_point`.
-pub struct FastTileMapDescriptor {
+pub struct FastTileMapDescriptor { //<F: FnOnce(MapIndexer) -> ()> {
     /// Size of the map (in tiles)
     pub map_size: IVec2,
     /// Size of a single tile (in pixels)
@@ -32,9 +32,12 @@ pub struct FastTileMapDescriptor {
     /// Relative anchor point into a tile.
     /// `(0.0, 0.0)` is top left, `(1.0, 1.0)` is bottom-right
     pub tile_anchor_point: Vec2,
+
+    pub initializer: Box<dyn FnOnce(MapIndexer) -> ()>, // FnOnce<MapIndexer<'a, 'b>>,
 }
 
-impl Default for FastTileMapDescriptor {
+impl Default for FastTileMapDescriptor
+{
     fn default() -> Self {
         Self {
             map_size: ivec2(100, 100),
@@ -43,19 +46,28 @@ impl Default for FastTileMapDescriptor {
             transform: default(),
             projection: mat2(vec2(1.0, 0.0), vec2(0.0, -1.0)),
             tile_anchor_point: vec2(0.0, 0.0),
+            initializer: Box::new(|_| {}),
         }
     }
 }
 
 impl FastTileMapDescriptor {
 
-    /// Spawn a `FastTileMapBundle` and return its `EntityCommands`.
-    pub fn spawn<'a, 'w, 's>(
+    pub fn build(
         self,
-        commands: &'a mut Commands<'w, 's>,
+        //commands: &mut Commands,
         images: &mut ResMut<Assets<Image>>,
         meshes: &mut ResMut<Assets<Mesh>>,
-    ) -> EntityCommands<'w, 's, 'a> {
+    ) -> FastTileMapBundle {
+    //}
+
+    // Spawn a `FastTileMapBundle` and return its `EntityCommands`.
+    //pub fn spawn<'a, 'w, 's>(
+        //self,
+        //commands: &'a mut Commands<'w, 's>,
+        //images: &mut ResMut<Assets<Image>>,
+        //meshes: &mut ResMut<Assets<Mesh>>,
+    //) -> EntityCommands<'w, 's, 'a> {
 
         let mut map_image = Image::new(
             Extent3d {
@@ -71,6 +83,13 @@ impl FastTileMapDescriptor {
             TextureUsages::STORAGE_BINDING | TextureUsages::COPY_DST
             | TextureUsages::TEXTURE_BINDING;
         map_image.texture_descriptor.mip_level_count = 1;
+
+        (self.initializer)(
+            MapIndexer {
+                image: &mut map_image,
+                size: self.map_size,
+            }
+        );
 
         let projection = self.projection;
         let inverse_projection = projection.inverse();
@@ -121,16 +140,16 @@ impl FastTileMapDescriptor {
         // will generate 3d position, 3d normal, and 2d UVs
         let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad { size, flip: false, })));
 
-        let bundle = FastTileMapBundle {
+        FastTileMapBundle {
             map,
             mesh: mesh.clone(),
             transform: self.transform,
             global_transform: GlobalTransform::default(),
             visibility: Visibility::default(),
             computed_visibility: ComputedVisibility::default(),
-        };
+        }
 
-        commands.spawn(bundle)
+        //commands.spawn(bundle)
     } // fn spawn()
 } // impl FastTileMapDescriptor
 

@@ -25,6 +25,17 @@ pub struct PreparedMap {
     pub bind_group: PreparedBindGroup<()>,
 }
 
+/*
+pub struct PrepareNextFrameFastTilemaps {
+    maps: Vec<(
+        Entity,
+        Mesh2dHandle,
+        Mesh2dUniform,
+        ExtractedMap
+    )>,
+}
+*/
+
 /// Prepare data for GPU
 /// More precisely, generated `PreparedBindGroup`s and
 /// store them somewhere in the render world (eg. a resource that holds them such as
@@ -32,6 +43,7 @@ pub struct PreparedMap {
 ///
 /// This is a system in the render app.
 pub fn prepare_fast_tilemap(
+    //mut prepare_next_frame: Local<PrepareNextFrameFastTilemaps>,
     extracted_maps: Query<(Entity, &Mesh2dHandle, &Mesh2dUniform, &ExtractedMap)>,
     render_device: Res<RenderDevice>,
     images: Res<RenderAssets<Image>>,
@@ -39,29 +51,41 @@ pub fn prepare_fast_tilemap(
     pipeline: Res<FastTileMapPipeline>,
     mut commands: Commands,
 ) {
-    let prepared_maps: Vec<(Entity, (Mesh2dHandle, Mesh2dUniform, PreparedMap))> = extracted_maps
-        .iter()
-        .map(|(entity, mesh_handle, mesh_uniform, extracted_map)| {
-            let prepared_map = PreparedMap {
-                bind_group: match extracted_map.as_bind_group(
-                    &pipeline.map_layout,
-                    &render_device,
-                    &images,
-                    &fallback_image,
-                ) {
-                    Ok(x) => x,
-                    // TODO: in this case we should queue them to try again next frame!
-                    // see bevy_sprite/src/mesh2d/material.rs
-                    Err(_) => panic!("Couldnt extract bind group"),
-                },
-            };
+    //println!("prepare_fast_tilemap");
 
-            (
-                entity,
-                (mesh_handle.clone(), mesh_uniform.clone(), prepared_map),
-            )
-        })
-        .collect();
+    //let queued = std::mem::take(&mut prepare_next_frame.maps);
+
+    let mut prepared_maps = Vec::new();
+
+    for (entity, mesh_handle, mesh_uniform, extracted_map) in extracted_maps.iter() {
+        //println!("maybe preparing {:?}", entity);
+        let prepared_map = PreparedMap {
+            bind_group: match extracted_map.as_bind_group(
+                &pipeline.map_layout,
+                &render_device,
+                &images,
+                &fallback_image,
+            ) {
+                Ok(x) => {
+                    //println!("Ok {:?}", entity);
+                    x
+                }
+                // TODO: in this case we should queue them to try again next frame!
+                // see bevy_sprite/src/mesh2d/material.rs
+                Err(AsBindGroupError::RetryNextUpdate) => {
+                    //println!("RetryNextUpdate {:?}", entity);
+                    continue
+                    //prepare_next_frame.push((
+                    //panic!("Couldnt extract bind group"),
+                }
+            },
+        };
+
+        prepared_maps.push((
+            entity,
+            (mesh_handle.clone(), mesh_uniform.clone(), prepared_map),
+        ));
+    }
 
     commands.insert_or_spawn_batch(prepared_maps);
 }

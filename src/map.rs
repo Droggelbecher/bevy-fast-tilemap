@@ -11,7 +11,8 @@ use std::num::NonZeroU32;
 /// Map, of size `size` tiles.
 /// The actual tile data is stored in MapLayer components and Images in the asset system
 /// and connected to this Map via bevys parent/child relationships for entities.
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, Default, Reflect)]
+#[reflect(Component)]
 pub struct Map {
     /// Size of the map, in tiles.
     pub size: IVec2,
@@ -98,13 +99,29 @@ impl Map {
 /// Indexer into a map.
 /// Internally holds a mutable reference to the underlying texture.
 /// See `Map.get_mut` for a usage example.
+#[derive(Debug)]
 pub struct MapIndexer<'a> {
-    image: &'a mut Image,
-    size: IVec2,
+    pub(crate) image: &'a mut Image,
+    pub(crate) size: IVec2,
 }
 
 impl<'a> MapIndexer<'a> {
     pub fn size(&self) -> IVec2 { self.size }
+
+    /*
+    pub fn resize(&mut self, size: IVec2) {
+        // TODO: Also resize the mesh somehow?!
+        // Consider removing this and have people instead create a new map
+        // when they want to change size?
+        //
+        self.image.resize(bevy::render::render_resource::Extent3d {
+            width: size.x as u32,
+            height: size.y as u32,
+            depth_or_array_layers: 1,
+        });
+        *self.size = size;
+    }
+    */
 }
 
 impl<'a> Index<IVec2> for MapIndexer<'a> {
@@ -114,6 +131,7 @@ impl<'a> Index<IVec2> for MapIndexer<'a> {
     /// Expected to be in `[(0, 0) .. map_size)`
     fn index(&self, i: IVec2) -> &Self::Output {
         let idx = i.y as isize * self.size.x as isize + i.x as isize;
+        // TODO: Get rid of this unsafe
         unsafe {
             let ptr = self.image.data.as_ptr() as *const u16;
             &*ptr.offset(idx)
@@ -127,6 +145,7 @@ impl<'a> IndexMut<IVec2> for MapIndexer<'a> {
     /// Expected to be in `[(0, 0) .. map_size)`
     fn index_mut(&mut self, i: IVec2) -> &mut u16 {
         let idx = i.y as isize * self.size.x as isize + i.x as isize;
+        // TODO: Get rid of this unsafe
         unsafe {
             let ptr = self.image.data.as_ptr() as *mut u16;
             &mut *ptr.offset(idx)

@@ -60,6 +60,12 @@ fn vertex(v: Vertex) -> VertexOutput {
 fn fragment(
     in: VertexOutput
 ) -> @location(0) vec4<f32> {
+/*
+    return textureSample(
+        tiles_texture, tiles_sampler,
+        in.world_position.xy / 100.0
+    );
+*/
 
     var map_size = textureDimensions(map_texture);
 

@@ -73,8 +73,8 @@ fn change_map(
         };
 
         let k = rng.gen_range(5..50);
-        let x_min = rng.gen_range(0..map.size().x - k);
-        let y_min = rng.gen_range(0..map.size().y - k);
+        let x_min = rng.gen_range(0..m.size().x - k);
+        let y_min = rng.gen_range(0..m.size().y - k);
         let i = rng.gen_range(1..8);
 
         for y in y_min .. y_min + k {
