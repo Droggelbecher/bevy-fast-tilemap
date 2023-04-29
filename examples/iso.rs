@@ -4,13 +4,14 @@
 /// where each tile ends up a diamond shape that is twice as wide as high.
 
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{ivec2, vec2, Mat2};
+use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{
-    bundle::FastTileMapDescriptor,
-    map::{Map, MapReadyEvent, MapIndexer},
-    plugin::FastTileMapPlugin,
+use bevy_fast_tilemap::prelude::{
+    FastTileMapDescriptor,
+    Map, MapReadyEvent, MapIndexer,
+    FastTileMapPlugin,
+    AXONOMETRIC
 };
 
 mod mouse_controls_camera;
@@ -36,7 +37,8 @@ fn main() {
         .add_plugin(MouseControlsCameraPlugin::default())
         .add_plugin(FastTileMapPlugin::default())
         .add_startup_system(startup)
-        .add_system(generate_map)
+        // One of the ways to initialize a map, we show a different one in startup() below.
+        //.add_system(initialize_map)
         .add_system(highlight_hovered)
         .run();
 }
@@ -49,46 +51,33 @@ fn startup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    /*
-     *         __--X--__
-     *    __---         ---__
-     * A--__               __---
-     *      ---__     __---
-     *           --Y--
-     *
-     * (A) anchor point, vertically centered i.e. at (0.0, 0.5)
-     * in relative tile cooridinates
-     *
-     * X-axis goes from (A) to (X), i.e. in map coordinates (A)
-     * is at (0, 0) (by definition, its the anchor point),
-     * and (X) is at (1, 0) (as defined by `projection`).
-     * Analogously, Y is at (0, 1) in map coordinates.
-     *
-     */
-
-    FastTileMapDescriptor {
+    let bundle = FastTileMapDescriptor {
         // Note that tile index 0 is used to draw tiles that are outside
         // the logical map (but inside the rectangular map bounding box).
         // In iso.png we chose a dotted outline to make this visible,
         // in practice you might prefer a transparent tile here or one
         // that can serve as some sort of background to your map.
         tiles_texture: asset_server.load("iso.png"),
-        projection: Mat2::from_cols(
-            vec2(0.5, -0.5),
-            vec2(0.5, 0.5)
-        ),
-        tile_anchor_point: vec2(0.0, 0.5),
+        projection: AXONOMETRIC,
         tile_size: vec2(40., 20.),
 
         // Completely arbitrary tile size, i.e. doesnt have to be a power of two or somesuch
-        map_size: ivec2(23, 57),
+        map_size: uvec2(23, 57),
+
+        // Option 1 to initialize the map is to provide an initializer callback here.
+        // Option 2 is to have a system wait for a MapReadyEvent and then set the map data (see
+        // generate_map)
+        initializer: Some(reset_map),
+
         ..default()
-    }
-    .spawn(&mut commands, &mut images, &mut meshes);
+    }.build(&mut images, &mut meshes);
+
+    //.spawn(&mut commands, &mut images, &mut meshes);
+    commands.spawn(bundle);
 } // startup
 
 /// Check whether the map is ready to be filled with contents and do so.
-fn generate_map(
+fn initialize_map(
     mut evs: EventReader<MapReadyEvent>,
     mut images: ResMut<Assets<Image>>,
     mut maps: Query<&mut Map>,
@@ -108,7 +97,7 @@ fn generate_map(
 fn reset_map(m: &mut MapIndexer) {
     for y in 0..m.size().y {
         for x in 0..m.size().x {
-            m[ivec2(x, y)] = (((x + y) % 2) + 1) as u16;
+            m.set(x, y, (((x + y) % 2) + 1) as u16);
         }
     }
 } // reset_map
@@ -138,11 +127,11 @@ fn highlight_hovered(
                         println!("Map coordinate: {:?}", coord);
 
                         let coord = coord
-                            .as_ivec2()
-                            .clamp(ivec2(0, 0), map.size() - ivec2(1, 1));
+                            .as_uvec2()
+                            .clamp(uvec2(0, 0), map.size() - uvec2(1, 1));
 
                         reset_map(&mut m);
-                        m[coord] = 3u16;
+                        m.set_uvec(coord, 3u16);
                     }
                 } // if Some(world)
             } // for (global, camera)

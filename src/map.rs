@@ -5,7 +5,6 @@ use bevy::{
         texture::ImageSampler
     },
 };
-use std::ops::{Index, IndexMut};
 use std::num::NonZeroU32;
 
 /// Map, of size `size` tiles.
@@ -15,7 +14,7 @@ use std::num::NonZeroU32;
 #[reflect(Component)]
 pub struct Map {
     /// Size of the map, in tiles.
-    pub size: IVec2,
+    pub size: UVec2,
 
     /// Size of each tile, in pixels.
     pub tile_size: Vec2,
@@ -44,7 +43,7 @@ pub struct Map {
 
 impl Map {
     /// Dimensions of this map in tiles.
-    pub fn size(&self) -> IVec2 {
+    pub fn size(&self) -> UVec2 {
         self.size
     }
 
@@ -102,53 +101,37 @@ impl Map {
 #[derive(Debug)]
 pub struct MapIndexer<'a> {
     pub(crate) image: &'a mut Image,
-    pub(crate) size: IVec2,
+    pub(crate) size: UVec2,
 }
 
 impl<'a> MapIndexer<'a> {
-    pub fn size(&self) -> IVec2 { self.size }
+    pub fn size(&self) -> UVec2 { self.size }
 
-    /*
-    pub fn resize(&mut self, size: IVec2) {
-        // TODO: Also resize the mesh somehow?!
-        // Consider removing this and have people instead create a new map
-        // when they want to change size?
-        //
-        self.image.resize(bevy::render::render_resource::Extent3d {
-            width: size.x as u32,
-            height: size.y as u32,
-            depth_or_array_layers: 1,
-        });
-        *self.size = size;
+    pub fn at_ivec(&self, i: IVec2) -> u16 {
+        self.at(i.x as u32, i.y as u32)
     }
-    */
-}
 
-impl<'a> Index<IVec2> for MapIndexer<'a> {
-    type Output = u16;
+    pub fn at_uvec(&self, i: UVec2) -> u16 {
+        self.at(i.x, i.y)
+    }
 
-    /// Index the map by 2d integer coordinate.
-    /// Expected to be in `[(0, 0) .. map_size)`
-    fn index(&self, i: IVec2) -> &Self::Output {
-        let idx = i.y as isize * self.size.x as isize + i.x as isize;
-        // TODO: Get rid of this unsafe
+    pub fn at(&self, x: u32, y: u32) -> u16 {
+        let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
             let ptr = self.image.data.as_ptr() as *const u16;
-            &*ptr.offset(idx)
+            *ptr.offset(idx)
         }
     }
-}
 
-impl<'a> IndexMut<IVec2> for MapIndexer<'a> {
+    pub fn set_uvec(&mut self, i: UVec2, v: u16) {
+        self.set(i.x, i.y, v)
+    }
 
-    /// Index the map by 2d integer coordinate.
-    /// Expected to be in `[(0, 0) .. map_size)`
-    fn index_mut(&mut self, i: IVec2) -> &mut u16 {
-        let idx = i.y as isize * self.size.x as isize + i.x as isize;
-        // TODO: Get rid of this unsafe
+    pub fn set(&mut self, x: u32, y: u32, v: u16) {
+        let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
             let ptr = self.image.data.as_ptr() as *mut u16;
-            &mut *ptr.offset(idx)
+            *ptr.offset(idx) = v
         }
     }
 }
