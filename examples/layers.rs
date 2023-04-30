@@ -1,11 +1,15 @@
+
+//! Simple example illustrating how to use multiple FastTileMap instances
+//! as map layers.
+//! Each map is a single quad so the performance overhead should be low for a reasonable amount of
+//! layers.
+
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    bundle::FastTileMapDescriptor,
-    map::MapIndexer,
-    plugin::FastTileMapPlugin,
+    bundle::FastTileMapDescriptor, map::MapIndexer, plugin::FastTileMapPlugin,
 };
 
 mod mouse_controls_camera;
@@ -13,19 +17,16 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(
-            DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: String::from("Fast Tilemap example"),
-                    resolution: (1820., 920.).into(),
-                    // disable vsync so we can see the raw FPS speed
-                    present_mode: PresentMode::Immediate,
-                    ..default()
-                }),
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: String::from("Fast Tilemap example"),
+                resolution: (1820., 920.).into(),
+                // disable vsync so we can see the raw FPS speed
+                present_mode: PresentMode::Immediate,
                 ..default()
-            })
-        )
+            }),
+            ..default()
+        }))
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(MouseControlsCameraPlugin::default())
@@ -33,6 +34,15 @@ fn main() {
         .add_startup_system(startup)
         .run();
 }
+
+// Completely optional:
+// Add an extra component to keep track of which map layer is which for easy modification later,
+// potentially containing some additional information.
+// Since you likely want the layer to have different z-coordinates you could also use that to
+// distinguish them.
+
+#[derive(Component)]
+struct MapLayer(i32);
 
 fn startup(
     mut commands: Commands,
@@ -49,6 +59,7 @@ fn startup(
         ..default()
     }
     .build_and_initialize(&mut images, &mut meshes, |m| {
+        // Initialize using a closure
         // Set all tiles in layer 0 to index 4
         for y in 0..m.size().y {
             for x in 0..m.size().x {
@@ -56,17 +67,21 @@ fn startup(
             }
         }
     });
-    commands.spawn(bundle);
+
+    commands.spawn(bundle).insert(MapLayer(0));
 
     let bundle = FastTileMapDescriptor {
         map_size: uvec2(51, 51),
         tile_size: vec2(16., 16.),
         tiles_texture: asset_server.load("pixel_tiles_16.png"),
+        // Higher z value means "closer to the camera"
         transform: Transform::default().with_translation(vec3(0., 0., 1.)),
         ..default()
     }
+    // Initialize using a function
     .build_and_initialize(&mut images, &mut meshes, initialize_layer1);
-    commands.spawn(bundle);
+
+    commands.spawn(bundle).insert(MapLayer(1));
 }
 
 fn initialize_layer1(m: &mut MapIndexer) {
@@ -85,5 +100,3 @@ fn initialize_layer1(m: &mut MapIndexer) {
         } // for x
     } // for y
 }
-
-

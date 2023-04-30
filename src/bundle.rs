@@ -1,6 +1,5 @@
 use crate::map::{Map, MapIndexer, MapData};
 use bevy::{
-    ecs::system::EntityCommands,
     math::{uvec2, mat2, vec2},
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},

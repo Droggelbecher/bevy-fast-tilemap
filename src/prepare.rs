@@ -5,7 +5,7 @@ use bevy::{
         render_resource::{
             AsBindGroup, AsBindGroupError, AsBindGroupError::RetryNextUpdate,
             BindGroupDescriptor, BindGroupEntry, BindGroupLayout, OwnedBindingResource,
-            PreparedBindGroup, encase::UniformBuffer, BufferInitDescriptor, BufferUsages, ShaderType
+            PreparedBindGroup, encase::UniformBuffer, BufferInitDescriptor, BufferUsages
         },
         renderer::RenderDevice,
         texture::FallbackImage,
