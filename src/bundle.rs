@@ -7,7 +7,7 @@ use bevy::{
 };
 use std::mem::size_of;
 
-/// Descriptor for creating a `FastTileMapBundle`.
+/// Descriptor for creating a `MapBundle`.
 /// Implements `Default` for convenience,
 /// however you should really define at least:
 /// - `map_size`
@@ -16,7 +16,7 @@ use std::mem::size_of;
 ///
 /// For non-rectangular map-tiles check out setting a different
 /// `projection` such as `AXONOMETRIC`.
-pub struct FastTileMapDescriptor {
+pub struct MapDescriptor {
     /// Size of the map (in tiles)
     pub map_size: UVec2,
 
@@ -82,7 +82,7 @@ pub const AXONOMETRIC: TileProjection = TileProjection {
     tile_anchor_point: vec2(0.0, 0.5),
 };
 
-impl Default for FastTileMapDescriptor {
+impl Default for MapDescriptor {
     fn default() -> Self {
         Self {
             map_size: uvec2(100, 100),
@@ -94,13 +94,14 @@ impl Default for FastTileMapDescriptor {
     }
 }
 
-impl FastTileMapDescriptor {
+impl MapDescriptor {
 
+    /// Build map bundle with default initialization (index 0).
     pub fn build(
         self,
         images: &mut ResMut<Assets<Image>>,
         meshes: &mut ResMut<Assets<Mesh>>,
-    ) -> FastTileMapBundle {
+    ) -> MapBundle {
         self.build_and_initialize(images, meshes, |_| {})
     }
 
@@ -111,7 +112,7 @@ impl FastTileMapDescriptor {
         images: &mut ResMut<Assets<Image>>,
         meshes: &mut ResMut<Assets<Mesh>>,
         initializer: F
-    ) -> FastTileMapBundle
+    ) -> MapBundle
         where F: FnOnce(&mut MapIndexer) -> ()
     {
         let mut map_image = Image::new(
@@ -186,7 +187,7 @@ impl FastTileMapDescriptor {
         // will generate 3d position, 3d normal, and 2d UVs
         let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad { size, flip: false })));
 
-        FastTileMapBundle {
+        MapBundle {
             map,
             mesh: mesh.clone(),
             transform: self.transform,
@@ -197,10 +198,10 @@ impl FastTileMapDescriptor {
 
         //commands.spawn(bundle)
     } // fn spawn()
-} // impl FastTileMapDescriptor
+} // impl MapDescriptor
 
 #[derive(Bundle, Clone)]
-pub struct FastTileMapBundle {
+pub struct MapBundle {
     pub mesh: Mesh2dHandle,
     pub map: Map,
     pub transform: Transform,

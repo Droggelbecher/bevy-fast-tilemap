@@ -1,6 +1,6 @@
 use crate::{
     map::{check_map_ready_events, MapReadyEvent},
-    pipeline::FastTileMapPipeline,
+    pipeline::MapPipeline,
 };
 use bevy::{
     core_pipeline::core_2d::Transparent2d,
@@ -16,12 +16,12 @@ use bevy::{
 use crate::{
     extract::extract_fast_tilemap,
     prepare::prepare_fast_tilemap,
-    queue::{queue_fast_tilemap, DrawFastTileMap},
+    queue::{queue_fast_tilemap, DrawMap},
     shader::{SHADER_CODE, SHADER_HANDLE},
 };
 
 /// Plugin for fast tilemap.
-/// Add this to you app and then spawn one or multiple maps use `FastTileMapDescriptor`.
+/// Add this to you app and then spawn one or multiple maps use `MapDescriptor`.
 pub struct FastTileMapPlugin;
 
 impl Default for FastTileMapPlugin {
@@ -40,9 +40,9 @@ impl Plugin for FastTileMapPlugin {
 
         app.get_sub_app_mut(RenderApp)
             .unwrap()
-            .init_resource::<FastTileMapPipeline>()
-            .init_resource::<SpecializedRenderPipelines<FastTileMapPipeline>>()
-            .add_render_command::<Transparent2d, DrawFastTileMap>()
+            .init_resource::<MapPipeline>()
+            .init_resource::<SpecializedRenderPipelines<MapPipeline>>()
+            .add_render_command::<Transparent2d, DrawMap>()
             .add_system(extract_fast_tilemap.in_schedule(ExtractSchedule))
             .add_system(
                 prepare_fast_tilemap

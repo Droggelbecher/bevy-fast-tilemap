@@ -61,12 +61,6 @@ fn vertex(v: Vertex) -> VertexOutput {
 fn fragment(
     in: VertexOutput
 ) -> @location(0) vec4<f32> {
-/*
-    return textureSample(
-        tiles_texture, tiles_sampler,
-        in.world_position.xy / 100.0
-    );
-*/
     var tilemap_tiles = vec2<f32>(textureDimensions(tiles_texture)) / map.tile_size;
 
     // Map position incl fractional part for this position.

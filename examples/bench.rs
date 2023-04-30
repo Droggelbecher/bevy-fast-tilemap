@@ -12,7 +12,7 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_fast_tilemap::{
-    bundle::FastTileMapDescriptor, plugin::FastTileMapPlugin,
+    MapDescriptor, FastTileMapPlugin,
 };
 
 mod mouse_controls_camera;
@@ -27,7 +27,7 @@ fn startup(
     commands.spawn(Camera2dBundle::default());
 
     // Create map with (10 * 128) ^ 2 tiles or 1,638,400 tiles.
-    let bundle = FastTileMapDescriptor {
+    let bundle = MapDescriptor {
         map_size: uvec2(1280, 1280),
         tile_size: vec2(16., 16.),
         tiles_texture: asset_server.load("tiles.png"),

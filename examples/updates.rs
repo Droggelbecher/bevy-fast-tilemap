@@ -1,4 +1,3 @@
-
 //! Example illustrating alternative map initialization and live updates (here: every frame).
 //!
 
@@ -8,13 +7,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-// TODO: More consistent naming: Map vs FastTileMapDescriptor
-use bevy_fast_tilemap::{
-    FastTileMapDescriptor,
-    Map,
-    FastTileMapPlugin,
-    MapReadyEvent
-};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapDescriptor, MapReadyEvent};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 
@@ -54,16 +47,16 @@ fn startup(
 
     let tiles_texture = asset_server.load("simple_tiles_64.png");
 
-    let bundle = FastTileMapDescriptor {
+    let bundle = MapDescriptor {
         map_size: uvec2(1024, 1024),
         tile_size: vec2(64., 64.),
         tiles_texture,
         ..default()
-    }.build(&mut images, &mut meshes);
+    }
+    .build(&mut images, &mut meshes);
 
     commands.spawn(bundle);
 }
-
 
 /// Check whether the map is ready to be filled with contents and do so.
 /// This way the map gets initialized as soon as its texture is available in the asset server.
@@ -93,12 +86,8 @@ fn initialize_map(
     } // for ev
 } // generate_map
 
-
 /// Update random patches of tile indices in the map
-fn change_map(
-    mut images: ResMut<Assets<Image>>,
-    mut maps: Query<&mut Map>,
-) {
+fn change_map(mut images: ResMut<Assets<Image>>, mut maps: Query<&mut Map>) {
     let mut rng = rand::thread_rng();
 
     for mut map in maps.iter_mut() {
@@ -107,7 +96,7 @@ fn change_map(
             Err(e) => {
                 // Map texture is not available
                 warn!("no map: {:?}", e);
-                continue
+                continue;
             }
             Ok(x) => x,
         };
@@ -117,8 +106,8 @@ fn change_map(
         let y_min = rng.gen_range(0..m.size().y - k);
         let i = rng.gen_range(1..8);
 
-        for y in y_min .. y_min + k {
-            for x in x_min .. x_min + k {
+        for y in y_min..y_min + k {
+            for x in x_min..x_min + k {
                 m.set(x, y, i);
             }
         }

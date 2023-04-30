@@ -17,7 +17,7 @@ use bevy::{
 
 use crate::{
     extract::ExtractedMap,
-    pipeline::FastTileMapPipeline
+    pipeline::MapPipeline
 };
 
 #[derive(Component)]
@@ -36,7 +36,7 @@ pub fn prepare_fast_tilemap(
     render_device: Res<RenderDevice>,
     images: Res<RenderAssets<Image>>,
     fallback_image: Res<FallbackImage>,
-    pipeline: Res<FastTileMapPipeline>,
+    pipeline: Res<MapPipeline>,
     mut commands: Commands,
 ) {
     let mut prepared_maps = Vec::new();

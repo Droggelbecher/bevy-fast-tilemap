@@ -8,7 +8,7 @@ use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    FastTileMapDescriptor, FastTileMapPlugin, Map, MapIndexer, AXONOMETRIC,
+    MapDescriptor, FastTileMapPlugin, Map, MapIndexer, AXONOMETRIC,
 };
 
 mod mouse_controls_camera;
@@ -43,7 +43,7 @@ fn startup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let bundle = FastTileMapDescriptor {
+    let bundle = MapDescriptor {
         // Note that tile index 0 is used to draw tiles that are outside
         // the logical map (but inside the rectangular map bounding box).
         // In iso.png we chose a dotted outline to make this visible,

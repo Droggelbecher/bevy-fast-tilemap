@@ -1,6 +1,5 @@
 
-//! Simple example illustrating how to use multiple FastTileMap instances
-//! as map layers.
+//! Simple example illustrating how to use multiple Map instances as layers.
 //! Each map is a single quad so the performance overhead should be low for a reasonable amount of
 //! layers.
 
@@ -9,7 +8,7 @@ use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    bundle::FastTileMapDescriptor, map::MapIndexer, plugin::FastTileMapPlugin,
+    MapDescriptor, MapIndexer, FastTileMapPlugin,
 };
 
 mod mouse_controls_camera;
@@ -52,7 +51,7 @@ fn startup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let bundle = FastTileMapDescriptor {
+    let bundle = MapDescriptor {
         map_size: uvec2(51, 51),
         tile_size: vec2(16., 16.),
         tiles_texture: asset_server.load("pixel_tiles_16.png"),
@@ -70,7 +69,7 @@ fn startup(
 
     commands.spawn(bundle).insert(MapLayer(0));
 
-    let bundle = FastTileMapDescriptor {
+    let bundle = MapDescriptor {
         map_size: uvec2(51, 51),
         tile_size: vec2(16., 16.),
         tiles_texture: asset_server.load("pixel_tiles_16.png"),
