@@ -1,6 +1,6 @@
 [package]
-name = "bevy_fast_tilemap"
-version = "0.2.0"
+name = "bevy-fast-tilemap"
+version = "0.3.0"
 edition = "2021"
 description = "A GPU accelerated simple tilemap for bevy"
 license = "MIT OR Apache-2.0"
@@ -11,10 +11,11 @@ repository = "https://github.com/Droggelbecher/bevy-fast-tilemap"
 
 [dependencies]
 bevy = "0.10.1"
-bevy-inspector-egui = "0.18.3"
-
 rand = "0.8.*"
 num = "0.4.*"
+
+[dev-dependencies]
+bevy-inspector-egui = "0.18.3"
 
 [lib]
 name = "bevy_fast_tilemap"

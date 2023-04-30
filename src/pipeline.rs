@@ -16,13 +16,13 @@ use bevy::{
 use crate::shader::SHADER_HANDLE;
 
 #[derive(Resource)]
-pub struct FastTileMapPipeline {
+pub struct MapPipeline {
     /// this pipeline wraps the standard [`Mesh2dPipeline`]
     pub mesh2d_pipeline: Mesh2dPipeline,
     pub map_layout: BindGroupLayout,
 }
 
-impl FromWorld for FastTileMapPipeline {
+impl FromWorld for MapPipeline {
     fn from_world(world: &mut World) -> Self {
         let mut system_state: SystemState<(Res<RenderDevice>, Res<DefaultImageSampler>)> =
             SystemState::new(world);
@@ -80,7 +80,7 @@ impl FromWorld for FastTileMapPipeline {
     } // from_world()
 }
 
-impl SpecializedRenderPipeline for FastTileMapPipeline {
+impl SpecializedRenderPipeline for MapPipeline {
     type Key = Mesh2dPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {

@@ -1,16 +1,14 @@
 
-/// Simple example for illustrating axonometrically projected tilemaps.
-/// To keep the math simple instead of strictly isometric, we stick to a projection
-/// where each tile ends up a diamond shape that is twice as wide as high.
+//! Simple example for illustrating axonometrically projected tilemaps.
+//! To keep the math simple instead of strictly isometric, we stick to a projection
+//! where each tile ends up a diamond shape that is twice as wide as high.
 
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{ivec2, vec2, Mat2};
+use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    bundle::FastTileMapDescriptor,
-    map::{Map, MapReadyEvent, MapIndexer},
-    plugin::FastTileMapPlugin,
+    MapDescriptor, FastTileMapPlugin, Map, MapIndexer, AXONOMETRIC,
 };
 
 mod mouse_controls_camera;
@@ -18,25 +16,21 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(
-            DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: String::from("Fast Tilemap example"),
-                    resolution: (1820., 920.).into(),
-                    // disable vsync so we can see the raw FPS speed
-                    present_mode: PresentMode::Immediate,
-                    ..default()
-                }),
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: String::from("Fast Tilemap example"),
+                resolution: (1820., 920.).into(),
+                // disable vsync so we can see the raw FPS speed
+                present_mode: PresentMode::Immediate,
                 ..default()
-            })
-        )
+            }),
+            ..default()
+        }))
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(MouseControlsCameraPlugin::default())
         .add_plugin(FastTileMapPlugin::default())
         .add_startup_system(startup)
-        .add_system(generate_map)
         .add_system(highlight_hovered)
         .run();
 }
@@ -49,66 +43,36 @@ fn startup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    /*
-     *         __--X--__
-     *    __---         ---__
-     * A--__               __---
-     *      ---__     __---
-     *           --Y--
-     *
-     * (A) anchor point, vertically centered i.e. at (0.0, 0.5)
-     * in relative tile cooridinates
-     *
-     * X-axis goes from (A) to (X), i.e. in map coordinates (A)
-     * is at (0, 0) (by definition, its the anchor point),
-     * and (X) is at (1, 0) (as defined by `projection`).
-     * Analogously, Y is at (0, 1) in map coordinates.
-     *
-     */
-
-    FastTileMapDescriptor {
+    let bundle = MapDescriptor {
         // Note that tile index 0 is used to draw tiles that are outside
         // the logical map (but inside the rectangular map bounding box).
         // In iso.png we chose a dotted outline to make this visible,
         // in practice you might prefer a transparent tile here or one
         // that can serve as some sort of background to your map.
         tiles_texture: asset_server.load("iso.png"),
-        projection: Mat2::from_cols(
-            vec2(0.5, -0.5),
-            vec2(0.5, 0.5)
-        ),
-        tile_anchor_point: vec2(0.0, 0.5),
+
+        // Axonometric projection here means:
+        // our tiles are diamond shaped (with corners at half width/height),
+        // and should be arranged accordingly.
+        projection: AXONOMETRIC,
         tile_size: vec2(40., 20.),
 
         // Completely arbitrary tile size, i.e. doesnt have to be a power of two or somesuch
-        map_size: ivec2(23, 57),
+        map_size: uvec2(23, 57),
+
         ..default()
     }
-    .spawn(&mut commands, &mut images, &mut meshes);
-} // startup
+    // Build the map is to provide an initializer callback here.
+    .build_and_initialize(&mut images, &mut meshes, reset_map);
 
-/// Check whether the map is ready to be filled with contents and do so.
-fn generate_map(
-    mut evs: EventReader<MapReadyEvent>,
-    mut images: ResMut<Assets<Image>>,
-    mut maps: Query<&mut Map>,
-) {
-    // Once the map texture is loaded we'll receive a `MapReadyEvent`.
-    // When this happens is a good point in time to initialize our map contents
-    for ev in evs.iter() {
-        // map is ready so this should not fail
-        let mut map = maps.get_mut(ev.map).unwrap();
-        if let Ok(mut m) = map.get_mut(&mut *images) {
-            reset_map(&mut m);
-        }
-    } // for ev
-} // generate_map
+    commands.spawn(bundle);
+} // startup
 
 /// Fill the map with a chessboard pattern.
 fn reset_map(m: &mut MapIndexer) {
     for y in 0..m.size().y {
         for x in 0..m.size().x {
-            m[ivec2(x, y)] = (((x + y) % 2) + 1) as u16;
+            m.set(x, y, (((x + y) % 2) + 1) as u16);
         }
     }
 } // reset_map
@@ -124,9 +88,10 @@ fn highlight_hovered(
         for mut map in maps.iter_mut() {
             for (global, camera) in camera_query.iter_mut() {
                 // Translate viewport coordinates to world coordinates
-                if let Some(world) = camera.viewport_to_world(global, event.position)
-                    .map(|ray| ray.origin.truncate()) {
-
+                if let Some(world) = camera
+                    .viewport_to_world(global, event.position)
+                    .map(|ray| ray.origin.truncate())
+                {
                     // Modifying the map requires that the underlying texture be synchronized to
                     // the GPU again so you want to avoid to do this every frame if your map is
                     // very large. The transfer cost does not depend on how much you change, so
@@ -138,11 +103,11 @@ fn highlight_hovered(
                         println!("Map coordinate: {:?}", coord);
 
                         let coord = coord
-                            .as_ivec2()
-                            .clamp(ivec2(0, 0), map.size() - ivec2(1, 1));
+                            .as_uvec2()
+                            .clamp(uvec2(0, 0), map.size() - uvec2(1, 1));
 
                         reset_map(&mut m);
-                        m[coord] = 3u16;
+                        m.set_uvec(coord, 3u16);
                     }
                 } // if Some(world)
             } // for (global, camera)

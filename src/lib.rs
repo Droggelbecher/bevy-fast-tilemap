@@ -26,7 +26,11 @@ pub mod prepare;
 pub mod queue;
 
 pub mod prelude {
-    pub use crate::bundle::{FastTileMapDescriptor, FastTileMapBundle};
+    pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
     pub use crate::map::{Map, MapIndexer, MapReadyEvent};
     pub use crate::plugin::FastTileMapPlugin;
 }
+
+pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
+pub use crate::map::{Map, MapIndexer, MapReadyEvent};
+pub use crate::plugin::FastTileMapPlugin;

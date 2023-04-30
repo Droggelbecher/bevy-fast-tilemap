@@ -5,7 +5,7 @@ use bevy::{
         render_resource::{
             AsBindGroup, AsBindGroupError, AsBindGroupError::RetryNextUpdate,
             BindGroupDescriptor, BindGroupEntry, BindGroupLayout, OwnedBindingResource,
-            PreparedBindGroup, encase::UniformBuffer, BufferInitDescriptor, BufferUsages, ShaderType
+            PreparedBindGroup, encase::UniformBuffer, BufferInitDescriptor, BufferUsages
         },
         renderer::RenderDevice,
         texture::FallbackImage,
@@ -17,7 +17,7 @@ use bevy::{
 
 use crate::{
     extract::ExtractedMap,
-    pipeline::FastTileMapPipeline
+    pipeline::MapPipeline
 };
 
 #[derive(Component)]
@@ -26,7 +26,7 @@ pub struct PreparedMap {
 }
 
 /// Prepare data for GPU
-/// More precisely, generated `PreparedBindGroup`s and
+/// More precisely, generate `PreparedBindGroup`s and
 /// store them somewhere in the render world (eg. a resource that holds them such as
 /// RenderMaterials2d)
 ///
@@ -36,32 +36,36 @@ pub fn prepare_fast_tilemap(
     render_device: Res<RenderDevice>,
     images: Res<RenderAssets<Image>>,
     fallback_image: Res<FallbackImage>,
-    pipeline: Res<FastTileMapPipeline>,
+    pipeline: Res<MapPipeline>,
     mut commands: Commands,
 ) {
-    let prepared_maps: Vec<(Entity, (Mesh2dHandle, Mesh2dUniform, PreparedMap))> = extracted_maps
-        .iter()
-        .map(|(entity, mesh_handle, mesh_uniform, extracted_map)| {
-            let prepared_map = PreparedMap {
-                bind_group: match extracted_map.as_bind_group(
-                    &pipeline.map_layout,
-                    &render_device,
-                    &images,
-                    &fallback_image,
-                ) {
-                    Ok(x) => x,
-                    // TODO: in this case we should queue them to try again next frame!
-                    // see bevy_sprite/src/mesh2d/material.rs
-                    Err(_) => panic!("Couldnt extract bind group"),
-                },
-            };
+    let mut prepared_maps = Vec::new();
 
-            (
-                entity,
-                (mesh_handle.clone(), mesh_uniform.clone(), prepared_map),
-            )
-        })
-        .collect();
+    for (entity, mesh_handle, mesh_uniform, extracted_map) in extracted_maps.iter() {
+        let prepared_map = PreparedMap {
+            bind_group: match extracted_map.as_bind_group(
+                &pipeline.map_layout,
+                &render_device,
+                &images,
+                &fallback_image,
+            ) {
+                Ok(x) => x,
+                Err(AsBindGroupError::RetryNextUpdate) => {
+                    // This implies the map data texture was not yet available in the asset server.
+                    //
+                    // There is no point in requeueing:
+                    // If the map is still there next frame it will be covered by the query then
+                    // and if not, it shouldnt be rendered anymore anyways.
+                    continue
+                }
+            },
+        };
+
+        prepared_maps.push((
+            entity,
+            (mesh_handle.clone(), mesh_uniform.clone(), prepared_map),
+        ));
+    }
 
     commands.insert_or_spawn_batch(prepared_maps);
 }
@@ -84,32 +88,7 @@ impl AsBindGroup for ExtractedMap {
         images: &RenderAssets<Image>,
         _fallback_image: &FallbackImage,
     ) -> Result<PreparedBindGroup<Self::Data>, AsBindGroupError> {
-        // See /home/henning/repos/bevy/crates/bevy_render/macros/src/as_bind_group.rs:262
-        let tiles_texture_size = images.get(&self.0.tiles_texture)
-            .ok_or_else(|| RetryNextUpdate)?
-            .size;
-
-        #[derive(ShaderType)]
-        struct MapData {
-            tilemap_tiles: Vec2,
-            tile_size: Vec2,
-            projection: Mat2,
-            inverse_projection: Mat2,
-            world_offset: Vec2,
-            tile_anchor_point: Vec2,
-        }
-
-        let map_data = MapData {
-            // Alas, for this calculation we need access to the tiles texture,
-            // so we can't do it in extract which forces us a bit to do it here
-            // and have this extra MapData intermediate representation.
-            tilemap_tiles: tiles_texture_size / self.0.tile_size,
-            tile_size: self.0.tile_size,
-            projection: self.0.projection,
-            inverse_projection: self.0.inverse_projection,
-            world_offset: self.0.world_offset,
-            tile_anchor_point: self.0.tile_anchor_point,
-        };
+        let map_data = &self.0.map_data;
 
         let mut map_data_buffer = UniformBuffer::new(Vec::new());
         map_data_buffer.write(&map_data).unwrap();

@@ -1,29 +1,37 @@
 use bevy::{
     prelude::*,
     render::{
-        render_resource::{SamplerDescriptor, FilterMode},
+        render_resource::{SamplerDescriptor, FilterMode, ShaderType},
         texture::ImageSampler
     },
 };
-use std::ops::{Index, IndexMut};
 use std::num::NonZeroU32;
 
 /// Map, of size `size` tiles.
 /// The actual tile data is stored in MapLayer components and Images in the asset system
 /// and connected to this Map via bevys parent/child relationships for entities.
-#[derive(Debug, Component, Clone)]
+#[derive(Debug, Component, Clone, Default, Reflect)]
+#[reflect(Component)]
 pub struct Map {
-    /// Size of the map, in tiles.
-    pub size: IVec2,
-
-    /// Size of each tile, in pixels.
-    pub tile_size: Vec2,
+    pub map_data: MapData,
 
     /// Texture containing the tile IDs (one per each pixel)
     pub map_texture: Handle<Image>,
 
     /// Atlas texture with the individual tiles
     pub tiles_texture: Handle<Image>,
+
+    /// True iff the necessary images for this map are loaded
+    pub ready: bool,
+}
+
+#[derive(ShaderType, Clone, Default, Debug, Reflect)]
+pub struct MapData {
+    /// Size of the map, in tiles.
+    pub size: UVec2,
+
+    /// Size of each tile, in pixels.
+    pub tile_size: Vec2,
 
     /// fractional 2d map index -> world pos
     pub projection: Mat2,
@@ -37,14 +45,12 @@ pub struct Map {
     /// relative anchor point position in a tile (in [0..1]^2)
     pub tile_anchor_point: Vec2,
 
-    /// True iff the necessary images for this map are loaded
-    pub ready: bool,
 }
 
 impl Map {
     /// Dimensions of this map in tiles.
-    pub fn size(&self) -> IVec2 {
-        self.size
+    pub fn size(&self) -> UVec2 {
+        self.map_data.size
     }
 
     /// Convert map position in `[(0.0, 0.0) .. self.size)`
@@ -52,12 +58,14 @@ impl Map {
     /// E.g. map position `(0.5, 0.5)` is in the center of the tile
     /// at index `(0, 0)`.
     pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
-        (self.projection * map_position) * self.tile_size + self.world_offset
+        let m = &self.map_data;
+        (m.projection * map_position) * m.tile_size + m.world_offset
     }
 
     /// Convert world position to map position.
     pub fn world_to_map(&self, world: Vec2) -> Vec2 {
-        self.inverse_projection * ((world - self.world_offset) / self.tile_size)
+        let m = &self.map_data;
+        m.inverse_projection * ((world - m.world_offset) / m.tile_size)
     }
 
     /// Get mutable access to map layers via a `MapIndexer`.
@@ -90,7 +98,7 @@ impl Map {
 
         Ok(MapIndexer {
             image,
-            size: self.size,
+            size: self.map_data.size,
         })
     } // get_mut()
 } // impl Map
@@ -98,38 +106,40 @@ impl Map {
 /// Indexer into a map.
 /// Internally holds a mutable reference to the underlying texture.
 /// See `Map.get_mut` for a usage example.
+#[derive(Debug)]
 pub struct MapIndexer<'a> {
-    image: &'a mut Image,
-    size: IVec2,
+    pub(crate) image: &'a mut Image,
+    pub(crate) size: UVec2,
 }
 
 impl<'a> MapIndexer<'a> {
-    pub fn size(&self) -> IVec2 { self.size }
-}
+    pub fn size(&self) -> UVec2 { self.size }
 
-impl<'a> Index<IVec2> for MapIndexer<'a> {
-    type Output = u16;
+    pub fn at_ivec(&self, i: IVec2) -> u16 {
+        self.at(i.x as u32, i.y as u32)
+    }
 
-    /// Index the map by 2d integer coordinate.
-    /// Expected to be in `[(0, 0) .. map_size)`
-    fn index(&self, i: IVec2) -> &Self::Output {
-        let idx = i.y as isize * self.size.x as isize + i.x as isize;
+    pub fn at_uvec(&self, i: UVec2) -> u16 {
+        self.at(i.x, i.y)
+    }
+
+    pub fn at(&self, x: u32, y: u32) -> u16 {
+        let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
             let ptr = self.image.data.as_ptr() as *const u16;
-            &*ptr.offset(idx)
+            *ptr.offset(idx)
         }
     }
-}
 
-impl<'a> IndexMut<IVec2> for MapIndexer<'a> {
+    pub fn set_uvec(&mut self, i: UVec2, v: u16) {
+        self.set(i.x, i.y, v)
+    }
 
-    /// Index the map by 2d integer coordinate.
-    /// Expected to be in `[(0, 0) .. map_size)`
-    fn index_mut(&mut self, i: IVec2) -> &mut u16 {
-        let idx = i.y as isize * self.size.x as isize + i.x as isize;
+    pub fn set(&mut self, x: u32, y: u32, v: u16) {
+        let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
             let ptr = self.image.data.as_ptr() as *mut u16;
-            &mut *ptr.offset(idx)
+            *ptr.offset(idx) = v
         }
     }
 }

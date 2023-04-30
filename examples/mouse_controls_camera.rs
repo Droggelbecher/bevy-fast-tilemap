@@ -1,4 +1,6 @@
 
+//! Helper module for examples, allowing panning and zooming with the mouse.
+
 use bevy::{
     input::mouse::{MouseMotion, MouseWheel},
     math::vec3,

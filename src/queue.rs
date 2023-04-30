@@ -28,25 +28,25 @@ use bevy::{
 };
 
 use crate::{
-    pipeline::FastTileMapPipeline,
+    pipeline::MapPipeline,
     prepare::PreparedMap,
 };
 
-pub type DrawFastTileMap = (
+pub type DrawMap = (
     // Set the pipeline
     SetItemPipeline,
     // Set the view uniform as bind group 0
     SetMesh2dViewBindGroup<0>,
-    SetFastTileMapBindGroup<1>,
+    SetMapBindGroup<1>,
     // Set the mesh uniform as bind group 1
     SetMesh2dBindGroup<2>,
     // Draw the mesh
     DrawMesh2d,
 );
 
-pub struct SetFastTileMapBindGroup<const I: usize>();
+pub struct SetMapBindGroup<const I: usize>();
 
-impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetFastTileMapBindGroup<I> {
+impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetMapBindGroup<I> {
     type Param = ();
     type ViewWorldQuery = ();
     type ItemWorldQuery = Read<PreparedMap>;
@@ -65,14 +65,14 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetFastTileMapBindGroup<
 
 
 /// Queue map for rendering in the views.
-/// This calls `FastTileMapPipeline.specialize()` and instantiates the draw functions
+/// This calls `MapPipeline.specialize()` and instantiates the draw functions
 /// to schedule them onto the GPU.
 ///
 /// This is a system in the render app.
 pub fn queue_fast_tilemap(
     transparent_draw_functions: Res<DrawFunctions<Transparent2d>>,
-    map_pipeline: Res<FastTileMapPipeline>,
-    mut pipelines: ResMut<SpecializedRenderPipelines<FastTileMapPipeline>>,
+    map_pipeline: Res<MapPipeline>,
+    mut pipelines: ResMut<SpecializedRenderPipelines<MapPipeline>>,
     pipeline_cache: Res<PipelineCache>,
     map: Query<(&Mesh2dHandle, &Mesh2dUniform), With<PreparedMap>>,
     render_meshes: Res<RenderAssets<Mesh>>,
@@ -89,7 +89,7 @@ pub fn queue_fast_tilemap(
 
     // Iterate each view (a camera is a view)
     for (visible_entities, mut transparent_phase, view) in &mut views {
-        let draw_map = transparent_draw_functions.read().id::<DrawFastTileMap>();
+        let draw_map = transparent_draw_functions.read().id::<DrawMap>();
 
         let mesh_key = Mesh2dPipelineKey::from_msaa_samples(msaa.samples())
             | Mesh2dPipelineKey::from_hdr(view.hdr);
