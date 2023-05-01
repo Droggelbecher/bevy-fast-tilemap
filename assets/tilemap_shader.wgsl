@@ -71,7 +71,7 @@ struct VertexOutput {
     @location(0) world_position: vec4<f32>,
 };
 
-// Custom vertex shader for passing along the UV coordinate
+/// Custom vertex shader for passing along the UV coordinate
 @vertex
 fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
@@ -132,7 +132,7 @@ struct MapPosition {
 };
 
 
-// Figure out where in the map (tile position & offset) this world position is.
+/// Figure out where in the map (tile position & offset) this world position is.
 fn world_to_tile_and_offset(
     world_position: vec2<f32>
 ) -> MapPosition {
@@ -152,6 +152,7 @@ fn world_to_tile_and_offset(
     return out;
 }
 
+///
 fn get_tile_index(map_position: vec2<i32>) -> u32 {
     return u32(textureLoad(map_texture, map_position).r);
 }
@@ -161,14 +162,15 @@ fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
 }
 
 fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+    // integral position of the neighbouring tile
     var tile = pos.tile + tile_offset;
-    var tile_index = get_tile_index(tile);
-    var tile_offset = (map.projection * vec2<f32>(tile_offset)) * map.tile_size;
 
-    // TODO: for some reason something is wrong with the tile offset here,
-    // seems the x-coordinate is flipped or something?
-    // Figure out whats going on!
-    return sample_tile(map, tile_index, pos.offset + tile_offset);
+    // kind of tile being displayed at that position
+    var tile_index = get_tile_index(tile);
+
+    var offset = (map.projection * vec2<f32>(-tile_offset)) * map.tile_size;
+
+    return sample_tile(map, tile_index, pos.offset + vec2<f32>(1.0, -1.0) * offset);
 }
 
 @fragment
@@ -196,7 +198,6 @@ fn fragment(
     color = blend(color, sample_neighbor(pos, vec2<i32>(0, 1)));
 
     return color;
-    /*return blend(main, top_tile_color);*/
 }
 
 
