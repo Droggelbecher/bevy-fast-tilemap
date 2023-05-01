@@ -26,13 +26,16 @@ pub mod shader;
 pub mod extract;
 pub mod prepare;
 pub mod queue;
+pub mod tile_projection;
 
 pub mod prelude {
-    pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
+    pub use crate::bundle::MapBundle;
     pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
     pub use crate::plugin::FastTileMapPlugin;
+    pub use crate::tile_projection::{TileProjection, IDENTITY, AXONOMETRIC};
 }
 
-pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
+pub use crate::bundle::MapBundle;
 pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
 pub use crate::plugin::FastTileMapPlugin;
+pub use crate::tile_projection::{TileProjection, IDENTITY, AXONOMETRIC};

@@ -9,8 +9,7 @@ use bevy::{
 };
 use std::mem::size_of;
 
-// TODO: Move this here
-use crate::bundle::TileProjection;
+use crate::tile_projection::TileProjection;
 
 pub struct MapBuilder {
     map: Map,
