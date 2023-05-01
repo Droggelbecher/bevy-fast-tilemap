@@ -1,5 +1,5 @@
 use crate::{
-    map::{check_map_ready_events, MapReadyEvent},
+    map::{mark_maps_dirty, update_dirty_maps, MapReadyEvent},
     pipeline::MapPipeline,
 };
 use bevy::{
@@ -33,7 +33,8 @@ impl Default for FastTileMapPlugin {
 impl Plugin for FastTileMapPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<MapReadyEvent>()
-            .add_system(check_map_ready_events);
+            .add_system(mark_maps_dirty)
+            .add_system(update_dirty_maps.after(mark_maps_dirty));
 
         let mut shaders = app.world.resource_mut::<Assets<Shader>>();
         shaders.set_untracked(SHADER_HANDLE, Shader::from_wgsl(SHADER_CODE));

@@ -54,14 +54,14 @@ fn startup(
     let bundle = MapDescriptor {
         map_size: uvec2(51, 51),
         tile_size: vec2(16., 16.),
-        tiles_texture: asset_server.load("pixel_tiles_16.png"),
+        atlas_texture: asset_server.load("pixel_tiles_16.png"),
         ..default()
     }
     .build_and_initialize(&mut images, &mut meshes, |m| {
         // Initialize using a closure
         // Set all tiles in layer 0 to index 4
         for y in 0..m.size().y {
-            for x in 0..m.size().x {
+            for x in 0..y {
                 m.set(x, y, ((x + y) % 4 + 1) as u16);
             }
         }
@@ -72,7 +72,7 @@ fn startup(
     let bundle = MapDescriptor {
         map_size: uvec2(51, 51),
         tile_size: vec2(16., 16.),
-        tiles_texture: asset_server.load("pixel_tiles_16.png"),
+        atlas_texture: asset_server.load("pixel_tiles_16.png"),
         // Higher z value means "closer to the camera"
         transform: Transform::default().with_translation(vec3(0., 0., 1.)),
         ..default()
@@ -95,7 +95,7 @@ fn initialize_layer1(m: &mut MapIndexer) {
 
     for y in y_min..y_max {
         for x in x_min..x_max {
-            m.set(x, y, 11);
+            m.set(x, y, (x % 6) as u16 + 6u16);
         } // for x
     } // for y
 }

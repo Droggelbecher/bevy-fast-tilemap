@@ -8,6 +8,7 @@ use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
+    MeshManagedByMap,
     MapDescriptor, FastTileMapPlugin, Map, MapIndexer, AXONOMETRIC,
 };
 
@@ -49,7 +50,7 @@ fn startup(
         // In iso.png we chose a dotted outline to make this visible,
         // in practice you might prefer a transparent tile here or one
         // that can serve as some sort of background to your map.
-        tiles_texture: asset_server.load("iso.png"),
+        atlas_texture: asset_server.load("iso.png"),
 
         // Axonometric projection here means:
         // our tiles are diamond shaped (with corners at half width/height),
@@ -65,7 +66,8 @@ fn startup(
     // Build the map is to provide an initializer callback here.
     .build_and_initialize(&mut images, &mut meshes, reset_map);
 
-    commands.spawn(bundle);
+    commands.spawn(bundle)
+        .insert(MeshManagedByMap);
 } // startup
 
 /// Fill the map with a chessboard pattern.
@@ -81,11 +83,11 @@ fn reset_map(m: &mut MapIndexer) {
 fn highlight_hovered(
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut camera_query: Query<(&GlobalTransform, &Camera), With<OrthographicProjection>>,
-    mut maps: Query<&mut Map>,
+    maps: Query<&Map>,
     mut images: ResMut<Assets<Image>>,
 ) {
     for event in cursor_moved_events.iter() {
-        for mut map in maps.iter_mut() {
+        for map in maps.iter() {
             for (global, camera) in camera_query.iter_mut() {
                 // Translate viewport coordinates to world coordinates
                 if let Some(world) = camera
@@ -97,6 +99,9 @@ fn highlight_hovered(
                     // very large. The transfer cost does not depend on how much you change, so
                     // you may as well generate the whole thing (of course consider the actual
                     // generation time).
+                    //
+                    // Note that this technically does *not* modify the `Map` component, but
+                    // teh underlying texture which is a plain old Image Asset.
                     if let Ok(mut m) = map.get_mut(&mut *images) {
                         // The map can convert between world coordinates and map coordinates
                         let coord = map.world_to_map(world);
@@ -104,7 +109,7 @@ fn highlight_hovered(
 
                         let coord = coord
                             .as_uvec2()
-                            .clamp(uvec2(0, 0), map.size() - uvec2(1, 1));
+                            .clamp(uvec2(0, 0), map.map_size() - uvec2(1, 1));
 
                         reset_map(&mut m);
                         m.set_uvec(coord, 3u16);

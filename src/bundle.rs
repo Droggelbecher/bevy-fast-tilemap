@@ -1,6 +1,7 @@
-use crate::map::{Map, MapIndexer, MapData};
+use crate::map::{Map, MapIndexer, MapDirty};
+use crate::map_uniform::MapUniform;
 use bevy::{
-    math::{uvec2, mat2, vec2},
+    math::{mat2, uvec2, vec2},
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
     sprite::Mesh2dHandle,
@@ -12,7 +13,7 @@ use std::mem::size_of;
 /// however you should really define at least:
 /// - `map_size`
 /// - `tile_size`
-/// - `tiles_texture`
+/// - `atlas_texture`
 ///
 /// For non-rectangular map-tiles check out setting a different
 /// `projection` such as `AXONOMETRIC`.
@@ -23,9 +24,11 @@ pub struct MapDescriptor {
     /// Size of a single tile (in pixels)
     pub tile_size: Vec2,
 
-    /// Images holding the texture atlases, one for each layer of the map.
-    /// All atlases must have a tile size of `tile_size` and no padding.
-    pub tiles_texture: Handle<Image>,
+    /// Gap between tiles in tile atlas
+    pub tile_padding: Vec2,
+
+    /// Images holding the texture "atlas".
+    pub atlas_texture: Handle<Image>,
 
     /// Transform of the quad holding the tilemap
     pub transform: Transform,
@@ -74,11 +77,7 @@ pub const AXONOMETRIC: TileProjection = TileProjection {
      * Analogously, Y is at (0, 1) in map coordinates.
      *
      */
-
-    projection: Mat2::from_cols(
-        vec2(0.5, -0.5),
-        vec2(0.5, 0.5)
-    ),
+    projection: Mat2::from_cols(vec2(0.5, -0.5), vec2(0.5, 0.5)),
     tile_anchor_point: vec2(0.0, 0.5),
 };
 
@@ -87,7 +86,8 @@ impl Default for MapDescriptor {
         Self {
             map_size: uvec2(100, 100),
             tile_size: vec2(16.0, 16.0),
-            tiles_texture: default(),
+            tile_padding: vec2(0.0, 0.0),
+            atlas_texture: default(),
             transform: default(),
             projection: IDENTITY,
         }
@@ -95,7 +95,6 @@ impl Default for MapDescriptor {
 }
 
 impl MapDescriptor {
-
     /// Build map bundle with default initialization (index 0).
     pub fn build(
         self,
@@ -111,9 +110,10 @@ impl MapDescriptor {
         self,
         images: &mut ResMut<Assets<Image>>,
         meshes: &mut ResMut<Assets<Mesh>>,
-        initializer: F
+        initializer: F,
     ) -> MapBundle
-        where F: FnOnce(&mut MapIndexer) -> ()
+    where
+        F: FnOnce(&mut MapIndexer) -> (),
     {
         let mut map_image = Image::new(
             Extent3d {
@@ -136,57 +136,40 @@ impl MapDescriptor {
         });
 
         let projection = self.projection.projection;
-        let inverse_projection = projection.inverse();
 
-        // In the first step we use a zero offset, it will be corrected later
-        let world_offset = Vec2::default();
-
-        let mut map = Map {
-            map_data: MapData {
-                size: self.map_size,
+        let map = Map {
+            map_uniform: MapUniform {
+                map_size: self.map_size,
                 tile_size: self.tile_size,
+                tile_padding: self.tile_padding,
                 projection,
-                inverse_projection,
-                world_offset,
                 tile_anchor_point: self.projection.tile_anchor_point,
+                ..default()
             },
             map_texture: images.add(map_image),
-            tiles_texture: self.tiles_texture.clone(),
-            ready: false,
+            atlas_texture: self.atlas_texture.clone(),
         };
 
-        // Determine the bounding rectangle of the projected map (in order to construct the quad
-        // that will hold the texture).
+        // TODO:
+        // Reconsider mesh resizing. Perhaps cleanest approach:
+        // - Control with a (descriptor/map) flag whether this map should try to resize its mesh
+        // - If off, generate mesh of some known default size
+        // - User can provide their own mesh in the bundle like MapBundle { mesh: my_mesh,
+        // ..MapDescriptor{...}.build() } or by replacing
+        // - If on, update mesh in a system
         //
-        // There is probably a more elegant way to do this, but this
-        // works and is simple enough:
-        // 1. save coordinates for all 4 corners
-        // 2. take maximum x- and y distances
-
-        let mut low = map.map_to_world(vec2(0.0, 0.0));
-        let mut high = low.clone();
-        for corner in [
-            vec2(map.map_data.size.x as f32, 0.0),
-            vec2(0.0, map.map_data.size.y as f32),
-            vec2(map.map_data.size.x as f32, map.map_data.size.y as f32),
-        ] {
-            let pos = map.map_to_world(corner);
-            low = low.min(pos);
-            high = high.max(pos);
-        }
-        let size = high - low;
-
-        // `map.projection` keeps the map coordinate (0, 0) at the world coordinate (0, 0).
-        // However after projection we may want the (0, 0) tile to map to a different position than
-        // say the top left corner (eg for an iso projection it might be vertically centered).
-        // We use `low` from above to figure out how to correctly translate here.
-
-        map.map_data.world_offset = vec2(-0.5, -0.5) * size - low;
-
         // See bevy_render/src/mesh/shape/mod.rs
         // will generate 3d position, 3d normal, and 2d UVs
-        let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad { size, flip: false })));
+        //
+        // TODO: Make an example that shows off the custom mesh, perhaps 3d.
+        // update feature list
+        let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
+            size: vec2(1000.0, 1000.0),
+            flip: false,
+        })));
 
+        // TODO: Consider turning this into constructing map only
+        // and have the user do the rest as its sufficiently simple now
         MapBundle {
             map,
             mesh: mesh.clone(),
@@ -194,6 +177,7 @@ impl MapDescriptor {
             global_transform: GlobalTransform::default(),
             visibility: Visibility::default(),
             computed_visibility: ComputedVisibility::default(),
+            dirty: MapDirty::default(),
         }
 
         //commands.spawn(bundle)
@@ -208,4 +192,5 @@ pub struct MapBundle {
     pub global_transform: GlobalTransform,
     pub visibility: Visibility,
     pub computed_visibility: ComputedVisibility,
+    pub dirty: MapDirty,
 }

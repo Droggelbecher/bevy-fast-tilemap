@@ -17,6 +17,7 @@
 //! position.
 
 pub mod map;
+pub mod map_uniform;
 pub mod bundle;
 pub mod plugin;
 pub mod pipeline;
@@ -27,10 +28,10 @@ pub mod queue;
 
 pub mod prelude {
     pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
-    pub use crate::map::{Map, MapIndexer, MapReadyEvent};
+    pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
     pub use crate::plugin::FastTileMapPlugin;
 }
 
 pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
-pub use crate::map::{Map, MapIndexer, MapReadyEvent};
+pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
 pub use crate::plugin::FastTileMapPlugin;
