@@ -18,6 +18,7 @@
 
 pub mod map;
 pub mod map_uniform;
+pub mod map_builder;
 pub mod bundle;
 pub mod plugin;
 pub mod pipeline;

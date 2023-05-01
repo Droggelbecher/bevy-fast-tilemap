@@ -9,6 +9,7 @@ use bevy::{
 use std::num::NonZeroU32;
 
 use crate::map_uniform::MapUniform;
+use crate::map_builder::MapBuilder;
 
 /// Map, of size `size` tiles.
 /// The actual tile data is stored in MapLayer components and Images in the asset system
@@ -45,6 +46,15 @@ pub struct MeshManagedByMap;
 pub struct MapDirty;
 
 impl Map {
+
+    pub fn builder(
+        map_size: UVec2,
+        atlas_texture: Handle<Image>,
+        tile_size: Vec2,
+    ) -> MapBuilder {
+        MapBuilder::new(map_size, atlas_texture, tile_size)
+    }
+
     /// Dimensions of this map in tiles.
     pub fn map_size(&self) -> UVec2 {
         self.map_uniform.map_size()

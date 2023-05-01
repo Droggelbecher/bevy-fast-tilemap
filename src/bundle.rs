@@ -38,6 +38,7 @@ pub struct MapDescriptor {
     pub projection: TileProjection,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct TileProjection {
     /// Projection matrix for converting map coordinates to world coordinates
     pub projection: Mat2,
@@ -141,7 +142,7 @@ impl MapDescriptor {
             map_uniform: MapUniform {
                 map_size: self.map_size,
                 tile_size: self.tile_size,
-                tile_padding: self.tile_padding,
+                inner_padding: self.tile_padding,
                 projection,
                 tile_anchor_point: self.projection.tile_anchor_point,
                 ..default()

@@ -15,18 +15,14 @@ pub struct MapUniform {
     pub(crate) tile_size: Vec2,
 
     /// Padding between tiles in atlas.
-    pub(crate) tile_padding: Vec2,
+    pub(crate) inner_padding: Vec2,
+
+    /// Padding at atlas top/left and bottom/right
+    pub(crate) outer_padding_topleft: Vec2,
+    pub(crate) outer_padding_bottomright: Vec2,
 
     /// Relative anchor point position in a tile (in [0..1]^2)
     pub(crate) tile_anchor_point: Vec2,
-
-    /// Number of paddings of size `tile_padding` at the top
-    /// and left of the tilemap atlas. Eg (0, 0) or (1, 1).
-    pub(crate) tile_paddings_topleft: UVec2,
-
-    /// Number of paddings of size `tile_padding` at the bottom
-    /// and right of the tilemap atlas. Eg (0, 0) or (1, 1).
-    pub(crate) tile_paddings_bottomright: UVec2,
 
     /// fractional 2d map index -> world pos
     pub(crate) projection: Mat2,
@@ -127,29 +123,13 @@ impl MapUniform {
     }
 
     fn compute_n_tiles(&self) -> UVec2 {
-        // Consider x dimension: (y analog):
-        // - Texture has width w (pixels)
-        // - We have k (0..2) paddings on the left/right side of the atlas
-        //    They have width p
-        // - We have n tiles and (n-1) paddings in the "inner" part.
-        // - Tiles have width t
-        //
-        // (k + n - 1) * p + n * t == w
-        // we want to determine n
-        //    p*k + p*n - p + n * t
-        // == n * (p + t) + p * (k - 1) == w
-        // <=> n = (w - p * (k - 1)) / (p + t)
 
-        let n_outside_paddings =
-            (self.tile_paddings_topleft + self.tile_paddings_bottomright).as_ivec2();
-
-        let padding_offset = (n_outside_paddings - ivec2(1, 1)).as_vec2() * self.tile_padding;
-
-        let n_tiles = (self.atlas_size - padding_offset) / (self.tile_padding + self.tile_size);
+        let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;
+        let n_tiles = (inner + self.inner_padding) / (self.inner_padding + self.tile_size);
 
         let eps = 0.01;
-        if (n_tiles.x - n_tiles.x.floor()).abs() > eps
-            || (n_tiles.y - n_tiles.y.floor()).abs() > eps
+        if (n_tiles.x - n_tiles.x.round()).abs() > eps
+            || (n_tiles.y - n_tiles.y.round()).abs() > eps
         {
             panic!(
                 "Expected an integral number of tiles in your atlas, but computes to be {:?}",
