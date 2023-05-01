@@ -50,10 +50,10 @@ struct Map {
 var map_texture: texture_storage_2d<r16uint, read>;
 
 @group(1) @binding(1)
-var tiles_texture: texture_2d<f32>;
+var atlas_texture: texture_2d<f32>;
 
 @group(1) @binding(2)
-var tiles_sampler: sampler;
+var atlas_sampler: sampler;
 
 @group(1) @binding(3)
 var<uniform> map: Map;
@@ -106,30 +106,97 @@ fn atlas_index_to_position(map: Map, index: u32) -> vec2<f32> {
     return pos;
 }
 
+/// Compute offset into the tile by world position and world position of tile reference point
+fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(1.0, -1.0) * (world_position - world_tile_base);
+}
+
+/// Sample tile from the tile atlas
+fn sample_tile(
+    map: Map,
+    tile_index: u32,
+    tile_offset: vec2<f32>,
+) -> vec4<f32> {
+    var tile_start = atlas_index_to_position(map, tile_index);
+    return textureSample(
+        atlas_texture, atlas_sampler,
+        (tile_start + tile_offset + map.tile_anchor_point * map.tile_size) / map.atlas_size
+    );
+}
+
+struct MapPosition {
+    // The 2d tile position on the map
+    tile: vec2<i32>,
+    // Offset in pixels/world coordinates from the reference position of that tile
+    offset: vec2<f32>
+};
+
+
+// Figure out where in the map (tile position & offset) this world position is.
+fn world_to_tile_and_offset(
+    world_position: vec2<f32>
+) -> MapPosition {
+    var out: MapPosition;
+
+    // Map position including fractional part
+    var pos = world_to_map(map, world_position);
+
+    // Integer part of map position (tile coordinate)
+    var tile = floor(pos);
+    out.tile = vec2<i32>(tile);
+
+    // World position of tile reference point
+    var world_tile_base = map_to_world(map, tile);
+    out.offset = world_to_tile_offset(world_position, world_tile_base);
+
+    return out;
+}
+
+fn get_tile_index(map_position: vec2<i32>) -> u32 {
+    return u32(textureLoad(map_texture, map_position).r);
+}
+
+fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
+    return mix(c0, c1, c1.a);
+}
+
+fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+    var tile = pos.tile + tile_offset;
+    var tile_index = get_tile_index(tile);
+    var tile_offset = (map.projection * vec2<f32>(tile_offset)) * map.tile_size;
+
+    // TODO: for some reason something is wrong with the tile offset here,
+    // seems the x-coordinate is flipped or something?
+    // Figure out whats going on!
+    return sample_tile(map, tile_index, pos.offset + tile_offset);
+}
 
 @fragment
 fn fragment(
     in: VertexOutput
 ) -> @location(0) vec4<f32> {
-    /*return vec4<f32>(1.0, 0.0, 0.0, 1.0);*/
+    var world_position = in.world_position.xy;
 
-    var map_pos = world_to_map(map, in.world_position.xy);
+    var pos = world_to_tile_and_offset(world_position);
+    var index = get_tile_index(pos.tile);
+    var color = sample_tile(map, index, pos.offset);
 
-    // Integer part of map position (tile coordinate)
-    var map_coord = floor(map_pos.xy);
+    /*var top_tile = pos.tile + vec2<i32>(-1, 1);*/
+    /*var top_tile_index = get_tile_index(top_tile);*/
+    // TODO: should use actually inverse transform of (-1,1) here
+    /*var top_tile_color = sample_tile(map, index, pos.offset + vec2<f32>(0.0, map.tile_size.y));*/
 
-    // fractional part (position inside tile)
-    var world_tile_base = map_to_world(map, map_coord);
+    // "top" tile (iso view)
+    color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 1)));
 
-    var offset_world_coords = in.world_position.xy - world_tile_base;
-    var offset = vec2<f32>(1.0, -1.0) * offset_world_coords;
+    // "top/left" tile (iso view)
+    color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 0)));
 
-    // tilemap index for that tile map_coord
-    var index = u32(textureLoad(map_texture, vec2<i32>(map_coord)).r);
+    // "top/right" tile (iso view)
+    color = blend(color, sample_neighbor(pos, vec2<i32>(0, 1)));
 
-    var tile_start = atlas_index_to_position(map, index);
-    return textureSample(
-        tiles_texture, tiles_sampler,
-        (tile_start + offset + map.tile_anchor_point * map.tile_size) / map.atlas_size
-    );
+    return color;
+    /*return blend(main, top_tile_color);*/
 }
+
+
