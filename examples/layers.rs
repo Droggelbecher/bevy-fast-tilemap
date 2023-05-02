@@ -8,7 +8,7 @@ use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    MapDescriptor, MapIndexer, FastTileMapPlugin,
+    Map, MapBundle, MapIndexer, FastTileMapPlugin, MeshManagedByMap
 };
 
 mod mouse_controls_camera;
@@ -46,41 +46,47 @@ struct MapLayer(i32);
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let bundle = MapDescriptor {
-        map_size: uvec2(51, 51),
-        tile_size: vec2(16., 16.),
-        atlas_texture: asset_server.load("pixel_tiles_16.png"),
-        ..default()
-    }
-    .build_and_initialize(&mut images, &mut meshes, |m| {
+    let map = Map::builder(
+        // Map size
+        uvec2(51, 51),
+        // Tile atlas
+        asset_server.load("pixel_tiles_16.png"),
+        // Tile Size
+        vec2(16., 16.),
+    )
+    .build_and_initialize(&mut images, |m| {
         // Initialize using a closure
         // Set all tiles in layer 0 to index 4
         for y in 0..m.size().y {
-            for x in 0..y {
+            for x in 0..m.size().y {
                 m.set(x, y, ((x + y) % 4 + 1) as u16);
             }
         }
     });
 
-    commands.spawn(bundle).insert(MapLayer(0));
+    commands.spawn(MapBundle::new(map))
+        .insert(MapLayer(0))
+        // Have the map manage our mesh so it always has the right size
+        .insert(MeshManagedByMap);
 
-    let bundle = MapDescriptor {
-        map_size: uvec2(51, 51),
-        tile_size: vec2(16., 16.),
-        atlas_texture: asset_server.load("pixel_tiles_16.png"),
-        // Higher z value means "closer to the camera"
-        transform: Transform::default().with_translation(vec3(0., 0., 1.)),
-        ..default()
-    }
-    // Initialize using a function
-    .build_and_initialize(&mut images, &mut meshes, initialize_layer1);
+    let map = Map::builder(
+        uvec2(51, 51),
+        asset_server.load("pixel_tiles_16.png"),
+        vec2(16., 16.),
+    )
+    .build_and_initialize(&mut images, initialize_layer1);
 
-    commands.spawn(bundle).insert(MapLayer(1));
+    let mut bundle = MapBundle::new(map);
+    // Higher z value means "closer to the camera"
+    bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
+
+    commands.spawn(bundle)
+        .insert(MapLayer(1))
+        .insert(MeshManagedByMap);
 }
 
 fn initialize_layer1(m: &mut MapIndexer) {
@@ -96,6 +102,7 @@ fn initialize_layer1(m: &mut MapIndexer) {
     for y in y_min..y_max {
         for x in x_min..x_max {
             m.set(x, y, (x % 6) as u16 + 6u16);
+            //m.set(x, y, (x % 12) as u16);
         } // for x
     } // for y
 }

@@ -69,6 +69,14 @@ fn startup(
         // bottom/right padding
         vec2(1., 5.)
     )
+    // Allow tiles to overlap. For this we draw in the "padding"
+    // area of the tile atlas. Tiles only overlap tiles with lower indices and in order by
+    // index.
+    // This requires each pixel to be computed once for every level higher than the current one
+    // and for every neighbor which can be a drastic performance hit.
+    // Therefore its a good idea to limit the number of levels looked upwards here.
+    // The default is 0 which disables this feature.
+    .with_max_overhang_levels(3)
     .build_and_initialize(&mut images, init_map);
 
     commands.spawn(MapBundle::new(map))

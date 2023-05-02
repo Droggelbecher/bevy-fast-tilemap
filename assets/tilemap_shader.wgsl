@@ -28,6 +28,8 @@ struct Map {
     /// fractional 2d map index -> world pos
     projection: mat2x2<f32>,
 
+    max_overhang_levels: u32,
+
     // -----
     /// [derived] Size of the map in world units necessary to display
     /// all tiles according to projection.
@@ -153,10 +155,10 @@ fn sample_tile(
 
     // Outside of "our" part of the padding, dont render anything as part of this tile,
     // as it might be used for overhang of a neighbouring tile in the tilemap
-    if rect_offset.x <= -max_overhang.x
-        || rect_offset.y <= -max_overhang.y
-        || rect_offset.x >= (map.tile_size.x + max_overhang.x)
-        || rect_offset.y >= (map.tile_size.y + max_overhang.y)
+    if rect_offset.x < -max_overhang.x
+        || rect_offset.y < -max_overhang.y
+        || rect_offset.x > (map.tile_size.x + max_overhang.x)
+        || rect_offset.y > (map.tile_size.y + max_overhang.y)
     {
         color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
@@ -240,8 +242,7 @@ fn fragment(
     var pos = world_to_tile_and_offset(world_position);
     var index = get_tile_index(pos.tile);
     var color = sample_tile(map, index, pos.offset);
-
-    var max_index = u32(4);
+    var max_index = min(map.n_tiles.x * map.n_tiles.y, index + map.max_overhang_levels);
 
     for(var idx = index + u32(1); idx < max_index; idx++) {
         // first render all the diagonal overhangs

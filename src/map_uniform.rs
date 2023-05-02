@@ -1,7 +1,9 @@
 use bevy::math::ivec2;
 use bevy::{math::vec2, prelude::*, render::render_resource::ShaderType};
 
-#[derive(ShaderType, Clone, Default, Debug, Reflect)]
+use crate::tile_projection::IDENTITY;
+
+#[derive(ShaderType, Clone, Debug, Reflect)]
 pub struct MapUniform {
     /// Size of the map, in tiles.
     /// Will be derived from underlying map texture.
@@ -27,6 +29,8 @@ pub struct MapUniform {
     /// fractional 2d map index -> world pos
     pub(crate) projection: Mat2,
 
+    pub(crate) max_overhang_levels: u32,
+
     // -----
     /// [derived] Size of the map in world units necessary to display
     /// all tiles according to projection.
@@ -43,6 +47,27 @@ pub struct MapUniform {
 
     // ShaderType doesnt handle bools very well
     pub(crate) ready: u32,
+}
+
+impl Default for MapUniform {
+    fn default() -> Self {
+        Self {
+            map_size: default(),
+            atlas_size: default(),
+            tile_size: default(),
+            inner_padding: default(),
+            outer_padding_topleft: default(),
+            outer_padding_bottomright: default(),
+            tile_anchor_point: IDENTITY.tile_anchor_point,
+            projection: IDENTITY.projection,
+            max_overhang_levels: default(),
+            world_size: default(),
+            world_offset: default(),
+            n_tiles: default(),
+            inverse_projection: default(),
+            ready: default()
+        }
+    }
 }
 
 impl MapUniform {

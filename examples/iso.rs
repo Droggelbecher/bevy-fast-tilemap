@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
     MeshManagedByMap,
-    MapDescriptor, FastTileMapPlugin, Map, MapIndexer, AXONOMETRIC,
+    MapBundle, FastTileMapPlugin, Map, MapIndexer, AXONOMETRIC,
 };
 
 mod mouse_controls_camera;
@@ -39,34 +39,29 @@ fn main() {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let bundle = MapDescriptor {
-        // Note that tile index 0 is used to draw tiles that are outside
-        // the logical map (but inside the rectangular map bounding box).
-        // In iso.png we chose a dotted outline to make this visible,
-        // in practice you might prefer a transparent tile here or one
-        // that can serve as some sort of background to your map.
-        atlas_texture: asset_server.load("iso.png"),
-
-        // Axonometric projection here means:
-        // our tiles are diamond shaped (with corners at half width/height),
-        // and should be arranged accordingly.
-        projection: AXONOMETRIC,
-        tile_size: vec2(40., 20.),
-
-        // Completely arbitrary tile size, i.e. doesnt have to be a power of two or somesuch
-        map_size: uvec2(23, 57),
-
-        ..default()
-    }
+    // Note that tile index 0 is used to draw tiles that are outside
+    // the logical map (but inside the rectangular map bounding box).
+    // In iso.png we chose a dotted outline to make this visible,
+    // in practice you might prefer a transparent tile here or one
+    // that can serve as some sort of background to your map.
+    let map = Map::builder(
+        // Map size
+        uvec2(23, 57),
+        // Tile atlas texture
+        asset_server.load("iso.png"),
+        // Tile size
+        vec2(40., 20.),
+    )
+    .with_projection(AXONOMETRIC)
     // Build the map is to provide an initializer callback here.
-    .build_and_initialize(&mut images, &mut meshes, reset_map);
+    .build_and_initialize(&mut images, reset_map);
 
-    commands.spawn(bundle)
+    commands.spawn(MapBundle::new(map))
+        // Have the map manage our mesh so it always has the right size
         .insert(MeshManagedByMap);
 } // startup
 

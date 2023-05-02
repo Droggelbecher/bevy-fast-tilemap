@@ -43,6 +43,11 @@ impl MapBuilder {
         self
     }
 
+    pub fn with_max_overhang_levels(mut self, max_overhang_levels: u32) -> Self {
+        self.map.map_uniform.max_overhang_levels = max_overhang_levels;
+        self
+    }
+
     pub fn build(
         self,
         images: &mut ResMut<Assets<Image>>,
