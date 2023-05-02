@@ -117,11 +117,50 @@ fn sample_tile(
     tile_index: u32,
     tile_offset: vec2<f32>,
 ) -> vec4<f32> {
+
+    /*
+
+      +-----------+    :    +------------+
+      |           |    :    |            |
+      a           |    :    |            |
+      |           |    :    |            |
+      +-----------+    :    +------------+
+                       :
+      .................:..................
+                       :
+      +-----------+    :    +------------+
+      |           |    :    |            |
+      |           |    :    |            |
+      |           |    :    |            |
+      +-----------+    :    +------------+
+
+      [   TILE    ] Padding [    TILE    ]
+
+    */
+
     var tile_start = atlas_index_to_position(map, tile_index);
-    return textureSample(
-        atlas_texture, atlas_sampler,
-        (tile_start + tile_offset + map.tile_anchor_point * map.tile_size) / map.atlas_size
+    var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;
+    var total_offset = tile_start + rect_offset;
+
+    // At most half of the inner "padding" is still rendered
+    // as overhang of any given tile.
+    // Outer padding is not taken into account
+    var max_overhang = map.inner_padding / 2.0;
+
+    var color = textureSample(
+        atlas_texture, atlas_sampler, total_offset / map.atlas_size
     );
+
+    // Outside of "our" part of the padding, dont render anything as part of this tile,
+    // as it might be used for overhang of a neighbouring tile in the tilemap
+    if rect_offset.x <= -max_overhang.x
+        || rect_offset.y <= -max_overhang.y
+        || rect_offset.x >= (map.tile_size.x + max_overhang.x)
+        || rect_offset.y >= (map.tile_size.y + max_overhang.y)
+    {
+        color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
+    return color;
 }
 
 struct MapPosition {
@@ -161,18 +200,6 @@ fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
     return mix(c0, c1, c1.a);
 }
 
-fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
-    // integral position of the neighbouring tile
-    var tile = pos.tile + tile_offset;
-
-    // kind of tile being displayed at that position
-    var tile_index = get_tile_index(tile);
-
-    var offset = (map.projection * vec2<f32>(-tile_offset)) * map.tile_size;
-
-    return sample_tile(map, tile_index, pos.offset + vec2<f32>(1.0, -1.0) * offset);
-}
-
 fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
     if tile.x < 0 || tile.y < 0 {
         return false;
@@ -184,7 +211,7 @@ fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
     return true;
 }
 
-fn sample_neighbor_if_higher(index: u32, pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
     // integral position of the neighbouring tile
     var tile = pos.tile + tile_offset;
     if !is_valid_tile(map, tile) {
@@ -194,14 +221,8 @@ fn sample_neighbor_if_higher(index: u32, pos: MapPosition, tile_offset: vec2<i32
     // kind of tile being displayed at that position
     var tile_index = get_tile_index(tile);
 
-    if tile_index > index {
+    if tile_index >= index {
         var overhang = (map.projection * vec2<f32>(-tile_offset)) * map.tile_size;
-
-        if abs(overhang.x) >= map.inner_padding.x / 2.0 || abs(overhang.y) >= map.inner_padding.y /
-        2.0 {
-            return vec4<f32>(0.0, 0.0, 0.0, 0.0);
-        }
-
         var offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
         return sample_tile(map, tile_index, offset);
     }
@@ -220,30 +241,23 @@ fn fragment(
     var index = get_tile_index(pos.tile);
     var color = sample_tile(map, index, pos.offset);
 
-    /*var top_tile = pos.tile + vec2<i32>(-1, 1);*/
-    /*var top_tile_index = get_tile_index(top_tile);*/
-    // TODO: should use actually inverse transform of (-1,1) here
-    /*var top_tile_color = sample_tile(map, index, pos.offset + vec2<f32>(0.0, map.tile_size.y));*/
+    var max_index = u32(4);
 
+    for(var idx = index + u32(1); idx < max_index; idx++) {
+        // first render all the diagonal overhangs
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1, -1)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  1)));
 
-    for(var x = -1; x <= 1; x++) {
-        for(var y = -1; y <= 1; y++) {
-            if x == 0 && y == 0 { continue; }
-            color = blend(color, sample_neighbor_if_higher(index, pos, vec2<i32>(x, y)));
-        }
+        // Now all the orthogonal ones
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1)));
     }
 
-    // "top" tile (iso view)
-    /*color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 1)));*/
-
-    // "top/left" tile (iso view)
-    /*color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 0)));*/
-
-    // "top/right" tile (iso view)
-    /*color = blend(color, sample_neighbor(pos, vec2<i32>(0, 1)));*/
-
     return color;
-    /*return blend(main, top_tile_color);*/
 }
 
 
