@@ -173,6 +173,43 @@ fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
     return sample_tile(map, tile_index, pos.offset + vec2<f32>(1.0, -1.0) * offset);
 }
 
+fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
+    if tile.x < 0 || tile.y < 0 {
+        return false;
+    }
+    let map_size = vec2<i32>(map.map_size);
+    if tile.x >= map_size.x || tile.y >= map_size.y {
+        return false;
+    }
+    return true;
+}
+
+fn sample_neighbor_if_higher(index: u32, pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+    // integral position of the neighbouring tile
+    var tile = pos.tile + tile_offset;
+    if !is_valid_tile(map, tile) {
+        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
+
+    // kind of tile being displayed at that position
+    var tile_index = get_tile_index(tile);
+
+    if tile_index > index {
+        var overhang = (map.projection * vec2<f32>(-tile_offset)) * map.tile_size;
+
+        if abs(overhang.x) >= map.inner_padding.x / 2.0 || abs(overhang.y) >= map.inner_padding.y /
+        2.0 {
+            return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+        }
+
+        var offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
+        return sample_tile(map, tile_index, offset);
+    }
+
+    return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+}
+
+
 @fragment
 fn fragment(
     in: VertexOutput
@@ -188,16 +225,25 @@ fn fragment(
     // TODO: should use actually inverse transform of (-1,1) here
     /*var top_tile_color = sample_tile(map, index, pos.offset + vec2<f32>(0.0, map.tile_size.y));*/
 
+
+    for(var x = -1; x <= 1; x++) {
+        for(var y = -1; y <= 1; y++) {
+            if x == 0 && y == 0 { continue; }
+            color = blend(color, sample_neighbor_if_higher(index, pos, vec2<i32>(x, y)));
+        }
+    }
+
     // "top" tile (iso view)
-    color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 1)));
+    /*color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 1)));*/
 
     // "top/left" tile (iso view)
-    color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 0)));
+    /*color = blend(color, sample_neighbor(pos, vec2<i32>(-1, 0)));*/
 
     // "top/right" tile (iso view)
-    color = blend(color, sample_neighbor(pos, vec2<i32>(0, 1)));
+    /*color = blend(color, sample_neighbor(pos, vec2<i32>(0, 1)));*/
 
     return color;
+    /*return blend(main, top_tile_color);*/
 }
 
 
