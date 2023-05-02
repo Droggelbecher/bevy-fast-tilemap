@@ -1,12 +1,7 @@
-use crate::map::{Map, MapDirty, MapIndexer};
+use crate::map::{Map, MapIndexer};
 use crate::map_uniform::MapUniform;
 use bevy::prelude::*;
-use bevy::{
-    math::{mat2, uvec2, vec2},
-    prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
-    sprite::Mesh2dHandle,
-};
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use std::mem::size_of;
 
 use crate::tile_projection::TileProjection;
@@ -48,10 +43,7 @@ impl MapBuilder {
         self
     }
 
-    pub fn build(
-        self,
-        images: &mut ResMut<Assets<Image>>,
-    ) -> Map {
+    pub fn build(self, images: &mut ResMut<Assets<Image>>) -> Map {
         self.build_and_initialize(images, |_| {})
     }
 

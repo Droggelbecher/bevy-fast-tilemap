@@ -1,12 +1,8 @@
-use crate::map::{Map, MapIndexer, MapDirty};
-use crate::map_uniform::MapUniform;
+use crate::map::{Map, MapDirty};
 use bevy::{
-    math::{mat2, uvec2, vec2},
     prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
     sprite::Mesh2dHandle,
 };
-use std::mem::size_of;
 
 #[derive(Bundle, Clone, Default)]
 pub struct MapBundle {

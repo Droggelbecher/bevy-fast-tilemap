@@ -1,4 +1,3 @@
-use bevy::math::ivec2;
 use bevy::{math::vec2, prelude::*, render::render_resource::ShaderType};
 
 use crate::tile_projection::IDENTITY;
@@ -161,7 +160,6 @@ impl MapUniform {
                 n_tiles
             );
         }
-        println!("n_tiles={n_tiles:?}");
         n_tiles.as_uvec2()
     }
 }
