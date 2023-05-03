@@ -7,7 +7,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapDescriptor, MapReadyEvent};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapReadyEvent, MeshManagedByMap};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 
@@ -40,22 +40,24 @@ fn main() {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let tiles_texture = asset_server.load("simple_tiles_64.png");
+    let tiles_texture = asset_server.load("pixel_tiles_16.png");
 
-    let bundle = MapDescriptor {
-        map_size: uvec2(1024, 1024),
-        tile_size: vec2(64., 64.),
+    let map = Map::builder(
+        // Map size
+        uvec2(1024, 1024),
+        // Tile atlas
         tiles_texture,
-        ..default()
-    }
-    .build(&mut images, &mut meshes);
+        // Tile Size
+        vec2(16., 16.),
+    )
+    .build(&mut images);
 
-    commands.spawn(bundle);
+    commands.spawn(MapBundle::new(map))
+        .insert(MeshManagedByMap);
 }
 
 /// Check whether the map is ready to be filled with contents and do so.
@@ -71,7 +73,7 @@ fn initialize_map(
     for ev in evs.iter() {
         // Get the actual map. Since it sent us an event,
         // this should not fail.
-        let mut map = maps.get_mut(ev.map).unwrap();
+        let map = maps.get_mut(ev.map).unwrap();
 
         // Get the indexer for modifying the map texture.
         // Since we got the MapReadyEvent, this should be available in `images`,
@@ -79,7 +81,7 @@ fn initialize_map(
         if let Ok(mut m) = map.get_mut(&mut *images) {
             for y in 0..m.size().y {
                 for x in 0..m.size().x {
-                    m.set(x, y, ((x + y) % 8) as u16);
+                    m.set(x, y, 1u16);
                 }
             }
         }
@@ -87,10 +89,10 @@ fn initialize_map(
 } // generate_map
 
 /// Update random patches of tile indices in the map
-fn change_map(mut images: ResMut<Assets<Image>>, mut maps: Query<&mut Map>) {
+fn change_map(mut images: ResMut<Assets<Image>>, maps: Query<&Map>) {
     let mut rng = rand::thread_rng();
 
-    for mut map in maps.iter_mut() {
+    for map in maps.iter() {
         // Get the indexer into the map texture
         let mut m = match map.get_mut(&mut *images) {
             Err(e) => {
@@ -104,7 +106,7 @@ fn change_map(mut images: ResMut<Assets<Image>>, mut maps: Query<&mut Map>) {
         let k = rng.gen_range(5..50);
         let x_min = rng.gen_range(0..m.size().x - k);
         let y_min = rng.gen_range(0..m.size().y - k);
-        let i = rng.gen_range(1..8);
+        let i = rng.gen_range(1..12);
 
         for y in y_min..y_min + k {
             for x in x_min..x_min + k {

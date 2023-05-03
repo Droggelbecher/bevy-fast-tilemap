@@ -17,6 +17,8 @@
 //! position.
 
 pub mod map;
+pub mod map_uniform;
+pub mod map_builder;
 pub mod bundle;
 pub mod plugin;
 pub mod pipeline;
@@ -24,13 +26,16 @@ pub mod shader;
 pub mod extract;
 pub mod prepare;
 pub mod queue;
+pub mod tile_projection;
 
 pub mod prelude {
-    pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
-    pub use crate::map::{Map, MapIndexer, MapReadyEvent};
+    pub use crate::bundle::MapBundle;
+    pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
     pub use crate::plugin::FastTileMapPlugin;
+    pub use crate::tile_projection::{TileProjection, IDENTITY, AXONOMETRIC};
 }
 
-pub use crate::bundle::{MapDescriptor, MapBundle, IDENTITY, AXONOMETRIC};
-pub use crate::map::{Map, MapIndexer, MapReadyEvent};
+pub use crate::bundle::MapBundle;
+pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
 pub use crate::plugin::FastTileMapPlugin;
+pub use crate::tile_projection::{TileProjection, IDENTITY, AXONOMETRIC};

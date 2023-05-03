@@ -12,7 +12,7 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_fast_tilemap::{
-    MapDescriptor, FastTileMapPlugin,
+    Map, MapBundle, FastTileMapPlugin, MeshManagedByMap
 };
 
 mod mouse_controls_camera;
@@ -21,21 +21,24 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
     // Create map with (10 * 128) ^ 2 tiles or 1,638,400 tiles.
-    let bundle = MapDescriptor {
-        map_size: uvec2(1280, 1280),
-        tile_size: vec2(16., 16.),
-        tiles_texture: asset_server.load("tiles.png"),
-        ..default()
-    }
-    .build(&mut images, &mut meshes);
+    let map = Map::builder(
+        // Map size (tiles)
+        uvec2(1280, 1280),
+        // Tile atlas
+        asset_server.load("tiles.png"),
+        // Tile size (pixels)
+        vec2(16., 16.),
+    )
+    .build(&mut images);
 
-    commands.spawn(bundle);
+    commands.spawn(MapBundle::new(map))
+        // Have the map manage our mesh so it always has the right size
+        .insert(MeshManagedByMap);
 }
 
 fn main() {

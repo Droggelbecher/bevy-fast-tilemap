@@ -17,8 +17,11 @@ This should be faster than most other bevy tilemap implementations as of this wr
 
 ## Screenshots
 
+![updates](screenshots/updates.png)
 ![layers](screenshots/layers.png)
 ![iso](screenshots/iso.png)
+![iso2](screenshots/iso2.png)
+![custom_mesh](screenshots/custom_mesh.png)
 
 ## How it works
 
@@ -26,8 +29,8 @@ The whole tilemap (-layer) is rendered as a single quad and a shader cares for r
 tiles at the correct position.
 
 Thus each map layer works with two textures: One with integer data type, constructed and maintained
-internally for storing for each tile position which tile index should be displayed there. And one
-that contains all the tiles which should be provided by you (see [assets/](assets/)).
+internally for storing for each tile position which tile index should be displayed there. And a
+tile atlas that contains all the tiles which should be provided by you (see [assets/](assets/)).
 
 ## Limitations
 
@@ -49,9 +52,11 @@ Check out the [examples/](examples/) folder to get an overview.
 You can run the examples like this:
 
 ```bash
-cargo run --example simple
+cargo run --example updates
 cargo run --example layers
 cargo run --example iso
+cargo run --example iso2
+cargo run --example bench
 ```
 
 ## Bevy Compatibility
@@ -60,3 +65,4 @@ cargo run --example iso
 |---|---|
 |0.10.1|0.1.0|
 |0.10.1|0.2.0|
+|0.10.1|0.3.0|

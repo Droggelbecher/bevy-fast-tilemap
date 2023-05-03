@@ -1,14 +1,16 @@
 
-//! Simple example illustrating how to use multiple Map instances as layers.
+//! Simple example illustrating use of a custom, non-rectangular mesh.
+//! This is based on `layers`, so you might want to read that one first.
 //! Each map is a single quad so the performance overhead should be low for a reasonable amount of
 //! layers.
 
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
+use bevy::sprite::Mesh2dHandle;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    Map, MapBundle, MapIndexer, FastTileMapPlugin, MeshManagedByMap
+    Map, MapBundle, MapIndexer, FastTileMapPlugin
 };
 
 mod mouse_controls_camera;
@@ -47,6 +49,7 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -68,10 +71,12 @@ fn startup(
         }
     });
 
+    let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Circle::new(300.0))));
+
     commands.spawn(MapBundle::new(map))
         .insert(MapLayer(0))
-        // Have the map manage our mesh so it always has the right size
-        .insert(MeshManagedByMap);
+        // Rather than `MeshManagedByMap`, use our own custom mesh here
+        .insert(mesh.clone());
 
     let map = Map::builder(
         uvec2(51, 51),
@@ -86,7 +91,7 @@ fn startup(
 
     commands.spawn(bundle)
         .insert(MapLayer(1))
-        .insert(MeshManagedByMap);
+        .insert(mesh);
 }
 
 fn initialize_layer1(m: &mut MapIndexer) {
@@ -101,7 +106,7 @@ fn initialize_layer1(m: &mut MapIndexer) {
 
     for y in y_min..y_max {
         for x in x_min..x_max {
-            m.set(x, y, (x % 6) as u16 + 6u16);
+            m.set(x, y, 11u16);
             //m.set(x, y, (x % 12) as u16);
         } // for x
     } // for y

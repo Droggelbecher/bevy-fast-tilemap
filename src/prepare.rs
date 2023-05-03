@@ -88,10 +88,10 @@ impl AsBindGroup for ExtractedMap {
         images: &RenderAssets<Image>,
         _fallback_image: &FallbackImage,
     ) -> Result<PreparedBindGroup<Self::Data>, AsBindGroupError> {
-        let map_data = &self.0.map_data;
+        let map_uniform = &self.0.map_uniform;
 
         let mut map_data_buffer = UniformBuffer::new(Vec::new());
-        map_data_buffer.write(&map_data).unwrap();
+        map_data_buffer.write(&map_uniform).unwrap();
 
         let bindings = vec![
             //@group(1) @binding(0)
@@ -104,10 +104,10 @@ impl AsBindGroup for ExtractedMap {
                     .clone()
             }),
             //@group(1) @binding(1)
-            //var tiles_texture: texture_2d<f32>;
+            //var atlas_texture: texture_2d<f32>;
             OwnedBindingResource::TextureView({
                 images
-                    .get(&self.0.tiles_texture)
+                    .get(&self.0.atlas_texture)
                     .ok_or_else(|| RetryNextUpdate)?
                     .texture_view
                     .clone()
@@ -117,7 +117,7 @@ impl AsBindGroup for ExtractedMap {
             //var tiles_sampler: sampler;
             OwnedBindingResource::Sampler({
                 images
-                    .get(&self.0.tiles_texture)
+                    .get(&self.0.atlas_texture)
                     .ok_or_else(|| RetryNextUpdate)?
                     .sampler
                     .clone()

@@ -1,11 +1,15 @@
 use bevy::{
     prelude::*,
     render::{
-        render_resource::{SamplerDescriptor, FilterMode, ShaderType},
-        texture::ImageSampler
+        render_resource::{FilterMode, SamplerDescriptor},
+        texture::ImageSampler,
     },
+    sprite::Mesh2dHandle,
 };
 use std::num::NonZeroU32;
+
+use crate::map_uniform::MapUniform;
+use crate::map_builder::MapBuilder;
 
 /// Map, of size `size` tiles.
 /// The actual tile data is stored in MapLayer components and Images in the asset system
@@ -13,44 +17,52 @@ use std::num::NonZeroU32;
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
 pub struct Map {
-    pub map_data: MapData,
+    /// Stores all the data that goes into the shader uniform,
+    /// such as projection data, offsets, sizes, etc..
+    pub(crate) map_uniform: MapUniform,
 
     /// Texture containing the tile IDs (one per each pixel)
     pub map_texture: Handle<Image>,
 
     /// Atlas texture with the individual tiles
-    pub tiles_texture: Handle<Image>,
-
-    /// True iff the necessary images for this map are loaded
-    pub ready: bool,
+    pub atlas_texture: Handle<Image>,
+    // True iff the necessary images for this map are loaded
 }
 
-#[derive(ShaderType, Clone, Default, Debug, Reflect)]
-pub struct MapData {
-    /// Size of the map, in tiles.
-    pub size: UVec2,
+/// For entities that have all of:
+/// - This component
+/// - `Map`
+/// - `Mesh2dHandle`
+/// The Mesh will be automatically replaced with a rectangular mesh matching
+/// the bounding box of the `Map` whenever a map change is detected.
+#[derive(Debug, Component, Clone, Default, Reflect)]
+#[reflect(Component)]
+pub struct MeshManagedByMap;
 
-    /// Size of each tile, in pixels.
-    pub tile_size: Vec2,
-
-    /// fractional 2d map index -> world pos
-    pub projection: Mat2,
-
-    /// world pos -> fractional 2d map index
-    pub inverse_projection: Mat2,
-
-    /// Offset of the projected map in world coordinates
-    pub world_offset: Vec2,
-
-    /// relative anchor point position in a tile (in [0..1]^2)
-    pub tile_anchor_point: Vec2,
-
-}
+/// `Map` Entities that also have this component are in need of recomputing
+/// some internal state (using `map.update()`).
+#[derive(Debug, Component, Clone, Default, Reflect)]
+#[reflect(Component)]
+pub struct MapDirty;
 
 impl Map {
+
+    pub fn builder(
+        map_size: UVec2,
+        atlas_texture: Handle<Image>,
+        tile_size: Vec2,
+    ) -> MapBuilder {
+        MapBuilder::new(map_size, atlas_texture, tile_size)
+    }
+
     /// Dimensions of this map in tiles.
-    pub fn size(&self) -> UVec2 {
-        self.map_data.size
+    pub fn map_size(&self) -> UVec2 {
+        self.map_uniform.map_size()
+    }
+
+    /// Size of the map contents bounding box in world coordinates
+    pub fn world_size(&self) -> Vec2 {
+        self.map_uniform.world_size()
     }
 
     /// Convert map position in `[(0.0, 0.0) .. self.size)`
@@ -58,14 +70,63 @@ impl Map {
     /// E.g. map position `(0.5, 0.5)` is in the center of the tile
     /// at index `(0, 0)`.
     pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
-        let m = &self.map_data;
-        (m.projection * map_position) * m.tile_size + m.world_offset
+        self.map_uniform.map_to_world(map_position)
     }
 
     /// Convert world position to map position.
     pub fn world_to_map(&self, world: Vec2) -> Vec2 {
-        let m = &self.map_data;
-        m.inverse_projection * ((world - m.world_offset) / m.tile_size)
+        self.map_uniform.world_to_map(world)
+    }
+
+    /// Use this to avoid creating a mutable reference 
+    pub fn needs_update(&self, images: &Assets<Image>) -> bool {
+        let map_texture = match images.get(&self.map_texture) {
+            Some(x) => x,
+            None => {
+                // No point in updating anything yet, lets wait until the texture is there
+                return false;
+            }
+        };
+
+        let atlas_texture = match images.get(&self.atlas_texture) {
+            Some(x) => x,
+            None => {
+                // No point in updating anything yet, lets wait until the texture is there
+                return false;
+            }
+        };
+
+        self.map_uniform
+            .needs_update(map_texture.size().as_uvec2(), atlas_texture.size())
+    }
+
+    pub fn set_dirty(&mut self) {
+        self.map_uniform.set_dirty();
+    }
+
+    /// Update internal state.
+    /// Should not be necessary to call this if only map contents changed.
+    pub fn update(&mut self, images: &Assets<Image>) -> bool {
+        let map_texture = match images.get(&self.map_texture) {
+            Some(x) => x,
+            None => {
+                warn!("No map texture");
+                self.map_uniform.set_dirty();
+                return false;
+            }
+        };
+
+        let atlas_texture = match images.get(&self.atlas_texture) {
+            Some(x) => x,
+            None => {
+                warn!("No atlas texture");
+                self.map_uniform.set_dirty();
+                return false;
+            }
+        };
+
+        self.map_uniform
+            .update(map_texture.size().as_uvec2(), atlas_texture.size())
     }
 
     /// Get mutable access to map layers via a `MapIndexer`.
@@ -89,7 +150,7 @@ impl Map {
     /// }
     /// ```
     pub fn get_mut<'a>(
-        &mut self,
+        &self,
         images: &'a mut Assets<Image>,
     ) -> Result<MapIndexer<'a>, &'a str> {
         let image = images
@@ -98,7 +159,7 @@ impl Map {
 
         Ok(MapIndexer {
             image,
-            size: self.map_data.size,
+            size: self.map_uniform.map_size(),
         })
     } // get_mut()
 } // impl Map
@@ -113,7 +174,9 @@ pub struct MapIndexer<'a> {
 }
 
 impl<'a> MapIndexer<'a> {
-    pub fn size(&self) -> UVec2 { self.size }
+    pub fn size(&self) -> UVec2 {
+        self.size
+    }
 
     pub fn at_ivec(&self, i: IVec2) -> u16 {
         self.at(i.x as u32, i.y as u32)
@@ -151,24 +214,26 @@ pub struct MapReadyEvent {
     pub map: Entity,
 }
 
-/// Check if all images and materials of a `Map` are loaded,
-/// when thats the case, send out a `MapReadyEvent`.
-pub fn check_map_ready_events(
+/// Check maps/textures state and mark them with `MapDirty` if they need an update
+pub fn mark_maps_dirty(
+    maps: Query<(Ref<Map>, Entity, Option<&MeshManagedByMap>), Without<MapDirty>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
     mut images: ResMut<Assets<Image>>,
-    mut send_map_ready_event: EventWriter<MapReadyEvent>,
-    mut maps: Query<(&mut Map, Entity)>,
+    mut commands: Commands,
 ) {
     for ev in ev_asset.iter() {
-        for (mut map, map_entity) in maps.iter_mut() {
+        for (map, map_entity, _) in maps.iter() {
             match ev {
                 AssetEvent::Created { handle }
-                    if *handle == map.map_texture || *handle == map.tiles_texture =>
+                    if *handle == map.map_texture || *handle == map.atlas_texture =>
                 {
-                    if let Some(tiles) = images.get_mut(&map.tiles_texture) {
+                    // Set some sampling options for the atlas texture for nicer looks,
+                    // such as avoiding "grid lines" when zooming out or mushy edges.
+                    //
+                    if let Some(atlas) = images.get_mut(&map.atlas_texture) {
                         // the below seems to crash?
-                        //tiles.texture_descriptor.mip_level_count = 3;
-                        tiles.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
+                        //atlas.texture_descriptor.mip_level_count = 3;
+                        atlas.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
                             // min_filter of linear gives undesired grid lines when zooming out
                             min_filter: FilterMode::Nearest,
                             // mag_filter of linear gives mushy edges on tiles in closeup which is
@@ -178,20 +243,57 @@ pub fn check_map_ready_events(
                             ..default()
                         });
 
-                        if let Some(ref mut view_descriptor) = tiles.texture_view_descriptor {
+                        if let Some(ref mut view_descriptor) = atlas.texture_view_descriptor {
                             view_descriptor.mip_level_count = NonZeroU32::new(4u32);
                         }
                     }
 
-                    if images.get(&map.map_texture).is_some()
-                        && images.get(&map.tiles_texture).is_some()
-                    {
-                        send_map_ready_event.send(MapReadyEvent { map: map_entity });
-                        map.ready = true;
-                    } // if
-                } // AssetEvent::Created
-                _ => {}
-            } // match
-        } // ev
-    } // map
-} // handle_tilemap_events()
+                    commands.entity(map_entity).insert(MapDirty);
+                }
+                AssetEvent::Modified { handle } | AssetEvent::Removed { handle }
+                    if *handle == map.map_texture || *handle == map.atlas_texture =>
+                {
+                    commands.entity(map_entity).insert(MapDirty);
+                }
+                _ => (),
+            } // match ev
+        } // for map
+    } // for ev
+
+    for (map, entity, _manage_mesh) in maps.iter() {
+        if map.is_changed() || map.is_added() {
+            commands.entity(entity).insert(MapDirty);
+        }
+    }
+} // update_maps()
+
+pub fn update_dirty_maps(
+    images: Res<Assets<Image>>,
+    mut maps: Query<(&mut Map, Entity, Option<&MeshManagedByMap>), With<MapDirty>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut commands: Commands,
+    mut send_map_ready_event: EventWriter<MapReadyEvent>,
+) {
+    for (mut map, entity, manage_mesh) in maps.iter_mut() {
+        commands.entity(entity).remove::<MapDirty>();
+
+        if !map.needs_update(images.as_ref()) {
+            continue;
+        }
+
+        if map.update(images.as_ref()) {
+            if let Some(_) = manage_mesh {
+                let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
+                    size: map.world_size(),
+                    flip: false,
+                })));
+                commands.entity(entity).insert(mesh);
+            }
+
+            send_map_ready_event.send(MapReadyEvent { map: entity });
+        }
+    }
+}
+
+
+
