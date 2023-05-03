@@ -17,10 +17,11 @@ This should be faster than most other bevy tilemap implementations as of this wr
 
 ## Screenshots
 
-![layers](screenshots/updates.png)
+![updates](screenshots/updates.png)
 ![layers](screenshots/layers.png)
 ![iso](screenshots/iso.png)
 ![iso2](screenshots/iso2.png)
+![custom_mesh](screenshots/custom_mesh.png)
 
 ## How it works
 
