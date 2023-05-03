@@ -1,5 +1,5 @@
 [package]
-name = "bevy-fast-tilemap"
+name = "bevy_fast_tilemap"
 version = "0.3.0"
 edition = "2021"
 description = "A GPU accelerated simple tilemap for bevy"
