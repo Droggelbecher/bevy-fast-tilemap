@@ -26,7 +26,7 @@ struct Map {
     tile_anchor_point: vec2<f32>,
 
     /// fractional 2d map index -> world pos
-    projection: mat2x2<f32>,
+    projection: mat3x3<f32>,
 
     max_overhang_levels: u32,
 
@@ -84,15 +84,13 @@ fn vertex(v: Vertex) -> VertexOutput {
 
 /// Map position incl fractional part for this position.
 fn world_to_map(map: Map, world_position: vec2<f32>) -> vec2<f32> {
-    return (
-        map.inverse_projection
-        * ((world_position - map.world_offset) / map.tile_size)
-    );
+    var pos = (world_position - map.world_offset) / map.tile_size;
+    return map.inverse_projection * pos;
 }
 
 fn map_to_world(map: Map, map_position: vec2<f32>) -> vec2<f32> {
     return (
-        (map.projection * map_position) * map.tile_size + map.world_offset
+        (map.projection * vec3<f32>(map_position, 0.0)).xy * map.tile_size + map.world_offset
     );
 }
 
@@ -224,7 +222,7 @@ fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>) -
     var tile_index = get_tile_index(tile);
 
     if tile_index >= index {
-        var overhang = (map.projection * vec2<f32>(-tile_offset)) * map.tile_size;
+        var overhang = (map.projection * vec3<f32>(vec2<f32>(-tile_offset), 0.0)).xy * map.tile_size;
         var offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
         return sample_tile(map, tile_index, offset);
     }

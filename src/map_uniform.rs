@@ -1,4 +1,8 @@
-use bevy::{math::vec2, prelude::*, render::render_resource::ShaderType};
+use bevy::{
+    math::{vec2, Vec3Swizzles, vec3, mat2},
+    prelude::*,
+    render::render_resource::ShaderType,
+};
 
 use crate::tile_projection::IDENTITY;
 
@@ -26,7 +30,7 @@ pub struct MapUniform {
     pub(crate) tile_anchor_point: Vec2,
 
     /// fractional 2d map index -> world pos
-    pub(crate) projection: Mat2,
+    pub(crate) projection: Mat3,
 
     pub(crate) max_overhang_levels: u32,
 
@@ -42,6 +46,13 @@ pub struct MapUniform {
     pub(crate) n_tiles: UVec2,
 
     /// [derived] world pos -> fractional 2d map index
+    ///
+    /// Note that the main use case for the inverse is to transform 2d world coordinates 
+    /// (eg from mouse cursor) to 2d map coordinates with some assumption about how we choose the z
+    /// coordinate.
+    /// An inverse of the 3d projection matrix here would assume that you feed in the correct z
+    /// coordinate and otherwise give wrong results, hence we only invert the 2d part
+    /// and let the caller handle management of z.
     pub(crate) inverse_projection: Mat2,
 
     // ShaderType doesnt handle bools very well
@@ -64,7 +75,7 @@ impl Default for MapUniform {
             world_offset: default(),
             n_tiles: default(),
             inverse_projection: default(),
-            ready: default()
+            ready: default(),
         }
     }
 }
@@ -78,12 +89,15 @@ impl MapUniform {
         self.world_size
     }
 
-    pub(crate) fn map_to_world(&self, map_position: Vec2) -> Vec2 {
-        (self.projection * map_position) * self.tile_size + self.world_offset
+    pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
+        (self.projection * map_position) * self.tile_size.extend(1.0) + self.world_offset.extend(0.0)
     }
 
-    pub(crate) fn world_to_map(&self, world: Vec2) -> Vec2 {
-        self.inverse_projection * ((world - self.world_offset) / self.tile_size)
+    /// As of now, this will ignore `world`s z coordinate
+    /// and always project to z=0 on the map.
+    /// This behavior might change in the future
+    pub(crate) fn world_to_map(&self, world: Vec3) -> Vec3 {
+        (self.inverse_projection * ((world.xy() - self.world_offset) / self.tile_size)).extend(0.0)
     }
 
     pub(crate) fn ready(&self) -> bool {
@@ -117,14 +131,14 @@ impl MapUniform {
         // works and is simple enough:
         // 1. save coordinates for all 4 corners
         // 2. take maximum x- and y distances
-        let mut low = self.map_to_world(vec2(0.0, 0.0));
+        let mut low = self.map_to_world(vec3(0.0, 0.0, 0.0)).xy();
         let mut high = low.clone();
         for corner in [
             vec2(self.map_size().x as f32, 0.0),
             vec2(0.0, self.map_size().y as f32),
             vec2(self.map_size().x as f32, self.map_size().y as f32),
         ] {
-            let pos = self.map_to_world(corner);
+            let pos = self.map_to_world(corner.extend(0.0)).xy();
             low = low.min(pos);
             high = high.max(pos);
         }
@@ -138,7 +152,10 @@ impl MapUniform {
         // We use `low` from above to figure out how to correctly translate here.
         self.world_offset = vec2(-0.5, -0.5) * self.world_size - low;
 
-        self.inverse_projection = self.projection.inverse();
+        self.inverse_projection = mat2(
+            self.projection.x_axis.xy(),
+            self.projection.y_axis.xy(),
+        ).inverse();
 
         self.n_tiles = self.compute_n_tiles();
 
@@ -147,7 +164,6 @@ impl MapUniform {
     }
 
     fn compute_n_tiles(&self) -> UVec2 {
-
         let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;
         let n_tiles = (inner + self.inner_padding) / (self.inner_padding + self.tile_size);
 

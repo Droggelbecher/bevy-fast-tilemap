@@ -1,5 +1,6 @@
 use bevy::{
     prelude::*,
+    math::Vec3Swizzles,
     render::{
         render_resource::{FilterMode, SamplerDescriptor},
         texture::ImageSampler,
@@ -8,8 +9,7 @@ use bevy::{
 };
 use std::num::NonZeroU32;
 
-use crate::map_uniform::MapUniform;
-use crate::map_builder::MapBuilder;
+use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 
 /// Map, of size `size` tiles.
 /// The actual tile data is stored in MapLayer components and Images in the asset system
@@ -46,12 +46,7 @@ pub struct MeshManagedByMap;
 pub struct MapDirty;
 
 impl Map {
-
-    pub fn builder(
-        map_size: UVec2,
-        atlas_texture: Handle<Image>,
-        tile_size: Vec2,
-    ) -> MapBuilder {
+    pub fn builder(map_size: UVec2, atlas_texture: Handle<Image>, tile_size: Vec2) -> MapBuilder {
         MapBuilder::new(map_size, atlas_texture, tile_size)
     }
 
@@ -70,15 +65,23 @@ impl Map {
     /// E.g. map position `(0.5, 0.5)` is in the center of the tile
     /// at index `(0, 0)`.
     pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
+        self.map_uniform.map_to_world(map_position.extend(0.0)).xy()
+    }
+
+    pub fn map_to_world_3d(&self, map_position: Vec3) -> Vec3 {
         self.map_uniform.map_to_world(map_position)
     }
 
     /// Convert world position to map position.
     pub fn world_to_map(&self, world: Vec2) -> Vec2 {
+        self.map_uniform.world_to_map(world.extend(0.0)).xy()
+    }
+
+    pub fn world_to_map_3d(&self, world: Vec3) -> Vec3 {
         self.map_uniform.world_to_map(world)
     }
 
-    /// Use this to avoid creating a mutable reference 
+    /// Use this to avoid creating a mutable reference
     pub fn needs_update(&self, images: &Assets<Image>) -> bool {
         let map_texture = match images.get(&self.map_texture) {
             Some(x) => x,
@@ -149,10 +152,7 @@ impl Map {
     ///   }
     /// }
     /// ```
-    pub fn get_mut<'a>(
-        &self,
-        images: &'a mut Assets<Image>,
-    ) -> Result<MapIndexer<'a>, &'a str> {
+    pub fn get_mut<'a>(&self, images: &'a mut Assets<Image>) -> Result<MapIndexer<'a>, &'a str> {
         let image = images
             .get_mut(&self.map_texture)
             .ok_or("Map texture not yet loaded")?;
@@ -294,6 +294,3 @@ pub fn update_dirty_maps(
         }
     }
 }
-
-
-

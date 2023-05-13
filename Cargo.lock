@@ -311,16 +311,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy-fast-tilemap"
-version = "0.3.0"
-dependencies = [
- "bevy",
- "bevy-inspector-egui",
- "num",
- "rand",
-]
-
-[[package]]
 name = "bevy-inspector-egui"
 version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -565,6 +555,16 @@ checksum = "c086ebdc1f5522787d63772943277cc74a279445fb65db4d58c2c5330654648e"
 dependencies = [
  "bevy_macro_utils",
  "encase_derive_impl",
+]
+
+[[package]]
+name = "bevy_fast_tilemap"
+version = "0.3.0"
+dependencies = [
+ "bevy",
+ "bevy-inspector-egui",
+ "num",
+ "rand",
 ]
 
 [[package]]
