@@ -76,6 +76,9 @@ impl MapBuilder {
         });
 
         self.map.map_texture = images.add(map_image);
+        self.map.map_uniform.update_inverse_projection();
+        self.map.map_uniform.update_world_size();
+
         self.map
     } // fn build_and_initialize
 }

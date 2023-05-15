@@ -54,9 +54,6 @@ pub struct MapUniform {
     /// coordinate and otherwise give wrong results, hence we only invert the 2d part
     /// and let the caller handle management of z.
     pub(crate) inverse_projection: Mat2,
-
-    // ShaderType doesnt handle bools very well
-    pub(crate) ready: u32,
 }
 
 impl Default for MapUniform {
@@ -75,7 +72,6 @@ impl Default for MapUniform {
             world_offset: default(),
             n_tiles: default(),
             inverse_projection: default(),
-            ready: default(),
         }
     }
 }
@@ -100,28 +96,17 @@ impl MapUniform {
         (self.inverse_projection * ((world.xy() - self.world_offset) / self.tile_size)).extend(0.0)
     }
 
-    pub(crate) fn ready(&self) -> bool {
-        self.ready != 0u32
-    }
-
-    pub(crate) fn set_dirty(&mut self) {
-        self.ready = 0u32
-    }
-
-    pub(crate) fn needs_update(&self, map_size: UVec2, atlas_size: Vec2) -> bool {
-        !self.ready() || self.map_size != map_size || self.atlas_size != atlas_size
-    }
-
-    /// Return true iff this update made the uniform ready
-    /// (ie. it was not ready before and is ready now).
-    pub(crate) fn update(&mut self, map_size: UVec2, atlas_size: Vec2) -> bool {
-        if !self.needs_update(map_size, atlas_size) {
+    pub(crate) fn update_map_size(&mut self, map_size: UVec2) -> bool {
+        if self.map_size == map_size {
             return false;
         }
 
         self.map_size = map_size;
-        self.atlas_size = atlas_size;
+        self.update_world_size();
+        true
+    }
 
+    pub(crate) fn update_world_size(&mut self) {
         // World Size
         //
         // Determine the bounding rectangle of the projected map (in order to construct the quad
@@ -151,19 +136,28 @@ impl MapUniform {
         // say the top left corner (eg for an iso projection it might be vertically centered).
         // We use `low` from above to figure out how to correctly translate here.
         self.world_offset = vec2(-0.5, -0.5) * self.world_size - low;
+    }
 
+    /// Return true iff this update made the uniform ready
+    /// (ie. it was not ready before and is ready now).
+    pub(crate) fn update_atlas_size(&mut self, atlas_size: Vec2) -> bool {
+        if self.atlas_size == atlas_size {
+            return false;
+        }
+
+        self.atlas_size = atlas_size;
+        self.update_n_tiles();
+        true
+    }
+
+    pub(crate) fn update_inverse_projection(&mut self) {
         self.inverse_projection = mat2(
             self.projection.x_axis.xy(),
             self.projection.y_axis.xy(),
         ).inverse();
-
-        self.n_tiles = self.compute_n_tiles();
-
-        self.ready = 1u32;
-        true
     }
 
-    fn compute_n_tiles(&self) -> UVec2 {
+    fn update_n_tiles(&mut self) {
         let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;
         let n_tiles = (inner + self.inner_padding) / (self.inner_padding + self.tile_size);
 
@@ -176,6 +170,6 @@ impl MapUniform {
                 n_tiles
             );
         }
-        n_tiles.as_uvec2()
+        self.n_tiles = n_tiles.as_uvec2();
     }
 }

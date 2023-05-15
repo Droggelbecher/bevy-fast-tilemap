@@ -43,9 +43,6 @@ struct Map {
 
     /// [derived] world pos -> fractional 2d map index
     inverse_projection: mat2x2<f32>,
-
-    // ShaderType doesnt handle bools very well
-    ready: u32,
 };
 
 @group(1) @binding(0)

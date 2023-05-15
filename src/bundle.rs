@@ -1,4 +1,4 @@
-use crate::map::{Map, MapDirty};
+use crate::map::{Map, MapLoading};
 use bevy::{
     prelude::*,
     sprite::Mesh2dHandle,
@@ -8,7 +8,7 @@ use bevy::{
 pub struct MapBundle {
     pub mesh: Mesh2dHandle,
     pub map: Map,
-    pub dirty: MapDirty,
+    pub loading: MapLoading,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
     pub visibility: Visibility,
