@@ -32,7 +32,15 @@ pub struct MapUniform {
     /// fractional 2d map index -> world pos
     pub(crate) projection: Mat3,
 
+    /// 0=dominance
+    /// 1=perspective
+    pub(crate) overhang_mode: u32,
+
+    /// For overhang_mode==0
     pub(crate) max_overhang_levels: u32,
+
+    /// For overhang_mode==1
+    pub(crate) perspective_overhang_mask: u32,
 
     // -----
     /// [derived] Size of the map in world units necessary to display
@@ -67,7 +75,9 @@ impl Default for MapUniform {
             outer_padding_bottomright: default(),
             tile_anchor_point: IDENTITY.tile_anchor_point,
             projection: IDENTITY.projection,
+            overhang_mode: default(),
             max_overhang_levels: default(),
+            perspective_overhang_mask: default(),
             world_size: default(),
             world_offset: default(),
             n_tiles: default(),

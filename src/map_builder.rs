@@ -38,8 +38,17 @@ impl MapBuilder {
         self
     }
 
-    pub fn with_max_overhang_levels(mut self, max_overhang_levels: u32) -> Self {
+    pub fn with_dominance_overhang(mut self, max_overhang_levels: u32) -> Self {
+        self.map.map_uniform.overhang_mode = 0;
         self.map.map_uniform.max_overhang_levels = max_overhang_levels;
+        self
+    }
+
+    // TODO: Lend user a hand with defining this mask, its anything but obvious
+    // perhaps we can automagically derive it from the projection matrix
+    pub fn with_perspective_overhang(mut self, overhang_mask: u32) -> Self {
+        self.map.map_uniform.overhang_mode = 1;
+        self.map.map_uniform.perspective_overhang_mask = overhang_mask;
         self
     }
 
