@@ -44,38 +44,23 @@ fn startup(
         // Map size
         uvec2(100, 100),
         // Tile atlas
-        asset_server.load("iso2.png"),
+        asset_server.load("iso_256x128_dominance.png"),
         // Tile size
-        vec2(18.0, 9.0),
+        vec2(256.0, 128.0),
     )
-    .with_projection(AXONOMETRIC)
     .with_padding(
-        // Padding values to describe your tile atlas.
-        // These must be exact, otherwise bevy-fast-tilemap will be confused about where in the
-        // atlas your tiles are and how many there are.
-
-        // inner padding
-        // Our tilemap is small enough to not have any inner padding in y-direction,
-        // however this value is used to determine how much of the "overhang"
-        // (here: the side faces) is being rendered, even if they are located in the outer padding
-        // area.
-        //
-        // We pretend here we have a full tile padding in y-direction, half of which
-        // is for each sides tile overhang.
-        // x-Padding is actually applied and is 1 pixel wide.
-        vec2(1.0, 9.0),
-        // top/left padding
-        vec2(1., 1.),
-        // bottom/right padding
-        vec2(1., 5.)
+        vec2(256.0, 128.0),
+        vec2(256.0, 128.0),
+        vec2(256.0, 128.0)
     )
-    // Allow tiles to overlap. For this we draw in the "padding"
-    // area of the tile atlas. Tiles only overlap tiles with lower indices and in order by
-    // index.
+    // "Dominance" overhang draws the overlap of tiles depending on their index in the tile atlas.
+    // Tiles with higher index will be drawn on top of tiles with lower index.
+    // For this we draw in the "padding" area of the tile atlas.
+    //
     // This requires each pixel to be computed once for every level higher than the current one
     // and for every neighbor which can be a drastic performance hit.
     // Therefore its a good idea to limit the number of levels looked upwards here.
-    // The default is 0 which disables this feature.
+    .with_projection(AXONOMETRIC)
     .with_dominance_overhang(3)
     .build_and_initialize(&mut images, init_map);
 

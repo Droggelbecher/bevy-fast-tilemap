@@ -21,7 +21,7 @@ use crate::{
 };
 
 /// Plugin for fast tilemap.
-/// Add this to you app and then spawn one or multiple maps use `MapDescriptor`.
+/// Add this to you app and then spawn one or multiple maps use [`crate::map_builder::MapBuilder`].
 pub struct FastTileMapPlugin;
 
 impl Default for FastTileMapPlugin {

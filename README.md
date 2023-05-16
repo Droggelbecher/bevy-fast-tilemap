@@ -11,9 +11,11 @@ This should be faster than most other bevy tilemap implementations as of this wr
 
 ## Features
 
-- Very high rendering performance.
+- Very high rendering performance (hundreds of fps, largely independent of map size)
 - Tilemaps can be very large or have many "layers"
-- Rectangular and isometric tile maps.
+- Rectangular and isometric (axonometric) tile maps.
+- Tile overlaps either by "dominance" rule or by perspective
+- Optional custom mesh for which the map serves as a texture
 
 ## Screenshots
 
@@ -22,27 +24,30 @@ This should be faster than most other bevy tilemap implementations as of this wr
 ![iso](screenshots/iso.png)
 ![iso2](screenshots/iso2.png)
 ![custom_mesh](screenshots/custom_mesh.png)
+![dominance](screenshots/dominance.png)
+![iso_dominance](screenshots/iso_dominance.png)
+![iso_perspective](screenshots/iso_perspective.png)
 
 ## How it works
 
-The whole tilemap (-layer) is rendered as a single quad and a shader cares for rendering the correct
-tiles at the correct position.
+The whole tilemap (-layer) is rendered as a single quad and a custom shader cares for rendering the
+correct tiles at the correct position.
 
 Thus each map layer works with two textures: One with integer data type, constructed and maintained
 internally for storing for each tile position which tile index should be displayed there. And a
-tile atlas that contains all the tiles which should be provided by you (see [assets/](assets/)).
+tile atlas that contains all the tiles which should be provided by you (see [assets/](assets/) for
+atlas examples).
 
 ## Limitations
 
 - Only tested on Windows, no WASM support
-- Overlapping "tiles" can not be rendered due to how the shader is designed, this may be
-changed in the future.
-- No direct animation support
+- No direct animation support, but due to the raw speed you can likely get away with just update the map data
+  tiles.
 
 ## Related work
 
-If you dont require all of `bevy_fast_tilemap`s performance and are looking for 
-more features and maturity, take a look at 
+If you dont require all of `bevy_fast_tilemap`s performance and are looking for an approach that
+supports some more tile shapes and allows to treat each tile as a separate entity, take a look at
 [bevy_ecs_tilemap](https://github.com/StarArawn/bevy_ecs_tilemap/) which (among others) inspired
 this work.
 
@@ -57,6 +62,7 @@ cargo run --example layers
 cargo run --example iso
 cargo run --example iso2
 cargo run --example bench
+...
 ```
 
 ## Bevy Compatibility
@@ -66,3 +72,4 @@ cargo run --example bench
 |0.10.1|0.1.0|
 |0.10.1|0.2.0|
 |0.10.1|0.3.0|
+|0.10.1|0.4.0|

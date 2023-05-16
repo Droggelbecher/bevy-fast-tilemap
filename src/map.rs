@@ -11,9 +11,8 @@ use std::num::NonZeroU32;
 
 use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 
-/// Map, of size `size` tiles.
-/// The actual tile data is stored in MapLayer components and Images in the asset system
-/// and connected to this Map via bevys parent/child relationships for entities.
+/// Map, holding handles to a map texture with the tile data and an atlas texture
+/// with the tile renderings.
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
 pub struct Map {
@@ -31,19 +30,25 @@ pub struct Map {
 
 /// For entities that have all of:
 /// - This component
-/// - `Map`
-/// - `Mesh2dHandle`
+/// - [`Map`]
+/// - [`bevy::sprite::Mesh2dHandle`]
 /// The Mesh will be automatically replaced with a rectangular mesh matching
 /// the bounding box of the `Map` whenever a map change is detected.
+///
+/// This is convenient if you dont care about the exact dimensions / shape of your mesh
+/// but just want to be sure it holds the full map.
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
 pub struct MeshManagedByMap;
 
+/// Component temporarily active during map loading.
+/// Will be added by [`crate::bundle::MapBundle`] and will automatically be removed, once the map is loaded.
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
 pub struct MapLoading;
 
 impl Map {
+    /// Create a [`MapBuilder`] for configuring your map.
     pub fn builder(map_size: UVec2, atlas_texture: Handle<Image>, tile_size: Vec2) -> MapBuilder {
         MapBuilder::new(map_size, atlas_texture, tile_size)
     }
@@ -66,6 +71,9 @@ impl Map {
         self.map_uniform.map_to_world(map_position.extend(0.0)).xy()
     }
 
+    /// Same as [`Self::map_to_world`], but return a 3d coordinate,
+    /// z-value is the logical "depth" of the map position (for eg axonometric projection).
+    /// Not generally consistent with actual z-position of the mesh.
     pub fn map_to_world_3d(&self, map_position: Vec3) -> Vec3 {
         self.map_uniform.map_to_world(map_position)
     }
@@ -100,10 +108,6 @@ impl Map {
         self.map_uniform.map_size != map_texture.size().as_uvec2()
             || self.map_uniform.atlas_size != atlas_texture.size()
     }
-
-    //pub fn set_dirty(&mut self) {
-    //self.map_uniform.set_dirty();
-    //}
 
     pub fn is_loaded(&self, images: &Assets<Image>) -> bool {
         if let None = images.get(&self.map_texture) {
@@ -144,8 +148,8 @@ impl Map {
     }
 
     /// Get mutable access to map layers via a `MapIndexer`.
-    /// For this needs to mutably borrow the contained `MapLayer`s
-    /// and the associated `Image`s.
+    /// For this needs to mutably borrow the referenced
+    /// `Image`s.
     ///
     /// ```
     /// fn some_system(
@@ -159,7 +163,7 @@ impl Map {
     ///   // unnecessary data transferns to the GPU.
     ///   if let Ok(m) = map.get_mut(&mut *images) {
     ///     // Set tile at (x, y) to tileset index 3
-    ///     m[ivec2(x, y)] = 3;
+    ///     m.set(x, y, 3);
     ///   }
     /// }
     /// ```
@@ -177,7 +181,7 @@ impl Map {
 
 /// Indexer into a map.
 /// Internally holds a mutable reference to the underlying texture.
-/// See `Map.get_mut` for a usage example.
+/// See [`Map::get_mut`] for a usage example.
 #[derive(Debug)]
 pub struct MapIndexer<'a> {
     pub(crate) image: &'a mut Image,
@@ -185,18 +189,22 @@ pub struct MapIndexer<'a> {
 }
 
 impl<'a> MapIndexer<'a> {
+    /// Size of the map being indexed.
     pub fn size(&self) -> UVec2 {
         self.size
     }
 
+    /// Get tile at given position.
     pub fn at_ivec(&self, i: IVec2) -> u16 {
         self.at(i.x as u32, i.y as u32)
     }
 
+    /// Get tile at given position.
     pub fn at_uvec(&self, i: UVec2) -> u16 {
         self.at(i.x, i.y)
     }
 
+    /// Get tile at given position.
     pub fn at(&self, x: u32, y: u32) -> u16 {
         let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
@@ -205,10 +213,12 @@ impl<'a> MapIndexer<'a> {
         }
     }
 
+    /// Set tile at given position.
     pub fn set_uvec(&mut self, i: UVec2, v: u16) {
         self.set(i.x, i.y, v)
     }
 
+    /// Set tile at given position.
     pub fn set(&mut self, x: u32, y: u32, v: u16) {
         let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
@@ -218,8 +228,8 @@ impl<'a> MapIndexer<'a> {
     }
 }
 
-/// Signals that `self.map` has been fully loaded (materials & images),
-/// so all layer's .get and .set methods can be used.
+/// Signals that the given map has been fully loaded and from now on
+/// [`Map::get_mut`] should be successful.
 #[derive(Debug)]
 pub struct MapReadyEvent {
     pub map: Entity,

@@ -3,9 +3,11 @@ use bevy::{
     prelude::*,
 };
 
+/// Determines how map coordinates are related to world coordinates.
 #[derive(Debug, Clone, Copy)]
 pub struct TileProjection {
-    /// Projection matrix for converting map coordinates to world coordinates
+    /// Projection matrix for converting map coordinates to world coordinates.
+    /// This is normalized to the tile dimensions, ie. 1.0 means full tile width/height.
     pub projection: Mat3,
 
     /// Relative anchor point into a tile.

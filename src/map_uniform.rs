@@ -42,18 +42,17 @@ pub struct MapUniform {
     /// For overhang_mode==1
     pub(crate) perspective_overhang_mask: u32,
 
-    // -----
-    /// [derived] Size of the map in world units necessary to display
+    /// (derived) Size of the map in world units necessary to display
     /// all tiles according to projection.
     pub(crate) world_size: Vec2,
 
-    /// [derived] Offset of the projected map in world coordinates
+    /// (derived) Offset of the projected map in world coordinates
     pub(crate) world_offset: Vec2,
 
-    /// [derived]
+    /// (derived)
     pub(crate) n_tiles: UVec2,
 
-    /// [derived] world pos -> fractional 2d map index
+    /// (derived) world pos -> fractional 2d map index
     ///
     /// Note that the main use case for the inverse is to transform 2d world coordinates 
     /// (eg from mouse cursor) to 2d map coordinates with some assumption about how we choose the z
@@ -165,6 +164,20 @@ impl MapUniform {
             self.projection.x_axis.xy(),
             self.projection.y_axis.xy(),
         ).inverse();
+
+        // Iterate through the four "straight" neighboring map directions, and figure
+        // out which of these have negative Z-values after projection to the world.
+        // These are exactly the directions we should "overlap" in the shader in perspective
+        // overhang mode.
+        let mut mask = 0u32;
+        let flags = [0x01u32, 0x02, 0x04, 0x08];
+        let offsets = [vec2(0.0, -1.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(1.0, 0.0)];
+        for (flag, offset) in flags.iter().zip(offsets) {
+            if self.map_to_world(offset.extend(0.0)).z < 0.0 {
+                mask |= flag;
+            }
+        }
+        self.perspective_overhang_mask = mask;
     }
 
     fn update_n_tiles(&mut self) {

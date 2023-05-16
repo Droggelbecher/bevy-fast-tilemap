@@ -30,7 +30,7 @@ struct Map {
 
     overhang_mode: u32,
     max_overhang_levels: u32,
-    perspective_overhang_mask: u32,
+    perspective_overhang_mask: u32, // TODO: Remove
 
     // -----
     /// [derived] Size of the map in world units necessary to display
@@ -87,9 +87,10 @@ fn world_to_map(map: Map, world_position: vec2<f32>) -> vec2<f32> {
     return map.inverse_projection * pos;
 }
 
-fn map_to_world(map: Map, map_position: vec2<f32>) -> vec2<f32> {
+fn map_to_world(map: Map, map_position: vec2<f32>) -> vec3<f32> {
     return (
-        (map.projection * vec3<f32>(map_position, 0.0)).xy * map.tile_size + map.world_offset
+        (map.projection * vec3<f32>(map_position, 0.0)) * vec3<f32>(map.tile_size, 1.0) +
+        vec3<f32>(map.world_offset, 0.0)
     );
 }
 
@@ -184,7 +185,7 @@ fn world_to_tile_and_offset(
     out.tile = vec2<i32>(tile);
 
     // World position of tile reference point
-    var world_tile_base = map_to_world(map, tile);
+    var world_tile_base = map_to_world(map, tile).xy;
     out.offset = world_to_tile_offset(world_position, world_tile_base);
 
     return out;
@@ -249,18 +250,17 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
     var color = color;
 
     for(var idx = index + u32(1); idx < max_index; idx++) {
-        // Now all the orthogonal ones
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1)));
-
         // first render all the diagonal overhangs
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1)));
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1)));
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1, -1)));
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  1)));
 
+        // Now all the orthogonal ones
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1)));
+        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1)));
     }
 
     return color;
