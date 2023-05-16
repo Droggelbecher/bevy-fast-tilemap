@@ -1,13 +1,12 @@
-
 //! Simple example illustrating how to use updates to the tilemap for animation.
 
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{uvec2, vec2, vec3};
-use bevy::prelude::*;
-use bevy::window::PresentMode;
-use bevy_fast_tilemap::{
-    Map, MapBundle, FastTileMapPlugin, MeshManagedByMap
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::{uvec2, vec2, vec3},
+    prelude::*,
+    window::PresentMode,
 };
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MeshManagedByMap};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -30,7 +29,8 @@ fn main() {
         .add_plugin(FastTileMapPlugin::default())
         .add_startup_system(startup)
         .add_system(update_map.in_schedule(CoreSchedule::FixedUpdate))
-        .insert_resource(FixedTime::new_from_secs(0.1))
+        // Performance-wise you can step this much faster but it'd require an epillepsy warning.
+        .insert_resource(FixedTime::new_from_secs(0.2))
         .run();
 }
 
@@ -59,8 +59,7 @@ fn startup(
         }
     });
 
-    commands.spawn(MapBundle::new(map))
-        .insert(MeshManagedByMap);
+    commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
 
     let map = Map::builder(
         uvec2(50, 50),
@@ -72,10 +71,10 @@ fn startup(
     let mut bundle = MapBundle::new(map);
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
-    commands.spawn(bundle)
+    commands
+        .spawn(bundle)
         .insert(MeshManagedByMap)
-        .insert(AnimationLayer)
-        ;
+        .insert(AnimationLayer);
 }
 
 fn update_map(mut images: ResMut<Assets<Image>>, maps: Query<&Map, With<AnimationLayer>>) {
@@ -98,10 +97,11 @@ fn update_map(mut images: ResMut<Assets<Image>>, maps: Query<&Map, With<Animatio
 
         for y in y_min..y_max {
             for x in x_min..x_max {
+                // Tile index transitions, since our animation is ridiculously short,
+                // we can list them here explicitly
                 let t = match m.at(x, y) {
                     6 => 7,
                     7 => 8,
-                    8 => 6,
                     _ => 6,
                 };
                 m.set(x, y, t);

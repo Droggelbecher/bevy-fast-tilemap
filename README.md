@@ -23,17 +23,16 @@ Checkout ![screenshots/](screenshots/) for more.
 
 ## How it works
 
-Aims at rendering tilemaps with lightning speed by using just a single quad per map (layer)
-and offloading the actual rendering to GPU.
-The whole tilemap (-layer) is rendered as a single quad and a custom shader cares for rendering the
+The whole map is rendered as a single quad and a custom shader cares for rendering the
 correct tiles at the correct position.
 
-Thus each map layer works with two textures: One with integer data type, constructed and maintained
-internally for storing for each tile position which tile index should be displayed there. And a
-tile atlas that contains all the tiles which should be provided by you (see [assets/](assets/) for
+Thus each map works with two textures: One with integer data type, constructed and maintained
+internally for storing for each tile position which tile index should be displayed there. And the
+other being a tile atlas that contains all the tiles. This one should be provided by you (see [assets/](assets/) for
 atlas examples).
 
-This should be faster than most other bevy tilemap implementations for bevy as of this writing.
+As of this writing, this should be (much) faster than most other bevy tilemap implementations out
+there.
 
 ## Limitations
 
