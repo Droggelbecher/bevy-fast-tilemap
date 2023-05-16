@@ -4,31 +4,27 @@
 [![Crates.io](https://img.shields.io/crates/v/bevy_fast_tilemap)](https://crates.io/crates/bevy_fast_tilemap)
 [![docs](https://docs.rs/bevy_fast_tilemap/badge.svg)](https://docs.rs/bevy_fast_tilemap/)
 
-GPU-accelerated tilemap functionality for [`bevy`](https://bevyengine.org/).
-Aims at rendering tilemaps with lightning speed by using just a single quad per map (layer)
-and offloading the actual rendering to GPU.
-This should be faster than most other bevy tilemap implementations as of this writing.
+Lightning fast tilemaps for [`bevy`](https://bevyengine.org/).
 
 ## Features
 
 - Very high rendering performance (hundreds of fps, largely independent of map size)
 - Tilemaps can be very large or have many "layers"
 - Rectangular and isometric (axonometric) tile maps.
-- Tile overlaps either by "dominance" rule or by perspective
+- Tiles can overlap either by "dominance" rule or by perspective
 - Optional custom mesh for which the map serves as a texture
 
 ## Screenshots
 
-![iso](screenshots/iso.png)
-![iso2](screenshots/iso2.png)
-![custom_mesh](screenshots/custom_mesh.png)
-![dominance](screenshots/dominance.png)
 ![iso_perspective](screenshots/iso_perspective.png)
+![custom_mesh](screenshots/custom_mesh.png)
 
-Checkout ![screenshots/](screenhots/) for more.
+Checkout ![screenshots/](screenshots/) for more.
 
 ## How it works
 
+Aims at rendering tilemaps with lightning speed by using just a single quad per map (layer)
+and offloading the actual rendering to GPU.
 The whole tilemap (-layer) is rendered as a single quad and a custom shader cares for rendering the
 correct tiles at the correct position.
 
@@ -36,6 +32,8 @@ Thus each map layer works with two textures: One with integer data type, constru
 internally for storing for each tile position which tile index should be displayed there. And a
 tile atlas that contains all the tiles which should be provided by you (see [assets/](assets/) for
 atlas examples).
+
+This should be faster than most other bevy tilemap implementations for bevy as of this writing.
 
 ## Limitations
 
