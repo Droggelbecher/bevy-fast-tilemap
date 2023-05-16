@@ -1,4 +1,8 @@
-use bevy::{math::vec2, prelude::*, render::render_resource::ShaderType};
+use bevy::{
+    math::{vec2, Vec3Swizzles, vec3, mat2},
+    prelude::*,
+    render::render_resource::ShaderType,
+};
 
 use crate::tile_projection::IDENTITY;
 
@@ -26,26 +30,37 @@ pub struct MapUniform {
     pub(crate) tile_anchor_point: Vec2,
 
     /// fractional 2d map index -> world pos
-    pub(crate) projection: Mat2,
+    pub(crate) projection: Mat3,
 
+    /// 0=dominance
+    /// 1=perspective
+    pub(crate) overhang_mode: u32,
+
+    /// For overhang_mode==0
     pub(crate) max_overhang_levels: u32,
 
-    // -----
-    /// [derived] Size of the map in world units necessary to display
+    /// For overhang_mode==1
+    pub(crate) perspective_overhang_mask: u32,
+
+    /// (derived) Size of the map in world units necessary to display
     /// all tiles according to projection.
     pub(crate) world_size: Vec2,
 
-    /// [derived] Offset of the projected map in world coordinates
+    /// (derived) Offset of the projected map in world coordinates
     pub(crate) world_offset: Vec2,
 
-    /// [derived]
+    /// (derived)
     pub(crate) n_tiles: UVec2,
 
-    /// [derived] world pos -> fractional 2d map index
+    /// (derived) world pos -> fractional 2d map index
+    ///
+    /// Note that the main use case for the inverse is to transform 2d world coordinates 
+    /// (eg from mouse cursor) to 2d map coordinates with some assumption about how we choose the z
+    /// coordinate.
+    /// An inverse of the 3d projection matrix here would assume that you feed in the correct z
+    /// coordinate and otherwise give wrong results, hence we only invert the 2d part
+    /// and let the caller handle management of z.
     pub(crate) inverse_projection: Mat2,
-
-    // ShaderType doesnt handle bools very well
-    pub(crate) ready: u32,
 }
 
 impl Default for MapUniform {
@@ -59,12 +74,13 @@ impl Default for MapUniform {
             outer_padding_bottomright: default(),
             tile_anchor_point: IDENTITY.tile_anchor_point,
             projection: IDENTITY.projection,
+            overhang_mode: default(),
             max_overhang_levels: default(),
+            perspective_overhang_mask: default(),
             world_size: default(),
             world_offset: default(),
             n_tiles: default(),
             inverse_projection: default(),
-            ready: default()
         }
     }
 }
@@ -78,36 +94,28 @@ impl MapUniform {
         self.world_size
     }
 
-    pub(crate) fn map_to_world(&self, map_position: Vec2) -> Vec2 {
-        (self.projection * map_position) * self.tile_size + self.world_offset
+    pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
+        (self.projection * map_position) * self.tile_size.extend(1.0) + self.world_offset.extend(0.0)
     }
 
-    pub(crate) fn world_to_map(&self, world: Vec2) -> Vec2 {
-        self.inverse_projection * ((world - self.world_offset) / self.tile_size)
+    /// As of now, this will ignore `world`s z coordinate
+    /// and always project to z=0 on the map.
+    /// This behavior might change in the future
+    pub(crate) fn world_to_map(&self, world: Vec3) -> Vec3 {
+        (self.inverse_projection * ((world.xy() - self.world_offset) / self.tile_size)).extend(0.0)
     }
 
-    pub(crate) fn ready(&self) -> bool {
-        self.ready != 0u32
-    }
-
-    pub(crate) fn set_dirty(&mut self) {
-        self.ready = 0u32
-    }
-
-    pub(crate) fn needs_update(&self, map_size: UVec2, atlas_size: Vec2) -> bool {
-        !self.ready() || self.map_size != map_size || self.atlas_size != atlas_size
-    }
-
-    /// Return true iff this update made the uniform ready
-    /// (ie. it was not ready before and is ready now).
-    pub(crate) fn update(&mut self, map_size: UVec2, atlas_size: Vec2) -> bool {
-        if !self.needs_update(map_size, atlas_size) {
+    pub(crate) fn update_map_size(&mut self, map_size: UVec2) -> bool {
+        if self.map_size == map_size {
             return false;
         }
 
         self.map_size = map_size;
-        self.atlas_size = atlas_size;
+        self.update_world_size();
+        true
+    }
 
+    pub(crate) fn update_world_size(&mut self) {
         // World Size
         //
         // Determine the bounding rectangle of the projected map (in order to construct the quad
@@ -117,14 +125,14 @@ impl MapUniform {
         // works and is simple enough:
         // 1. save coordinates for all 4 corners
         // 2. take maximum x- and y distances
-        let mut low = self.map_to_world(vec2(0.0, 0.0));
+        let mut low = self.map_to_world(vec3(0.0, 0.0, 0.0)).xy();
         let mut high = low.clone();
         for corner in [
             vec2(self.map_size().x as f32, 0.0),
             vec2(0.0, self.map_size().y as f32),
             vec2(self.map_size().x as f32, self.map_size().y as f32),
         ] {
-            let pos = self.map_to_world(corner);
+            let pos = self.map_to_world(corner.extend(0.0)).xy();
             low = low.min(pos);
             high = high.max(pos);
         }
@@ -137,17 +145,42 @@ impl MapUniform {
         // say the top left corner (eg for an iso projection it might be vertically centered).
         // We use `low` from above to figure out how to correctly translate here.
         self.world_offset = vec2(-0.5, -0.5) * self.world_size - low;
+    }
 
-        self.inverse_projection = self.projection.inverse();
+    /// Return true iff this update made the uniform ready
+    /// (ie. it was not ready before and is ready now).
+    pub(crate) fn update_atlas_size(&mut self, atlas_size: Vec2) -> bool {
+        if self.atlas_size == atlas_size {
+            return false;
+        }
 
-        self.n_tiles = self.compute_n_tiles();
-
-        self.ready = 1u32;
+        self.atlas_size = atlas_size;
+        self.update_n_tiles();
         true
     }
 
-    fn compute_n_tiles(&self) -> UVec2 {
+    pub(crate) fn update_inverse_projection(&mut self) {
+        self.inverse_projection = mat2(
+            self.projection.x_axis.xy(),
+            self.projection.y_axis.xy(),
+        ).inverse();
 
+        // Iterate through the four "straight" neighboring map directions, and figure
+        // out which of these have negative Z-values after projection to the world.
+        // These are exactly the directions we should "overlap" in the shader in perspective
+        // overhang mode.
+        let mut mask = 0u32;
+        let flags = [0x01u32, 0x02, 0x04, 0x08];
+        let offsets = [vec2(0.0, -1.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(1.0, 0.0)];
+        for (flag, offset) in flags.iter().zip(offsets) {
+            if self.map_to_world(offset.extend(0.0)).z < 0.0 {
+                mask |= flag;
+            }
+        }
+        self.perspective_overhang_mask = mask;
+    }
+
+    fn update_n_tiles(&mut self) {
         let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;
         let n_tiles = (inner + self.inner_padding) / (self.inner_padding + self.tile_size);
 
@@ -160,6 +193,6 @@ impl MapUniform {
                 n_tiles
             );
         }
-        n_tiles.as_uvec2()
+        self.n_tiles = n_tiles.as_uvec2();
     }
 }

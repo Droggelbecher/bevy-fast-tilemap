@@ -1,4 +1,5 @@
 use bevy::{
+    math::Vec3Swizzles,
     prelude::*,
     render::{
         render_resource::{FilterMode, SamplerDescriptor},
@@ -8,12 +9,10 @@ use bevy::{
 };
 use std::num::NonZeroU32;
 
-use crate::map_uniform::MapUniform;
-use crate::map_builder::MapBuilder;
+use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 
-/// Map, of size `size` tiles.
-/// The actual tile data is stored in MapLayer components and Images in the asset system
-/// and connected to this Map via bevys parent/child relationships for entities.
+/// Map, holding handles to a map texture with the tile data and an atlas texture
+/// with the tile renderings.
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
 pub struct Map {
@@ -31,27 +30,26 @@ pub struct Map {
 
 /// For entities that have all of:
 /// - This component
-/// - `Map`
-/// - `Mesh2dHandle`
+/// - [`Map`]
+/// - [`bevy::sprite::Mesh2dHandle`]
 /// The Mesh will be automatically replaced with a rectangular mesh matching
 /// the bounding box of the `Map` whenever a map change is detected.
+///
+/// This is convenient if you dont care about the exact dimensions / shape of your mesh
+/// but just want to be sure it holds the full map.
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
 pub struct MeshManagedByMap;
 
-/// `Map` Entities that also have this component are in need of recomputing
-/// some internal state (using `map.update()`).
+/// Component temporarily active during map loading.
+/// Will be added by [`crate::bundle::MapBundle`] and will automatically be removed, once the map is loaded.
 #[derive(Debug, Component, Clone, Default, Reflect)]
 #[reflect(Component)]
-pub struct MapDirty;
+pub struct MapLoading;
 
 impl Map {
-
-    pub fn builder(
-        map_size: UVec2,
-        atlas_texture: Handle<Image>,
-        tile_size: Vec2,
-    ) -> MapBuilder {
+    /// Create a [`MapBuilder`] for configuring your map.
+    pub fn builder(map_size: UVec2, atlas_texture: Handle<Image>, tile_size: Vec2) -> MapBuilder {
         MapBuilder::new(map_size, atlas_texture, tile_size)
     }
 
@@ -70,15 +68,26 @@ impl Map {
     /// E.g. map position `(0.5, 0.5)` is in the center of the tile
     /// at index `(0, 0)`.
     pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
+        self.map_uniform.map_to_world(map_position.extend(0.0)).xy()
+    }
+
+    /// Same as [`Self::map_to_world`], but return a 3d coordinate,
+    /// z-value is the logical "depth" of the map position (for eg axonometric projection).
+    /// Not generally consistent with actual z-position of the mesh.
+    pub fn map_to_world_3d(&self, map_position: Vec3) -> Vec3 {
         self.map_uniform.map_to_world(map_position)
     }
 
     /// Convert world position to map position.
     pub fn world_to_map(&self, world: Vec2) -> Vec2 {
+        self.map_uniform.world_to_map(world.extend(0.0)).xy()
+    }
+
+    pub fn world_to_map_3d(&self, world: Vec3) -> Vec3 {
         self.map_uniform.world_to_map(world)
     }
 
-    /// Use this to avoid creating a mutable reference 
+    /// Use this to avoid creating a mutable reference
     pub fn needs_update(&self, images: &Assets<Image>) -> bool {
         let map_texture = match images.get(&self.map_texture) {
             Some(x) => x,
@@ -96,22 +105,30 @@ impl Map {
             }
         };
 
-        self.map_uniform
-            .needs_update(map_texture.size().as_uvec2(), atlas_texture.size())
+        self.map_uniform.map_size != map_texture.size().as_uvec2()
+            || self.map_uniform.atlas_size != atlas_texture.size()
     }
 
-    pub fn set_dirty(&mut self) {
-        self.map_uniform.set_dirty();
+    pub fn is_loaded(&self, images: &Assets<Image>) -> bool {
+        if let None = images.get(&self.map_texture) {
+            return false;
+        }
+
+        if let None = images.get(&self.atlas_texture) {
+            return false;
+        }
+
+        return true;
     }
 
     /// Update internal state.
+    /// Call this when map size changed or assets may have become available.
     /// Should not be necessary to call this if only map contents changed.
     pub fn update(&mut self, images: &Assets<Image>) -> bool {
         let map_texture = match images.get(&self.map_texture) {
             Some(x) => x,
             None => {
                 warn!("No map texture");
-                self.map_uniform.set_dirty();
                 return false;
             }
         };
@@ -120,18 +137,19 @@ impl Map {
             Some(x) => x,
             None => {
                 warn!("No atlas texture");
-                self.map_uniform.set_dirty();
                 return false;
             }
         };
 
-        self.map_uniform
-            .update(map_texture.size().as_uvec2(), atlas_texture.size())
+        let a = self.map_uniform.update_map_size(map_texture.size().as_uvec2());
+        let b = self.map_uniform.update_atlas_size(atlas_texture.size());
+
+        a || b
     }
 
     /// Get mutable access to map layers via a `MapIndexer`.
-    /// For this needs to mutably borrow the contained `MapLayer`s
-    /// and the associated `Image`s.
+    /// For this needs to mutably borrow the referenced
+    /// `Image`s.
     ///
     /// ```
     /// fn some_system(
@@ -145,14 +163,11 @@ impl Map {
     ///   // unnecessary data transferns to the GPU.
     ///   if let Ok(m) = map.get_mut(&mut *images) {
     ///     // Set tile at (x, y) to tileset index 3
-    ///     m[ivec2(x, y)] = 3;
+    ///     m.set(x, y, 3);
     ///   }
     /// }
     /// ```
-    pub fn get_mut<'a>(
-        &self,
-        images: &'a mut Assets<Image>,
-    ) -> Result<MapIndexer<'a>, &'a str> {
+    pub fn get_mut<'a>(&self, images: &'a mut Assets<Image>) -> Result<MapIndexer<'a>, &'a str> {
         let image = images
             .get_mut(&self.map_texture)
             .ok_or("Map texture not yet loaded")?;
@@ -166,7 +181,7 @@ impl Map {
 
 /// Indexer into a map.
 /// Internally holds a mutable reference to the underlying texture.
-/// See `Map.get_mut` for a usage example.
+/// See [`Map::get_mut`] for a usage example.
 #[derive(Debug)]
 pub struct MapIndexer<'a> {
     pub(crate) image: &'a mut Image,
@@ -174,18 +189,22 @@ pub struct MapIndexer<'a> {
 }
 
 impl<'a> MapIndexer<'a> {
+    /// Size of the map being indexed.
     pub fn size(&self) -> UVec2 {
         self.size
     }
 
+    /// Get tile at given position.
     pub fn at_ivec(&self, i: IVec2) -> u16 {
         self.at(i.x as u32, i.y as u32)
     }
 
+    /// Get tile at given position.
     pub fn at_uvec(&self, i: UVec2) -> u16 {
         self.at(i.x, i.y)
     }
 
+    /// Get tile at given position.
     pub fn at(&self, x: u32, y: u32) -> u16 {
         let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
@@ -194,10 +213,12 @@ impl<'a> MapIndexer<'a> {
         }
     }
 
+    /// Set tile at given position.
     pub fn set_uvec(&mut self, i: UVec2, v: u16) {
         self.set(i.x, i.y, v)
     }
 
+    /// Set tile at given position.
     pub fn set(&mut self, x: u32, y: u32, v: u16) {
         let idx = y as isize * self.size.x as isize + x as isize;
         unsafe {
@@ -207,22 +228,21 @@ impl<'a> MapIndexer<'a> {
     }
 }
 
-/// Signals that `self.map` has been fully loaded (materials & images),
-/// so all layer's .get and .set methods can be used.
+/// Signals that the given map has been fully loaded and from now on
+/// [`Map::get_mut`] should be successful.
 #[derive(Debug)]
 pub struct MapReadyEvent {
     pub map: Entity,
 }
 
-/// Check maps/textures state and mark them with `MapDirty` if they need an update
-pub fn mark_maps_dirty(
-    maps: Query<(Ref<Map>, Entity, Option<&MeshManagedByMap>), Without<MapDirty>>,
+/// 
+pub fn configure_loaded_assets(
+    maps: Query<Ref<Map>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
     mut images: ResMut<Assets<Image>>,
-    mut commands: Commands,
 ) {
     for ev in ev_asset.iter() {
-        for (map, map_entity, _) in maps.iter() {
+        for map in maps.iter() {
             match ev {
                 AssetEvent::Created { handle }
                     if *handle == map.map_texture || *handle == map.atlas_texture =>
@@ -247,41 +267,28 @@ pub fn mark_maps_dirty(
                             view_descriptor.mip_level_count = NonZeroU32::new(4u32);
                         }
                     }
-
-                    commands.entity(map_entity).insert(MapDirty);
-                }
-                AssetEvent::Modified { handle } | AssetEvent::Removed { handle }
-                    if *handle == map.map_texture || *handle == map.atlas_texture =>
-                {
-                    commands.entity(map_entity).insert(MapDirty);
                 }
                 _ => (),
             } // match ev
         } // for map
     } // for ev
 
-    for (map, entity, _manage_mesh) in maps.iter() {
-        if map.is_changed() || map.is_added() {
-            commands.entity(entity).insert(MapDirty);
-        }
-    }
-} // update_maps()
+} // configure_loaded_assets()
 
-pub fn update_dirty_maps(
+/// Check to see if any maps' assets became available and send a MapReadyEvent
+/// if so.
+pub fn update_loading_maps(
     images: Res<Assets<Image>>,
-    mut maps: Query<(&mut Map, Entity, Option<&MeshManagedByMap>), With<MapDirty>>,
+    mut maps: Query<(&mut Map, Entity, Option<&MeshManagedByMap>), With<MapLoading>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     mut send_map_ready_event: EventWriter<MapReadyEvent>,
 ) {
     for (mut map, entity, manage_mesh) in maps.iter_mut() {
-        commands.entity(entity).remove::<MapDirty>();
+        if map.is_loaded(images.as_ref()) {
+            commands.entity(entity).remove::<MapLoading>();
+            map.update(images.as_ref());
 
-        if !map.needs_update(images.as_ref()) {
-            continue;
-        }
-
-        if map.update(images.as_ref()) {
             if let Some(_) = manage_mesh {
                 let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
                     size: map.world_size(),
@@ -290,10 +297,8 @@ pub fn update_dirty_maps(
                 commands.entity(entity).insert(mesh);
             }
 
+            debug!("Map loaded: {:?}", map.map_size());
             send_map_ready_event.send(MapReadyEvent { map: entity });
         }
     }
 }
-
-
-

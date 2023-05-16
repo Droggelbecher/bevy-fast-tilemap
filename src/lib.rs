@@ -6,9 +6,11 @@
 //!
 //! ## Features
 //! 
-//! - Very high rendering performance.
+//! - Very high rendering performance (hundreds of fps, largely independent of map size)
 //! - Tilemaps can be very large or have many "layers"
-//! - Rectangular and isometric tile maps.
+//! - Rectangular and isometric (axonometric) tile maps.
+//! - Tile overlaps either by "dominance" rule or by perspective
+//! - Optional custom mesh for which the map serves as a texture
 //! 
 //! ## How it works
 //! 
