@@ -19,14 +19,13 @@ This should be faster than most other bevy tilemap implementations as of this wr
 
 ## Screenshots
 
-![updates](screenshots/updates.png)
-![layers](screenshots/layers.png)
 ![iso](screenshots/iso.png)
 ![iso2](screenshots/iso2.png)
 ![custom_mesh](screenshots/custom_mesh.png)
 ![dominance](screenshots/dominance.png)
-![iso_dominance](screenshots/iso_dominance.png)
 ![iso_perspective](screenshots/iso_perspective.png)
+
+Checkout ![screenshots/](screenhots/) for more.
 
 ## How it works
 
@@ -41,8 +40,8 @@ atlas examples).
 ## Limitations
 
 - Only tested on Windows, no WASM support
-- No direct animation support, but due to the raw speed you can likely get away with just update the map data
-  tiles.
+- No direct animation support, but you can easily update the tilemap in regular intervals
+  to achieve the same (see [Animation Example](examples/animation.rs))
 
 ## Related work
 
