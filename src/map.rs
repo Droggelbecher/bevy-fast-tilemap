@@ -185,6 +185,7 @@ impl Map {
 #[derive(Debug)]
 pub struct MapIndexer<'a> {
     pub(crate) image: &'a mut Image,
+    // TODO: We can get size from image.texture_descriptor.size
     pub(crate) size: UVec2,
 }
 
