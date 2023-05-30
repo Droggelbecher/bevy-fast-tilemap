@@ -249,7 +249,12 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
     var max_index = min(map.n_tiles.x * map.n_tiles.y, index + map.max_overhang_levels);
     var color = color;
 
-    for(var idx = index + u32(1); idx < max_index; idx++) {
+    // Note: For some reason on OSX, the use of for loops fails silently (produces pure red output
+    // in our case), while a loop { ... } seems to work just fine.
+    var idx = index + u32(1);
+    loop {
+        if idx >= max_index { break; }
+
         // first render all the diagonal overhangs
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1)));
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1)));
@@ -261,6 +266,8 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0)));
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1)));
         color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1)));
+
+        idx++;
     }
 
     return color;
