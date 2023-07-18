@@ -1,8 +1,5 @@
 use crate::map::{Map, MapLoading};
-use bevy::{
-    prelude::*,
-    sprite::Mesh2dHandle,
-};
+use bevy::{prelude::*, sprite::Mesh2dHandle};
 
 /// Bundle of components you should typically have for a map.
 /// In addition to the components here you should either:
@@ -22,10 +19,6 @@ pub struct MapBundle {
 
 impl MapBundle {
     pub fn new(map: Map) -> Self {
-        Self {
-            map,
-            ..default()
-        }
+        Self { map, ..default() }
     }
 }
-

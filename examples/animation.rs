@@ -13,22 +13,24 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Fast Tilemap example"),
-                resolution: (1820., 920.).into(),
-                // disable vsync so we can see the raw FPS speed
-                present_mode: PresentMode::Immediate,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("Fast Tilemap example"),
+                    resolution: (1820., 920.).into(),
+                    // disable vsync so we can see the raw FPS speed
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
-        .add_plugin(FastTileMapPlugin::default())
-        .add_startup_system(startup)
-        .add_system(update_map.in_schedule(CoreSchedule::FixedUpdate))
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            MouseControlsCameraPlugin::default(),
+            FastTileMapPlugin::default(),
+        ))
+        .add_systems(Startup, startup)
+        .add_systems(FixedUpdate, update_map)
         // Performance-wise you can step this much faster but it'd require an epillepsy warning.
         .insert_resource(FixedTime::new_from_secs(0.2))
         .run();

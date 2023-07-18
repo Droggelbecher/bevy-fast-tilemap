@@ -1,4 +1,3 @@
-
 //! Simple example illustrating use of a custom, non-rectangular mesh.
 //! This is based on `layers`, so you might want to read that one first.
 //! Each map is a single quad so the performance overhead should be low for a reasonable amount of
@@ -9,30 +8,30 @@ use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{
-    Map, MapBundle, MapIndexer, FastTileMapPlugin
-};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Fast Tilemap example"),
-                resolution: (1820., 920.).into(),
-                // disable vsync so we can see the raw FPS speed
-                present_mode: PresentMode::Immediate,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("Fast Tilemap example"),
+                    resolution: (1820., 920.).into(),
+                    // disable vsync so we can see the raw FPS speed
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
-        .add_plugin(FastTileMapPlugin::default())
-        .add_startup_system(startup)
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            MouseControlsCameraPlugin::default(),
+            FastTileMapPlugin::default(),
+        ))
+        .add_systems(Startup, startup)
         .run();
 }
 
@@ -73,7 +72,8 @@ fn startup(
 
     let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Circle::new(300.0))));
 
-    commands.spawn(MapBundle::new(map))
+    commands
+        .spawn(MapBundle::new(map))
         .insert(MapLayer(0))
         // Rather than `MeshManagedByMap`, use our own custom mesh here
         .insert(mesh.clone());
@@ -89,9 +89,7 @@ fn startup(
     // Higher z value means "closer to the camera"
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
-    commands.spawn(bundle)
-        .insert(MapLayer(1))
-        .insert(mesh);
+    commands.spawn(bundle).insert(MapLayer(1)).insert(mesh);
 }
 
 fn initialize_layer1(m: &mut MapIndexer) {

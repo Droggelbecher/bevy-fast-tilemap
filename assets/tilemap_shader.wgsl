@@ -1,7 +1,4 @@
-
-#import bevy_sprite::mesh2d_view_bindings
-#import bevy_pbr::utils
-#import bevy_sprite::mesh2d_bindings
+#import bevy_sprite::mesh2d_bindings mesh
 
 struct Map {
     /// Size of the map, in tiles.
@@ -59,7 +56,7 @@ var atlas_sampler: sampler;
 @group(1) @binding(3)
 var<uniform> map: Map;
 
-#import bevy_sprite::mesh2d_functions
+#import bevy_sprite::mesh2d_functions mesh2d_position_local_to_clip, mesh2d_position_local_to_world
 
 struct Vertex {
     @location(0) position: vec3<f32>,

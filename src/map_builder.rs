@@ -1,6 +1,6 @@
 use crate::map::{Map, MapIndexer};
-use bevy::math::uvec2;
 use crate::map_uniform::MapUniform;
+use bevy::math::uvec2;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
 use std::mem::size_of;
@@ -88,12 +88,12 @@ impl MapBuilder {
         initializer: F,
     ) -> Map
     where
-        F: FnOnce(&mut MapIndexer) -> (),
+        F: FnOnce(&mut MapIndexer),
     {
         let mut map_image = Image::new(
             Extent3d {
-                width: self.map.map_size().x as u32,
-                height: self.map.map_size().y as u32,
+                width: self.map.map_size().x,
+                height: self.map.map_size().y,
                 depth_or_array_layers: 1,
             },
             TextureDimension::D2,
@@ -119,18 +119,14 @@ impl MapBuilder {
 
     /// Build the map component and immediately initialize the map
     /// data with the given initializer callback.
-    pub fn build_and_set<F>(
-        self,
-        mut images: &mut ResMut<Assets<Image>>,
-        mut initializer: F,
-    ) -> Map
+    pub fn build_and_set<F>(self, images: &mut ResMut<Assets<Image>>, mut initializer: F) -> Map
     where
         F: FnMut(UVec2) -> u16,
     {
         let sx = self.map.map_size().x;
         let sy = self.map.map_size().y;
 
-        self.build_and_initialize(&mut images, |m: &mut MapIndexer| {
+        self.build_and_initialize(images, |m: &mut MapIndexer| {
             for y in 0..sy {
                 for x in 0..sx {
                     m.set(x, y, initializer(uvec2(x, y)));

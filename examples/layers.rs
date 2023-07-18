@@ -1,4 +1,3 @@
-
 //! Simple example illustrating how to use multiple Map instances as layers.
 //! Each map is a single quad so the performance overhead should be low for a reasonable amount of
 //! layers.
@@ -7,30 +6,30 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{
-    Map, MapBundle, MapIndexer, FastTileMapPlugin, MeshManagedByMap
-};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Fast Tilemap example"),
-                resolution: (1820., 920.).into(),
-                // disable vsync so we can see the raw FPS speed
-                present_mode: PresentMode::Immediate,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("Fast Tilemap example"),
+                    resolution: (1820., 920.).into(),
+                    // disable vsync so we can see the raw FPS speed
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
-        .add_plugin(FastTileMapPlugin::default())
-        .add_startup_system(startup)
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            MouseControlsCameraPlugin::default(),
+            FastTileMapPlugin::default(),
+        ))
+        .add_systems(Startup, startup)
         .run();
 }
 
@@ -58,17 +57,14 @@ fn startup(
         // Tile Size
         vec2(16., 16.),
     )
-    .build_and_initialize(&mut images, |m| {
+    .build_and_set(&mut images, |pos| {
         // Initialize using a closure
         // Set all tiles in layer 0 to index 4
-        for y in 0..m.size().y {
-            for x in 0..m.size().y {
-                m.set(x, y, ((x + y) % 4 + 1) as u16);
-            }
-        }
+        ((pos.x + pos.y) % 4 + 1) as u16
     });
 
-    commands.spawn(MapBundle::new(map))
+    commands
+        .spawn(MapBundle::new(map))
         .insert(MapLayer(0))
         // Have the map manage our mesh so it always has the right size
         .insert(MeshManagedByMap);
@@ -84,7 +80,8 @@ fn startup(
     // Higher z value means "closer to the camera"
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
-    commands.spawn(bundle)
+    commands
+        .spawn(bundle)
         .insert(MapLayer(1))
         .insert(MeshManagedByMap);
 }
