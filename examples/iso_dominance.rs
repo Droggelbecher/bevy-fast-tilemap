@@ -6,7 +6,9 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{FastTileMapPlugin, MeshManagedByMap, Map, MapIndexer, AXONOMETRIC, MapBundle};
+use bevy_fast_tilemap::{
+    FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap, AXONOMETRIC,
+};
 use rand::Rng;
 
 mod mouse_controls_camera;
@@ -14,22 +16,24 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Fast Tilemap example"),
-                resolution: (1820., 920.).into(),
-                // disable vsync so we can see the raw FPS speed
-                present_mode: PresentMode::Immediate,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("Fast Tilemap example"),
+                    resolution: (1820., 920.).into(),
+                    // disable vsync so we can see the raw FPS speed
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
-        .add_plugin(FastTileMapPlugin::default())
-        .add_startup_system(startup)
-        .add_system(show_coordinate)
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            MouseControlsCameraPlugin::default(),
+            FastTileMapPlugin::default(),
+        ))
+        .add_systems(Startup, startup)
+        .add_systems(Update, show_coordinate)
         .run();
 }
 
@@ -48,11 +52,7 @@ fn startup(
         // Tile size
         vec2(256.0, 128.0),
     )
-    .with_padding(
-        vec2(256.0, 128.0),
-        vec2(256.0, 128.0),
-        vec2(256.0, 128.0)
-    )
+    .with_padding(vec2(256.0, 128.0), vec2(256.0, 128.0), vec2(256.0, 128.0))
     // "Dominance" overhang draws the overlap of tiles depending on their index in the tile atlas.
     // Tiles with higher index will be drawn on top of tiles with lower index.
     // For this we draw in the "padding" area of the tile atlas.
@@ -64,9 +64,7 @@ fn startup(
     .with_dominance_overhang(3)
     .build_and_initialize(&mut images, init_map);
 
-    commands.spawn(MapBundle::new(map))
-        .insert(MeshManagedByMap);
-
+    commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
 } // startup
 
 /// Fill the map with a random pattern

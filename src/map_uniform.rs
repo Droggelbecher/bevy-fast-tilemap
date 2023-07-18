@@ -1,5 +1,5 @@
 use bevy::{
-    math::{vec2, Vec3Swizzles, vec3, mat2},
+    math::{mat2, vec2, vec3, Vec3Swizzles},
     prelude::*,
     render::render_resource::ShaderType,
 };
@@ -54,7 +54,7 @@ pub struct MapUniform {
 
     /// (derived) world pos -> fractional 2d map index
     ///
-    /// Note that the main use case for the inverse is to transform 2d world coordinates 
+    /// Note that the main use case for the inverse is to transform 2d world coordinates
     /// (eg from mouse cursor) to 2d map coordinates with some assumption about how we choose the z
     /// coordinate.
     /// An inverse of the 3d projection matrix here would assume that you feed in the correct z
@@ -95,7 +95,8 @@ impl MapUniform {
     }
 
     pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
-        (self.projection * map_position) * self.tile_size.extend(1.0) + self.world_offset.extend(0.0)
+        (self.projection * map_position) * self.tile_size.extend(1.0)
+            + self.world_offset.extend(0.0)
     }
 
     /// As of now, this will ignore `world`s z coordinate
@@ -126,7 +127,7 @@ impl MapUniform {
         // 1. save coordinates for all 4 corners
         // 2. take maximum x- and y distances
         let mut low = self.map_to_world(vec3(0.0, 0.0, 0.0)).xy();
-        let mut high = low.clone();
+        let mut high = low;
         for corner in [
             vec2(self.map_size().x as f32, 0.0),
             vec2(0.0, self.map_size().y as f32),
@@ -160,10 +161,8 @@ impl MapUniform {
     }
 
     pub(crate) fn update_inverse_projection(&mut self) {
-        self.inverse_projection = mat2(
-            self.projection.x_axis.xy(),
-            self.projection.y_axis.xy(),
-        ).inverse();
+        self.inverse_projection =
+            mat2(self.projection.x_axis.xy(), self.projection.y_axis.xy()).inverse();
 
         // Iterate through the four "straight" neighboring map directions, and figure
         // out which of these have negative Z-values after projection to the world.
@@ -171,7 +170,12 @@ impl MapUniform {
         // overhang mode.
         let mut mask = 0u32;
         let flags = [0x01u32, 0x02, 0x04, 0x08];
-        let offsets = [vec2(0.0, -1.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(1.0, 0.0)];
+        let offsets = [
+            vec2(0.0, -1.0),
+            vec2(-1.0, 0.0),
+            vec2(0.0, 1.0),
+            vec2(1.0, 0.0),
+        ];
         for (flag, offset) in flags.iter().zip(offsets) {
             if self.map_to_world(offset.extend(0.0)).z < 0.0 {
                 mask |= flag;

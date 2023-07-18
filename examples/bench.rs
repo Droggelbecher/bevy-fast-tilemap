@@ -1,4 +1,3 @@
-
 //! Analog to https://github.com/StarArawn/bevy_ecs_tilemap/blob/main/examples/bench.rs
 //! Note that we offer much less in terms of features compared to bevy_ecs_tilemap,
 //! so the comparison might rightfully be considered unfair.
@@ -11,9 +10,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{
-    Map, MapBundle, FastTileMapPlugin, MeshManagedByMap
-};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MeshManagedByMap};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -36,26 +33,29 @@ fn startup(
     )
     .build(&mut images);
 
-    commands.spawn(MapBundle::new(map))
+    commands
+        .spawn(MapBundle::new(map))
         // Have the map manage our mesh so it always has the right size
         .insert(MeshManagedByMap);
 }
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Benchmark Example"),
-                resolution: (1270.0, 720.0).into(),
-                present_mode: PresentMode::Immediate,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("Benchmark Example"),
+                    resolution: (1270.0, 720.0).into(),
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(FastTileMapPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
-        .add_startup_system(startup)
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            MouseControlsCameraPlugin::default(),
+            FastTileMapPlugin::default(),
+        ))
+        .add_systems(Startup, startup)
         .run();
 }

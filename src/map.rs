@@ -7,7 +7,6 @@ use bevy::{
     },
     sprite::Mesh2dHandle,
 };
-use std::num::NonZeroU32;
 
 use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 
@@ -110,15 +109,15 @@ impl Map {
     }
 
     pub fn is_loaded(&self, images: &Assets<Image>) -> bool {
-        if let None = images.get(&self.map_texture) {
+        if images.get(&self.map_texture).is_none() {
             return false;
         }
 
-        if let None = images.get(&self.atlas_texture) {
+        if images.get(&self.atlas_texture).is_none() {
             return false;
         }
 
-        return true;
+        true
     }
 
     /// Update internal state.
@@ -141,7 +140,9 @@ impl Map {
             }
         };
 
-        let a = self.map_uniform.update_map_size(map_texture.size().as_uvec2());
+        let a = self
+            .map_uniform
+            .update_map_size(map_texture.size().as_uvec2());
         let b = self.map_uniform.update_atlas_size(atlas_texture.size());
 
         a || b
@@ -231,12 +232,12 @@ impl<'a> MapIndexer<'a> {
 
 /// Signals that the given map has been fully loaded and from now on
 /// [`Map::get_mut`] should be successful.
-#[derive(Debug)]
+#[derive(Debug, Event)]
 pub struct MapReadyEvent {
     pub map: Entity,
 }
 
-/// 
+///
 pub fn configure_loaded_assets(
     maps: Query<Ref<Map>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
@@ -265,7 +266,7 @@ pub fn configure_loaded_assets(
                         });
 
                         if let Some(ref mut view_descriptor) = atlas.texture_view_descriptor {
-                            view_descriptor.mip_level_count = NonZeroU32::new(4u32);
+                            view_descriptor.mip_level_count = Some(4);
                         }
                     }
                 }
@@ -273,7 +274,6 @@ pub fn configure_loaded_assets(
             } // match ev
         } // for map
     } // for ev
-
 } // configure_loaded_assets()
 
 /// Check to see if any maps' assets became available and send a MapReadyEvent
@@ -290,7 +290,7 @@ pub fn update_loading_maps(
             commands.entity(entity).remove::<MapLoading>();
             map.update(images.as_ref());
 
-            if let Some(_) = manage_mesh {
+            if manage_mesh.is_some() {
                 let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
                     size: map.world_size(),
                     flip: false,

@@ -16,24 +16,25 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Fast Tilemap example"),
-                resolution: (1820., 920.).into(),
-                // disable vsync so we can see the raw FPS speed
-                present_mode: PresentMode::Immediate,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("Fast Tilemap example"),
+                    resolution: (1820., 920.).into(),
+                    // disable vsync so we can see the raw FPS speed
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(FastTileMapPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
-        .add_startup_system(startup)
-        .add_system(initialize_map)
-        .add_system(change_map)
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            WorldInspectorPlugin::new(),
+            MouseControlsCameraPlugin::default(),
+            FastTileMapPlugin::default(),
+        ))
+        .add_systems(Startup, startup)
+        .add_systems(Update, (initialize_map, change_map))
         .run();
 }
 
@@ -56,8 +57,7 @@ fn startup(
     )
     .build(&mut images);
 
-    commands.spawn(MapBundle::new(map))
-        .insert(MeshManagedByMap);
+    commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
 }
 
 /// Check whether the map is ready to be filled with contents and do so.

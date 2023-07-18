@@ -1,8 +1,4 @@
-
-use bevy::{
-    prelude::*,
-    render::Extract,
-};
+use bevy::{prelude::*, render::Extract};
 
 use crate::map::Map;
 

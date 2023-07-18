@@ -1,23 +1,17 @@
-
 use bevy::{
-    prelude::*,
     core_pipeline::core_2d::Transparent2d,
     ecs::{
         query::ROQueryItem,
-        system::{
-            lifetimeless::Read,
-            SystemParamItem,
-        },
+        system::{lifetimeless::Read, SystemParamItem},
     },
+    prelude::*,
     render::{
-        render_phase::{
-            DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult,
-            RenderPhase, SetItemPipeline, TrackedRenderPass,
-        },
-        render_resource::{
-            SpecializedRenderPipelines, PipelineCache,
-        },
         render_asset::RenderAssets,
+        render_phase::{
+            DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase,
+            SetItemPipeline, TrackedRenderPass,
+        },
+        render_resource::{PipelineCache, SpecializedRenderPipelines},
         view::{ExtractedView, VisibleEntities},
     },
     sprite::{
@@ -27,10 +21,7 @@ use bevy::{
     utils::FloatOrd,
 };
 
-use crate::{
-    pipeline::MapPipeline,
-    prepare::PreparedMap,
-};
+use crate::{pipeline::MapPipeline, prepare::PreparedMap};
 
 pub type DrawMap = (
     // Set the pipeline
@@ -62,7 +53,6 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetMapBindGroup<I> {
         RenderCommandResult::Success
     }
 }
-
 
 /// Queue map for rendering in the views.
 /// This calls `MapPipeline.specialize()` and instantiates the draw functions
@@ -121,4 +111,3 @@ pub fn queue_fast_tilemap(
         }
     } // for visible_entities
 } // queue_fast_tilemap()
-

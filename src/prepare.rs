@@ -3,22 +3,18 @@ use bevy::{
     render::{
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, AsBindGroupError, AsBindGroupError::RetryNextUpdate,
-            BindGroupDescriptor, BindGroupEntry, BindGroupLayout, OwnedBindingResource,
-            PreparedBindGroup, encase::UniformBuffer, BufferInitDescriptor, BufferUsages
+            encase::UniformBuffer, AsBindGroup, AsBindGroupError,
+            AsBindGroupError::RetryNextUpdate, BindGroupDescriptor, BindGroupEntry,
+            BindGroupLayout, BufferInitDescriptor, BufferUsages, OwnedBindingResource,
+            PreparedBindGroup,
         },
         renderer::RenderDevice,
         texture::FallbackImage,
     },
-    sprite::{
-         Mesh2dHandle, Mesh2dUniform
-    },
+    sprite::{Mesh2dHandle, Mesh2dUniform},
 };
 
-use crate::{
-    extract::ExtractedMap,
-    pipeline::MapPipeline
-};
+use crate::{extract::ExtractedMap, pipeline::MapPipeline};
 
 #[derive(Component)]
 pub struct PreparedMap {
@@ -56,7 +52,7 @@ pub fn prepare_fast_tilemap(
                     // There is no point in requeueing:
                     // If the map is still there next frame it will be covered by the query then
                     // and if not, it shouldnt be rendered anymore anyways.
-                    continue
+                    continue;
                 }
             },
         };
@@ -112,7 +108,6 @@ impl AsBindGroup for ExtractedMap {
                     .texture_view
                     .clone()
             }),
-
             //@group(1) @binding(2)
             //var tiles_sampler: sampler;
             OwnedBindingResource::Sampler({
@@ -122,21 +117,18 @@ impl AsBindGroup for ExtractedMap {
                     .sampler
                     .clone()
             }),
-
             //@group(1) @binding(3)
             //var<uniform> map: Map;
             //struct Map {
             //tilemap_size: vec2<f32>,
             //};
-            OwnedBindingResource::Buffer(
-                render_device.create_buffer_with_data(
-                    &BufferInitDescriptor {
-                        label: Some("Map"),
-                        usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
-                        contents: map_data_buffer.as_ref(),
-                    }
-                )
-            ),
+            OwnedBindingResource::Buffer(render_device.create_buffer_with_data(
+                &BufferInitDescriptor {
+                    label: Some("Map"),
+                    usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
+                    contents: map_data_buffer.as_ref(),
+                },
+            )),
         ];
 
         let bind_group = {
@@ -160,7 +152,7 @@ impl AsBindGroup for ExtractedMap {
                     },
                 ],
                 label: None,
-                layout: &layout,
+                layout,
             };
             render_device.create_bind_group(&descriptor)
         };
@@ -171,5 +163,4 @@ impl AsBindGroup for ExtractedMap {
             data: (),
         })
     }
-
 }

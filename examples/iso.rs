@@ -1,4 +1,3 @@
-
 //! Simple example for illustrating axonometrically projected tilemaps.
 //! To keep the math simple instead of strictly isometric, we stick to a projection
 //! where each tile ends up a diamond shape that is twice as wide as high.
@@ -8,8 +7,7 @@ use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    MeshManagedByMap,
-    MapBundle, FastTileMapPlugin, Map, MapIndexer, AXONOMETRIC,
+    FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap, AXONOMETRIC,
 };
 
 mod mouse_controls_camera;
@@ -17,22 +15,24 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Fast Tilemap example"),
-                resolution: (1820., 920.).into(),
-                // disable vsync so we can see the raw FPS speed
-                present_mode: PresentMode::Immediate,
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("Fast Tilemap example"),
+                    resolution: (1820., 920.).into(),
+                    // disable vsync so we can see the raw FPS speed
+                    present_mode: PresentMode::Immediate,
+                    ..default()
+                }),
                 ..default()
             }),
-            ..default()
-        }))
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(MouseControlsCameraPlugin::default())
-        .add_plugin(FastTileMapPlugin::default())
-        .add_startup_system(startup)
-        .add_system(highlight_hovered)
+            LogDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            MouseControlsCameraPlugin::default(),
+            FastTileMapPlugin::default(),
+        ))
+        .add_systems(Startup, startup)
+        .add_systems(Update, highlight_hovered)
         .run();
 }
 
@@ -60,7 +60,8 @@ fn startup(
     // Build the map is to provide an initializer callback here.
     .build_and_initialize(&mut images, reset_map);
 
-    commands.spawn(MapBundle::new(map))
+    commands
+        .spawn(MapBundle::new(map))
         // Have the map manage our mesh so it always has the right size
         .insert(MeshManagedByMap);
 } // startup

@@ -1,16 +1,13 @@
-
 use bevy::{
-    prelude::*,
     ecs::system::SystemState,
-    sprite::{
-        Mesh2dPipeline, Mesh2dPipelineKey,
-    },
+    prelude::*,
     render::{
         render_resource::*,
-        view::ViewTarget,
-        texture::{BevyDefault, DefaultImageSampler},
         renderer::RenderDevice,
+        texture::{BevyDefault, DefaultImageSampler},
+        view::ViewTarget,
     },
+    sprite::{Mesh2dPipeline, Mesh2dPipelineKey},
 };
 
 use crate::shader::SHADER_HANDLE;
@@ -67,7 +64,7 @@ impl FromWorld for MapPipeline {
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },
-                    count: None
+                    count: None,
                 },
             ],
             label: Some("fast_tilemap_layout"),
@@ -75,7 +72,7 @@ impl FromWorld for MapPipeline {
 
         Self {
             mesh2d_pipeline: Mesh2dPipeline::from_world(world),
-            map_layout
+            map_layout,
         } // Self
     } // from_world()
 }
@@ -93,14 +90,13 @@ impl SpecializedRenderPipeline for MapPipeline {
                 VertexFormat::Float32x3,
                 // UV
                 VertexFormat::Float32x2,
-            ]
+            ],
         );
 
         let format = match key.contains(Mesh2dPipelineKey::HDR) {
             true => ViewTarget::TEXTURE_FORMAT_HDR,
             false => TextureFormat::bevy_default(),
         };
-
 
         RenderPipelineDescriptor {
             vertex: VertexState {
@@ -150,8 +146,6 @@ impl SpecializedRenderPipeline for MapPipeline {
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
-
         } // RenderPipelineDescriptor
     } // specialize()
 } // impl SpeceializedRenderPipeline
-
