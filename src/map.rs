@@ -304,7 +304,6 @@ pub fn update_loading_maps(
     }
 }
 
-
 pub fn apply_map_transforms(
     mut maps: Query<(&mut Map, &GlobalTransform), Changed<GlobalTransform>>,
 ) {
@@ -312,5 +311,3 @@ pub fn apply_map_transforms(
         map.map_uniform.apply_transform(transform.clone());
     }
 }
-
-

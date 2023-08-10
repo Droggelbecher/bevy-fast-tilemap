@@ -1,5 +1,5 @@
 use crate::{
-    map::{configure_loaded_assets, update_loading_maps, apply_map_transforms, MapReadyEvent},
+    map::{apply_map_transforms, configure_loaded_assets, update_loading_maps, MapReadyEvent},
     pipeline::MapPipeline,
 };
 use bevy::{

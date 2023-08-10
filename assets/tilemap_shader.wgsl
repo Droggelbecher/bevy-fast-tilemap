@@ -23,10 +23,12 @@ struct Map {
     tile_anchor_point: vec2<f32>,
 
     /// fractional 2d map index -> relative local world pos
-    // TODO: consider moving this out of the uniform
     projection: mat3x3<f32>,
 
-    // TODO: Update docstrings
+    /// Global transform of the entity holding the map as transformation matrix & offset.
+    /// This is currently redundant with mesh.model,
+    /// which should represent the same info as a 4x4 affine matrix, but we consider it a bit
+    /// more consistent in conjunction with the inverse below. May be removed in the future.
     global_transform_matrix: mat3x3<f32>,
     global_transform_translation: vec3<f32>,
 
@@ -48,7 +50,7 @@ struct Map {
     /// [derived] local world pos -> fractional 2d map index
     inverse_projection: mat2x2<f32>,
 
-    /// [derived] global world pos -> fractional 2d map index
+    /// [derived] Iverse of global transform of the entity holding the map as transformation matrix & offset.
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
 };
@@ -346,5 +348,3 @@ fn fragment(
 
     return color;
 }
-
-

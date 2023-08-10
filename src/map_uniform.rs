@@ -1,5 +1,5 @@
 use bevy::{
-    math::{mat2, vec2, mat3, vec3, Vec3Swizzles, Affine3A},
+    math::{mat2, vec2, vec3, Vec3Swizzles},
     prelude::*,
     render::render_resource::ShaderType,
 };
@@ -106,7 +106,6 @@ impl MapUniform {
     }
 
     pub(crate) fn map_to_local(&self, map_position: Vec3) -> Vec3 {
-        // TODO Consider applying global transform here depending on how its used
         (self.projection * map_position) * self.tile_size.extend(1.0)
             + self.world_offset.extend(0.0)
     }
@@ -114,9 +113,14 @@ impl MapUniform {
     /// As of now, this will ignore `world`s z coordinate
     /// and always project to z=0 on the map.
     /// This behavior might change in the future
+    pub(crate) fn local_to_map(&self, local: Vec3) -> Vec3 {
+        (self.inverse_projection * ((local.xy() - self.world_offset) / self.tile_size)).extend(0.0)
+    }
+
     pub(crate) fn world_to_map(&self, world: Vec3) -> Vec3 {
-        // TODO Consider applying global transform here depending on how its used
-        (self.inverse_projection * ((world.xy() - self.world_offset) / self.tile_size)).extend(0.0)
+        let local = self.global_inverse_transform_matrix * world
+            + self.global_inverse_transform_translation;
+        self.local_to_map(local)
     }
 
     pub(crate) fn update_map_size(&mut self, map_size: UVec2) -> bool {
