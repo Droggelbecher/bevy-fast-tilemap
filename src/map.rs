@@ -63,18 +63,18 @@ impl Map {
     }
 
     /// Convert map position in `[(0.0, 0.0) .. self.size)`
-    /// to world position.
+    /// to local world position (before this entities transform).
     /// E.g. map position `(0.5, 0.5)` is in the center of the tile
     /// at index `(0, 0)`.
-    pub fn map_to_world(&self, map_position: Vec2) -> Vec2 {
-        self.map_uniform.map_to_world(map_position.extend(0.0)).xy()
+    pub fn map_to_local(&self, map_position: Vec2) -> Vec2 {
+        self.map_uniform.map_to_local(map_position.extend(0.0)).xy()
     }
 
-    /// Same as [`Self::map_to_world`], but return a 3d coordinate,
+    /// Same as [`Self::map_to_local`], but return a 3d coordinate,
     /// z-value is the logical "depth" of the map position (for eg axonometric projection).
     /// Not generally consistent with actual z-position of the mesh.
-    pub fn map_to_world_3d(&self, map_position: Vec3) -> Vec3 {
-        self.map_uniform.map_to_world(map_position)
+    pub fn map_to_local_3d(&self, map_position: Vec3) -> Vec3 {
+        self.map_uniform.map_to_local(map_position)
     }
 
     /// Convert world position to map position.

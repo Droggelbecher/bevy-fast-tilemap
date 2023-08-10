@@ -38,7 +38,7 @@ fn startup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let k = 3;
+    let k = 10;
 
     for i in 0..5 {
         for j in 0..5 {
@@ -53,7 +53,7 @@ fn startup(
             .build_and_set(&mut images, |pos| {
                 // Initialize using a closure
                 // Set all tiles in layer 0 to index 4
-                ((i + j + pos.x + pos.y) % 4 + 1) as u16
+                ((i + j) % 4 + 6) as u16
             });
 
             commands

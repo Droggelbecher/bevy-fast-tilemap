@@ -95,7 +95,7 @@ fn world_to_map(map: Map, world_position: vec2<f32>) -> vec2<f32> {
     // - Scale according to `map.tile_size`
     // - Apply inverse map projection for tile distortion (eg iso)
     var local_world_pos = map.global_inverse_transform_matrix * vec3<f32>(world_position, 0.0) + map.global_inverse_transform_translation;
-    var pos = (world_position - map.world_offset) / map.tile_size;
+    var pos = (local_world_pos.xy - map.world_offset) / map.tile_size;
     return map.inverse_projection * pos;
 }
 

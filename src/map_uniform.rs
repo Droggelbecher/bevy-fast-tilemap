@@ -105,7 +105,7 @@ impl MapUniform {
         self.world_size
     }
 
-    pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
+    pub(crate) fn map_to_local(&self, map_position: Vec3) -> Vec3 {
         // TODO Consider applying global transform here depending on how its used
         (self.projection * map_position) * self.tile_size.extend(1.0)
             + self.world_offset.extend(0.0)
@@ -139,14 +139,14 @@ impl MapUniform {
         // works and is simple enough:
         // 1. save coordinates for all 4 corners
         // 2. take maximum x- and y distances
-        let mut low = self.map_to_world(vec3(0.0, 0.0, 0.0)).xy();
+        let mut low = self.map_to_local(vec3(0.0, 0.0, 0.0)).xy();
         let mut high = low;
         for corner in [
             vec2(self.map_size().x as f32, 0.0),
             vec2(0.0, self.map_size().y as f32),
             vec2(self.map_size().x as f32, self.map_size().y as f32),
         ] {
-            let pos = self.map_to_world(corner.extend(0.0)).xy();
+            let pos = self.map_to_local(corner.extend(0.0)).xy();
             low = low.min(pos);
             high = high.max(pos);
         }
@@ -177,7 +177,6 @@ impl MapUniform {
         let affine = transform.compute_transform().compute_affine();
         self.global_transform_matrix = affine.matrix3.into();
         self.global_transform_translation = affine.translation.into();
-        println!("translation {}", self.global_transform_translation);
 
         let inverse = affine.inverse();
         self.global_inverse_transform_matrix = inverse.matrix3.into();
@@ -201,7 +200,7 @@ impl MapUniform {
             vec2(1.0, 0.0),
         ];
         for (flag, offset) in flags.iter().zip(offsets) {
-            if self.map_to_world(offset.extend(0.0)).z < 0.0 {
+            if self.map_to_local(offset.extend(0.0)).z < 0.0 {
                 mask |= flag;
             }
         }
