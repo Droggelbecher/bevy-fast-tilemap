@@ -1,5 +1,5 @@
 use bevy::{
-    math::{mat2, vec2, vec3, Vec3Swizzles},
+    math::{mat2, vec2, mat3, vec3, Vec3Swizzles, Affine3A},
     prelude::*,
     render::render_resource::ShaderType,
 };
@@ -29,8 +29,11 @@ pub struct MapUniform {
     /// Relative anchor point position in a tile (in [0..1]^2)
     pub(crate) tile_anchor_point: Vec2,
 
-    /// fractional 2d map index -> world pos
+    /// fractional 2d map index -> projected 2d "map index"
     pub(crate) projection: Mat3,
+
+    pub(crate) global_transform_matrix: Mat3,
+    pub(crate) global_transform_translation: Vec3,
 
     /// 0=dominance
     /// 1=perspective
@@ -52,7 +55,7 @@ pub struct MapUniform {
     /// (derived)
     pub(crate) n_tiles: UVec2,
 
-    /// (derived) world pos -> fractional 2d map index
+    /// (derived) local world pos -> fractional 2d map index
     ///
     /// Note that the main use case for the inverse is to transform 2d world coordinates
     /// (eg from mouse cursor) to 2d map coordinates with some assumption about how we choose the z
@@ -61,6 +64,10 @@ pub struct MapUniform {
     /// coordinate and otherwise give wrong results, hence we only invert the 2d part
     /// and let the caller handle management of z.
     pub(crate) inverse_projection: Mat2,
+
+    /// (derived) global world pos -> fractional 2d map index
+    pub(crate) global_inverse_transform_matrix: Mat3,
+    pub(crate) global_inverse_transform_translation: Vec3,
 }
 
 impl Default for MapUniform {
@@ -74,6 +81,8 @@ impl Default for MapUniform {
             outer_padding_bottomright: default(),
             tile_anchor_point: IDENTITY.tile_anchor_point,
             projection: IDENTITY.projection,
+            global_transform_matrix: default(),
+            global_transform_translation: default(),
             overhang_mode: default(),
             max_overhang_levels: default(),
             perspective_overhang_mask: default(),
@@ -81,6 +90,8 @@ impl Default for MapUniform {
             world_offset: default(),
             n_tiles: default(),
             inverse_projection: default(),
+            global_inverse_transform_matrix: default(),
+            global_inverse_transform_translation: default(),
         }
     }
 }
@@ -95,6 +106,7 @@ impl MapUniform {
     }
 
     pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
+        // TODO Consider applying global transform here depending on how its used
         (self.projection * map_position) * self.tile_size.extend(1.0)
             + self.world_offset.extend(0.0)
     }
@@ -103,6 +115,7 @@ impl MapUniform {
     /// and always project to z=0 on the map.
     /// This behavior might change in the future
     pub(crate) fn world_to_map(&self, world: Vec3) -> Vec3 {
+        // TODO Consider applying global transform here depending on how its used
         (self.inverse_projection * ((world.xy() - self.world_offset) / self.tile_size)).extend(0.0)
     }
 
@@ -158,6 +171,17 @@ impl MapUniform {
         self.atlas_size = atlas_size;
         self.update_n_tiles();
         true
+    }
+
+    pub(crate) fn apply_transform(&mut self, transform: GlobalTransform) {
+        let affine = transform.compute_transform().compute_affine();
+        self.global_transform_matrix = affine.matrix3.into();
+        self.global_transform_translation = affine.translation.into();
+        println!("translation {}", self.global_transform_translation);
+
+        let inverse = affine.inverse();
+        self.global_inverse_transform_matrix = inverse.matrix3.into();
+        self.global_inverse_transform_translation = inverse.translation.into();
     }
 
     pub(crate) fn update_inverse_projection(&mut self) {

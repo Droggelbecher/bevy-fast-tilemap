@@ -303,3 +303,14 @@ pub fn update_loading_maps(
         }
     }
 }
+
+
+pub fn apply_map_transforms(
+    mut maps: Query<(&mut Map, &GlobalTransform), Changed<GlobalTransform>>,
+) {
+    for (mut map, transform) in &mut maps {
+        map.map_uniform.apply_transform(transform.clone());
+    }
+}
+
+

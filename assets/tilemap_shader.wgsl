@@ -22,8 +22,13 @@ struct Map {
     /// Relative anchor point position in a tile (in [0..1]^2)
     tile_anchor_point: vec2<f32>,
 
-    /// fractional 2d map index -> world pos
+    /// fractional 2d map index -> relative local world pos
+    // TODO: consider moving this out of the uniform
     projection: mat3x3<f32>,
+
+    // TODO: Update docstrings
+    global_transform_matrix: mat3x3<f32>,
+    global_transform_translation: vec3<f32>,
 
     overhang_mode: u32,
     max_overhang_levels: u32,
@@ -40,8 +45,12 @@ struct Map {
     /// [derived]
     n_tiles: vec2<u32>,
 
-    /// [derived] world pos -> fractional 2d map index
+    /// [derived] local world pos -> fractional 2d map index
     inverse_projection: mat2x2<f32>,
+
+    /// [derived] global world pos -> fractional 2d map index
+    global_inverse_transform_matrix: mat3x3<f32>,
+    global_inverse_transform_translation: vec3<f32>,
 };
 
 @group(1) @binding(0)
@@ -80,15 +89,26 @@ fn vertex(v: Vertex) -> VertexOutput {
 
 /// Map position incl fractional part for this position.
 fn world_to_map(map: Map, world_position: vec2<f32>) -> vec2<f32> {
+    // Steps:
+    // - Apply inverse global transform
+    // - Adjust for `map.world_offset` (where in the mesh tile 0,0 should be)
+    // - Scale according to `map.tile_size`
+    // - Apply inverse map projection for tile distortion (eg iso)
+    var local_world_pos = map.global_inverse_transform_matrix * vec3<f32>(world_position, 0.0) + map.global_inverse_transform_translation;
     var pos = (world_position - map.world_offset) / map.tile_size;
     return map.inverse_projection * pos;
 }
 
 fn map_to_world(map: Map, map_position: vec2<f32>) -> vec3<f32> {
-    return (
+    // Steps:
+    // - Apply map projection (to compensate for eg iso view)
+    // - scale according to `map.tile_size`
+    // - Adjust for `map.world_offset` (where in the mesh tile 0,0 should be)
+    // - Apply global transform
+    return map.global_transform_matrix * (
         (map.projection * vec3<f32>(map_position, 0.0)) * vec3<f32>(map.tile_size, 1.0) +
         vec3<f32>(map.world_offset, 0.0)
-    );
+    ) + map.global_transform_translation;
 }
 
 /// Position (world/pixel units) in tilemap atlas of the top left corner
