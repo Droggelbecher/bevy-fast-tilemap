@@ -32,8 +32,6 @@ fn main() {
             FastTileMapPlugin::default(),
         ))
         .add_systems(Startup, startup)
-        // Performance-wise you can step this much faster but it'd require an epillepsy warning.
-        .insert_resource(FixedTime::new_from_secs(0.2))
         .run();
 }
 
