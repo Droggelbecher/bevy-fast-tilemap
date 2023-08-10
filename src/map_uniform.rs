@@ -110,6 +110,11 @@ impl MapUniform {
             + self.world_offset.extend(0.0)
     }
 
+    pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
+        let local = self.map_to_local(map_position);
+        self.global_transform_matrix * local + self.global_inverse_transform_translation
+    }
+
     /// As of now, this will ignore `world`s z coordinate
     /// and always project to z=0 on the map.
     /// This behavior might change in the future

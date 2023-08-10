@@ -77,6 +77,10 @@ impl Map {
         self.map_uniform.map_to_local(map_position)
     }
 
+    pub fn map_to_world_3d(&self, map_position: Vec3) -> Vec3 {
+        self.map_uniform.map_to_world(map_position)
+    }
+
     /// Convert world position to map position.
     pub fn world_to_map(&self, world: Vec2) -> Vec2 {
         self.map_uniform.world_to_map(world.extend(0.0)).xy()

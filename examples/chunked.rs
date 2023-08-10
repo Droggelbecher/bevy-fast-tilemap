@@ -1,8 +1,8 @@
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{uvec2, vec2, vec3};
+use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MeshManagedByMap};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod mouse_controls_camera;
@@ -40,21 +40,17 @@ fn startup(
 
     let k = 10;
 
-    for i in 0..5 {
-        for j in 0..5 {
+    for i in -2..3 {
+        for j in -2..3 {
             let map = Map::builder(
                 // Map size
-                uvec2(k, k),
+                uvec2(k as u32, k as u32),
                 // Tile atlas
                 asset_server.load("pixel_tiles_16.png"),
                 // Tile Size
                 vec2(16., 16.),
             )
-            .build_and_set(&mut images, |pos| {
-                // Initialize using a closure
-                // Set all tiles in layer 0 to index 4
-                ((i + j) % 4 + 6) as u16
-            });
+            .build_and_set(&mut images, |_| ((i + j + 4) % 4 + 6) as u16);
 
             commands
                 .spawn(MapBundle::new(map))

@@ -78,7 +78,7 @@ fn startup(
 
     let mut bundle = MapBundle::new(map);
     // Higher z value means "closer to the camera"
-    bundle.transform = Transform::default().with_translation(vec3(8., 0., 1.));
+    bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
     commands
         .spawn(bundle)
