@@ -29,8 +29,11 @@ pub struct MapUniform {
     /// Relative anchor point position in a tile (in [0..1]^2)
     pub(crate) tile_anchor_point: Vec2,
 
-    /// fractional 2d map index -> world pos
+    /// fractional 2d map index -> projected 2d "map index"
     pub(crate) projection: Mat3,
+
+    pub(crate) global_transform_matrix: Mat3,
+    pub(crate) global_transform_translation: Vec3,
 
     /// 0=dominance
     /// 1=perspective
@@ -52,7 +55,7 @@ pub struct MapUniform {
     /// (derived)
     pub(crate) n_tiles: UVec2,
 
-    /// (derived) world pos -> fractional 2d map index
+    /// (derived) local world pos -> fractional 2d map index
     ///
     /// Note that the main use case for the inverse is to transform 2d world coordinates
     /// (eg from mouse cursor) to 2d map coordinates with some assumption about how we choose the z
@@ -61,6 +64,10 @@ pub struct MapUniform {
     /// coordinate and otherwise give wrong results, hence we only invert the 2d part
     /// and let the caller handle management of z.
     pub(crate) inverse_projection: Mat2,
+
+    /// (derived) global world pos -> fractional 2d map index
+    pub(crate) global_inverse_transform_matrix: Mat3,
+    pub(crate) global_inverse_transform_translation: Vec3,
 }
 
 impl Default for MapUniform {
@@ -74,6 +81,8 @@ impl Default for MapUniform {
             outer_padding_bottomright: default(),
             tile_anchor_point: IDENTITY.tile_anchor_point,
             projection: IDENTITY.projection,
+            global_transform_matrix: default(),
+            global_transform_translation: default(),
             overhang_mode: default(),
             max_overhang_levels: default(),
             perspective_overhang_mask: default(),
@@ -81,6 +90,8 @@ impl Default for MapUniform {
             world_offset: default(),
             n_tiles: default(),
             inverse_projection: default(),
+            global_inverse_transform_matrix: default(),
+            global_inverse_transform_translation: default(),
         }
     }
 }
@@ -94,16 +105,27 @@ impl MapUniform {
         self.world_size
     }
 
-    pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
+    pub(crate) fn map_to_local(&self, map_position: Vec3) -> Vec3 {
         (self.projection * map_position) * self.tile_size.extend(1.0)
             + self.world_offset.extend(0.0)
+    }
+
+    pub(crate) fn map_to_world(&self, map_position: Vec3) -> Vec3 {
+        let local = self.map_to_local(map_position);
+        self.global_transform_matrix * local + self.global_inverse_transform_translation
     }
 
     /// As of now, this will ignore `world`s z coordinate
     /// and always project to z=0 on the map.
     /// This behavior might change in the future
+    pub(crate) fn local_to_map(&self, local: Vec3) -> Vec3 {
+        (self.inverse_projection * ((local.xy() - self.world_offset) / self.tile_size)).extend(0.0)
+    }
+
     pub(crate) fn world_to_map(&self, world: Vec3) -> Vec3 {
-        (self.inverse_projection * ((world.xy() - self.world_offset) / self.tile_size)).extend(0.0)
+        let local = self.global_inverse_transform_matrix * world
+            + self.global_inverse_transform_translation;
+        self.local_to_map(local)
     }
 
     pub(crate) fn update_map_size(&mut self, map_size: UVec2) -> bool {
@@ -126,14 +148,14 @@ impl MapUniform {
         // works and is simple enough:
         // 1. save coordinates for all 4 corners
         // 2. take maximum x- and y distances
-        let mut low = self.map_to_world(vec3(0.0, 0.0, 0.0)).xy();
+        let mut low = self.map_to_local(vec3(0.0, 0.0, 0.0)).xy();
         let mut high = low;
         for corner in [
             vec2(self.map_size().x as f32, 0.0),
             vec2(0.0, self.map_size().y as f32),
             vec2(self.map_size().x as f32, self.map_size().y as f32),
         ] {
-            let pos = self.map_to_world(corner.extend(0.0)).xy();
+            let pos = self.map_to_local(corner.extend(0.0)).xy();
             low = low.min(pos);
             high = high.max(pos);
         }
@@ -160,6 +182,16 @@ impl MapUniform {
         true
     }
 
+    pub(crate) fn apply_transform(&mut self, transform: GlobalTransform) {
+        let affine = transform.compute_transform().compute_affine();
+        self.global_transform_matrix = affine.matrix3.into();
+        self.global_transform_translation = affine.translation.into();
+
+        let inverse = affine.inverse();
+        self.global_inverse_transform_matrix = inverse.matrix3.into();
+        self.global_inverse_transform_translation = inverse.translation.into();
+    }
+
     pub(crate) fn update_inverse_projection(&mut self) {
         self.inverse_projection =
             mat2(self.projection.x_axis.xy(), self.projection.y_axis.xy()).inverse();
@@ -177,7 +209,7 @@ impl MapUniform {
             vec2(1.0, 0.0),
         ];
         for (flag, offset) in flags.iter().zip(offsets) {
-            if self.map_to_world(offset.extend(0.0)).z < 0.0 {
+            if self.map_to_local(offset.extend(0.0)).z < 0.0 {
                 mask |= flag;
             }
         }

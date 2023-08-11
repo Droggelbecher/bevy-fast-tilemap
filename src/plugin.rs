@@ -1,5 +1,5 @@
 use crate::{
-    map::{configure_loaded_assets, update_loading_maps, MapReadyEvent},
+    map::{apply_map_transforms, configure_loaded_assets, update_loading_maps, MapReadyEvent},
     pipeline::MapPipeline,
 };
 use bevy::{
@@ -29,6 +29,7 @@ impl Plugin for FastTileMapPlugin {
             Update,
             (configure_loaded_assets, update_loading_maps).chain(),
         );
+        app.add_systems(Update, apply_map_transforms);
 
         let mut shaders = app.world.resource_mut::<Assets<Shader>>();
         shaders.set_untracked(
