@@ -39,6 +39,8 @@ there.
 - Only tested on Windows, no WASM support
 - No direct animation support, but you can easily update the tilemap in regular intervals
   to achieve the same (see [Animation Example](examples/animation.rs))
+- Currently no support for rotating or scaling the entity holding the map (it will not look like you'd expect).
+  (You can of course still zoom/rotate the camera to achieve any such effect)
 
 ## Related work
 
