@@ -2,11 +2,12 @@ use bevy::{
     math::{mat2, vec2, vec3, Vec3Swizzles},
     prelude::*,
     render::render_resource::ShaderType,
+    render::render_resource::{AsBindGroup, ShaderRef},
 };
 
 use crate::tile_projection::IDENTITY;
 
-#[derive(ShaderType, Clone, Debug, Reflect)]
+#[derive(ShaderType, Clone, Debug, Reflect, AsBindGroup)]
 pub struct MapUniform {
     /// Size of the map, in tiles.
     /// Will be derived from underlying map texture.

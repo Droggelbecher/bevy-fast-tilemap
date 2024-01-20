@@ -1,9 +1,11 @@
+use bevy::prelude::Material;
 use bevy::{
     math::Vec3Swizzles,
     prelude::*,
+    render::render_resource::ShaderRef,
     render::{
-        render_resource::{FilterMode, SamplerDescriptor},
-        texture::ImageSampler,
+        render_resource::{AsBindGroup, SamplerDescriptor},
+        texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
     sprite::Mesh2dHandle,
 };
@@ -12,7 +14,7 @@ use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
-#[derive(Debug, Component, Clone, Default, Reflect)]
+#[derive(Asset, Debug, Component, Clone, Default, Reflect, AsBindGroup)]
 #[reflect(Component)]
 pub struct Map {
     /// Stores all the data that goes into the shader uniform,
@@ -20,11 +22,20 @@ pub struct Map {
     pub(crate) map_uniform: MapUniform,
 
     /// Texture containing the tile IDs (one per each pixel)
+    #[texture(100)]
+    #[sampler(101)]
     pub map_texture: Handle<Image>,
 
     /// Atlas texture with the individual tiles
+    #[texture(102)]
     pub atlas_texture: Handle<Image>,
     // True iff the necessary images for this map are loaded
+}
+
+impl Material for Map {
+    fn fragment_shader() -> ShaderRef {
+        "tilemap_shader.wgsl".into()
+    }
 }
 
 /// For entities that have all of:
@@ -108,8 +119,8 @@ impl Map {
             }
         };
 
-        self.map_uniform.map_size != map_texture.size().as_uvec2()
-            || self.map_uniform.atlas_size != atlas_texture.size()
+        self.map_uniform.map_size != map_texture.size() //.as_uvec2()
+            || self.map_uniform.atlas_size != atlas_texture.size().as_vec2()
     }
 
     pub fn is_loaded(&self, images: &Assets<Image>) -> bool {
@@ -144,10 +155,10 @@ impl Map {
             }
         };
 
-        let a = self
+        let a = self.map_uniform.update_map_size(map_texture.size());
+        let b = self
             .map_uniform
-            .update_map_size(map_texture.size().as_uvec2());
-        let b = self.map_uniform.update_atlas_size(atlas_texture.size());
+            .update_atlas_size(atlas_texture.size().as_vec2());
 
         a || b
     }
@@ -250,8 +261,8 @@ pub fn configure_loaded_assets(
     for ev in ev_asset.iter() {
         for map in maps.iter() {
             match ev {
-                AssetEvent::Created { handle }
-                    if *handle == map.map_texture || *handle == map.atlas_texture =>
+                AssetEvent::Added { id }
+                    if *id == map.map_texture.id() || *id == map.atlas_texture.id() =>
                 {
                     // Set some sampling options for the atlas texture for nicer looks,
                     // such as avoiding "grid lines" when zooming out or mushy edges.
@@ -259,13 +270,13 @@ pub fn configure_loaded_assets(
                     if let Some(atlas) = images.get_mut(&map.atlas_texture) {
                         // the below seems to crash?
                         //atlas.texture_descriptor.mip_level_count = 3;
-                        atlas.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
+                        atlas.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
                             // min_filter of linear gives undesired grid lines when zooming out
-                            min_filter: FilterMode::Nearest,
+                            min_filter: ImageFilterMode::Nearest,
                             // mag_filter of linear gives mushy edges on tiles in closeup which is
                             // usually not what we want
-                            mag_filter: FilterMode::Nearest,
-                            mipmap_filter: FilterMode::Linear,
+                            mag_filter: ImageFilterMode::Nearest,
+                            mipmap_filter: ImageFilterMode::Linear,
                             ..default()
                         });
 

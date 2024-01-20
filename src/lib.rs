@@ -18,14 +18,14 @@
 //! position.
 
 pub mod bundle;
-pub mod extract;
+//pub mod extract;
 pub mod map;
 pub mod map_builder;
 pub mod map_uniform;
-pub mod pipeline;
+//pub mod pipeline;
 pub mod plugin;
-pub mod prepare;
-pub mod queue;
+//pub mod prepare;
+//pub mod queue;
 pub mod shader;
 pub mod tile_projection;
 

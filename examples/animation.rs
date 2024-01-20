@@ -32,7 +32,7 @@ fn main() {
         .add_systems(Startup, startup)
         .add_systems(FixedUpdate, update_map)
         // Performance-wise you can step this much faster but it'd require an epillepsy warning.
-        .insert_resource(FixedTime::new_from_secs(0.2))
+        .insert_resource(Time::<Fixed>::from_seconds(0.2))
         .run();
 }
 
