@@ -16,7 +16,7 @@ pub fn extract_fast_tilemap(
     mut previous_len: Local<usize>,
     // When extracting, you must use `Extract` to mark the `SystemParam`s
     // which should be taken from the main world.
-    query: Extract<Query<(Entity, &ComputedVisibility, &Map)>>,
+    query: Extract<Query<(Entity, &InheritedVisibility, &Map)>>,
 ) {
     // TODO: Can we avoid the reallocation here in the common case?
     let mut values = Vec::with_capacity(*previous_len);

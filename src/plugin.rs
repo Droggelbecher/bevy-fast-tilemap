@@ -6,8 +6,8 @@ use bevy::{
     core_pipeline::core_2d::Transparent2d,
     prelude::*,
     render::{
-        render_asset::PrepareAssetSet, render_phase::AddRenderCommand,
-        render_resource::SpecializedRenderPipelines, Render, RenderApp, RenderSet,
+        render_phase::AddRenderCommand, render_resource::SpecializedRenderPipelines, Render,
+        RenderApp, RenderSet,
     },
 };
 
