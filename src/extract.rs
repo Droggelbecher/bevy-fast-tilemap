@@ -1,10 +1,19 @@
-use bevy::{prelude::*, render::Extract};
+use bevy::{ecs::query::QueryItem, prelude::*, render::extract_component::ExtractComponent};
 
 use crate::map::Map;
+use crate::plugin::ExtractedMap;
 
-#[derive(Debug, Component, Clone)]
-pub struct ExtractedMap(pub Map);
+impl ExtractComponent for ExtractedMap {
+    type Query = &'static Map;
+    type Filter = ();
+    type Out = Self;
 
+    fn extract_component(item: QueryItem<'_, Self::Query>) -> Option<Self::Out> {
+        Some(Self(item.0.clone()))
+    }
+}
+
+/*
 /// Extract map data from the main world and copy it to the render world.
 ///
 /// This is a system in the render app.
@@ -30,3 +39,4 @@ pub fn extract_fast_tilemap(
     *previous_len = values.len();
     commands.insert_or_spawn_batch(values);
 }
+*/

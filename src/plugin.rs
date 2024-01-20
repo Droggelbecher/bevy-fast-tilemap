@@ -6,13 +6,16 @@ use bevy::{
     core_pipeline::core_2d::Transparent2d,
     prelude::*,
     render::{
-        render_phase::AddRenderCommand, render_resource::SpecializedRenderPipelines, Render,
-        RenderApp, RenderSet,
+        extract_component::{ExtractComponent, ExtractComponentPlugin},
+        render_phase::AddRenderCommand,
+        render_resource::SpecializedRenderPipelines,
+        Render, RenderApp, RenderSet,
     },
 };
 
+use crate::map::Map;
 use crate::{
-    extract::extract_fast_tilemap,
+    //extract::extract_fast_tilemap,
     prepare::prepare_fast_tilemap,
     queue::{queue_fast_tilemap, DrawMap},
     shader::{SHADER_CODE, SHADER_HANDLE},
@@ -23,8 +26,12 @@ use crate::{
 #[derive(Default)]
 pub struct FastTileMapPlugin;
 
+#[derive(Debug, Component, Clone)]
+pub struct ExtractedMap(pub Map);
+
 impl Plugin for FastTileMapPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(ExtractComponentPlugin::<ExtractedMap>::default());
         app.add_event::<MapReadyEvent>().add_systems(
             Update,
             (configure_loaded_assets, update_loading_maps).chain(),
@@ -44,14 +51,12 @@ impl Plugin for FastTileMapPlugin {
 
         render_app
             .add_render_command::<Transparent2d, DrawMap>()
-            .add_systems(ExtractSchedule, extract_fast_tilemap)
+            //.add_systems(ExtractSchedule, extract_fast_tilemap)
             .add_systems(
                 Render,
                 (
-                    prepare_fast_tilemap
-                        .in_set(RenderSet::Prepare)
-                        .after(PrepareAssetSet::PreAssetPrepare),
                     queue_fast_tilemap.in_set(RenderSet::Queue),
+                    prepare_fast_tilemap.in_set(RenderSet::Prepare), //.after(PrepareAssetSet::PreAssetPrepare),
                 ),
             );
     }

@@ -14,7 +14,7 @@ use bevy::{
     sprite::{Mesh2dHandle, Mesh2dUniform},
 };
 
-use crate::{extract::ExtractedMap, pipeline::MapPipeline};
+use crate::{pipeline::MapPipeline, plugin::ExtractedMap};
 
 #[derive(Component)]
 pub struct PreparedMap {
@@ -28,16 +28,24 @@ pub struct PreparedMap {
 ///
 /// This is a system in the render app.
 pub fn prepare_fast_tilemap(
-    extracted_maps: Query<(Entity, &Mesh2dHandle, &Mesh2dUniform, &ExtractedMap)>,
+    //extracted_maps: Query<(Entity, &Mesh2dHandle, &Mesh2dUniform, &ExtractedMap)>,
+    extracted_maps: Query<(Entity, &ExtractedMap)>,
     render_device: Res<RenderDevice>,
     images: Res<RenderAssets<Image>>,
     fallback_image: Res<FallbackImage>,
     pipeline: Res<MapPipeline>,
     mut commands: Commands,
 ) {
-    let mut prepared_maps = Vec::new();
+    //let mut prepared_maps = Vec::new();
 
-    for (entity, mesh_handle, mesh_uniform, extracted_map) in extracted_maps.iter() {
+    for (entity, extracted_map) in extracted_maps.iter() {
+        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            label: Some("tilemap buffer"),
+            usage: BufferUsages::COPY_DST | BufferUsages::UNIFORM,
+            contents: map_data_buffer.as_ref(),
+        });
+
+        /*
         let prepared_map = PreparedMap {
             bind_group: match extracted_map.as_bind_group(
                 &pipeline.map_layout,
@@ -61,6 +69,7 @@ pub fn prepare_fast_tilemap(
             entity,
             (mesh_handle.clone(), mesh_uniform.clone(), prepared_map),
         ));
+        */
     }
 
     commands.insert_or_spawn_batch(prepared_maps);
