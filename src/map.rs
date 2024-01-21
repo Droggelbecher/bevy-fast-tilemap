@@ -1,6 +1,6 @@
-use bevy::prelude::Material;
+use bevy::sprite::Material2d;
 use bevy::{
-    math::Vec3Swizzles,
+    math::{vec2, Vec3Swizzles},
     prelude::*,
     render::render_resource::ShaderRef,
     render::{
@@ -19,20 +19,22 @@ use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 pub struct Map {
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
+    #[uniform(0)]
     pub(crate) map_uniform: MapUniform,
 
     /// Texture containing the tile IDs (one per each pixel)
-    #[texture(100)]
-    #[sampler(101)]
-    pub map_texture: Handle<Image>,
+    #[storage(100)]
+    //pub map_texture: Handle<Image>,
+    pub map_texture: Vec<u32>,
 
     /// Atlas texture with the individual tiles
-    #[texture(102)]
+    #[texture(101)]
+    #[sampler(102)]
     pub atlas_texture: Handle<Image>,
     // True iff the necessary images for this map are loaded
 }
 
-impl Material for Map {
+impl Material2d for Map {
     fn fragment_shader() -> ShaderRef {
         "tilemap_shader.wgsl".into()
     }
@@ -103,6 +105,7 @@ impl Map {
 
     /// Use this to avoid creating a mutable reference
     pub fn needs_update(&self, images: &Assets<Image>) -> bool {
+        /*
         let map_texture = match images.get(&self.map_texture) {
             Some(x) => x,
             None => {
@@ -121,9 +124,15 @@ impl Map {
 
         self.map_uniform.map_size != map_texture.size() //.as_uvec2()
             || self.map_uniform.atlas_size != atlas_texture.size().as_vec2()
+        */
+
+        // TODO
+
+        true
     }
 
     pub fn is_loaded(&self, images: &Assets<Image>) -> bool {
+        /*
         if images.get(&self.map_texture).is_none() {
             return false;
         }
@@ -131,6 +140,8 @@ impl Map {
         if images.get(&self.atlas_texture).is_none() {
             return false;
         }
+        */
+        // TODO
 
         true
     }
@@ -139,6 +150,7 @@ impl Map {
     /// Call this when map size changed or assets may have become available.
     /// Should not be necessary to call this if only map contents changed.
     pub fn update(&mut self, images: &Assets<Image>) -> bool {
+        /*
         let map_texture = match images.get(&self.map_texture) {
             Some(x) => x,
             None => {
@@ -161,89 +173,93 @@ impl Map {
             .update_atlas_size(atlas_texture.size().as_vec2());
 
         a || b
+        */
+        // TODO
+        true
     }
 
-    /// Get mutable access to map layers via a `MapIndexer`.
-    /// For this needs to mutably borrow the referenced
-    /// `Image`s.
-    ///
-    /// ```
-    /// fn some_system(
-    ///    mut images: ResMut<Assets<Image>>,
-    ///    mut maps: Query<(&mut Map, &Transform)>,
-    ///    // ...
-    /// ) {
-    ///
-    ///   // Obtain mutable access to the underlying image structure.
-    ///   // Use this only when you intend to make modifications to avoid
-    ///   // unnecessary data transferns to the GPU.
-    ///   if let Ok(m) = map.get_mut(&mut *images) {
-    ///     // Set tile at (x, y) to tileset index 3
-    ///     m.set(x, y, 3);
-    ///   }
-    /// }
-    /// ```
-    pub fn get_mut<'a>(&self, images: &'a mut Assets<Image>) -> Result<MapIndexer<'a>, &'a str> {
-        let image = images
-            .get_mut(&self.map_texture)
-            .ok_or("Map texture not yet loaded")?;
+    // Get mutable access to map layers via a `MapIndexer`.
+    // For this needs to mutably borrow the referenced
+    // `Image`s.
+    //
+    // ```
+    // fn some_system(
+    //    mut images: ResMut<Assets<Image>>,
+    //    mut maps: Query<(&mut Map, &Transform)>,
+    //    // ...
+    // ) {
+    //
+    //   // Obtain mutable access to the underlying image structure.
+    //   // Use this only when you intend to make modifications to avoid
+    //   // unnecessary data transferns to the GPU.
+    //   if let Ok(m) = map.get_mut(&mut *images) {
+    //     // Set tile at (x, y) to tileset index 3
+    //     m.set(x, y, 3);
+    //   }
+    // }
+    // ```
+    // TODO
+    //pub fn get_mut<'a>(&self, images: &'a mut Assets<Image>) -> Result<MapIndexer<'a>, &'a str> {
+    //let image = images
+    //.get_mut(&self.map_texture)
+    //.ok_or("Map texture not yet loaded")?;
 
-        Ok(MapIndexer {
-            image,
-            size: self.map_uniform.map_size(),
-        })
-    } // get_mut()
+    //Ok(MapIndexer {
+    //image,
+    //size: self.map_uniform.map_size(),
+    //})
+    //} // get_mut()
 } // impl Map
 
-/// Indexer into a map.
-/// Internally holds a mutable reference to the underlying texture.
-/// See [`Map::get_mut`] for a usage example.
-#[derive(Debug)]
-pub struct MapIndexer<'a> {
-    pub(crate) image: &'a mut Image,
-    // TODO: We can get size from image.texture_descriptor.size
-    pub(crate) size: UVec2,
-}
+// Indexer into a map.
+// Internally holds a mutable reference to the underlying texture.
+// See [`Map::get_mut`] for a usage example.
+//#[derive(Debug)]
+//pub struct MapIndexer<'a> {
+//pub(crate) image: &'a mut Image,
+//// TODO: We can get size from image.texture_descriptor.size
+//pub(crate) size: UVec2,
+//}
 
-impl<'a> MapIndexer<'a> {
-    /// Size of the map being indexed.
-    pub fn size(&self) -> UVec2 {
-        self.size
-    }
+//impl<'a> MapIndexer<'a> {
+///// Size of the map being indexed.
+//pub fn size(&self) -> UVec2 {
+//self.size
+//}
 
-    /// Get tile at given position.
-    pub fn at_ivec(&self, i: IVec2) -> u16 {
-        self.at(i.x as u32, i.y as u32)
-    }
+///// Get tile at given position.
+//pub fn at_ivec(&self, i: IVec2) -> u16 {
+//self.at(i.x as u32, i.y as u32)
+//}
 
-    /// Get tile at given position.
-    pub fn at_uvec(&self, i: UVec2) -> u16 {
-        self.at(i.x, i.y)
-    }
+///// Get tile at given position.
+//pub fn at_uvec(&self, i: UVec2) -> u16 {
+//self.at(i.x, i.y)
+//}
 
-    /// Get tile at given position.
-    pub fn at(&self, x: u32, y: u32) -> u16 {
-        let idx = y as isize * self.size.x as isize + x as isize;
-        unsafe {
-            let ptr = self.image.data.as_ptr() as *const u16;
-            *ptr.offset(idx)
-        }
-    }
+///// Get tile at given position.
+//pub fn at(&self, x: u32, y: u32) -> u16 {
+//let idx = y as isize * self.size.x as isize + x as isize;
+//unsafe {
+//let ptr = self.image.data.as_ptr() as *const u16;
+//*ptr.offset(idx)
+//}
+//}
 
-    /// Set tile at given position.
-    pub fn set_uvec(&mut self, i: UVec2, v: u16) {
-        self.set(i.x, i.y, v)
-    }
+///// Set tile at given position.
+//pub fn set_uvec(&mut self, i: UVec2, v: u16) {
+//self.set(i.x, i.y, v)
+//}
 
-    /// Set tile at given position.
-    pub fn set(&mut self, x: u32, y: u32, v: u16) {
-        let idx = y as isize * self.size.x as isize + x as isize;
-        unsafe {
-            let ptr = self.image.data.as_ptr() as *mut u16;
-            *ptr.offset(idx) = v
-        }
-    }
-}
+///// Set tile at given position.
+//pub fn set(&mut self, x: u32, y: u32, v: u16) {
+//let idx = y as isize * self.size.x as isize + x as isize;
+//unsafe {
+//let ptr = self.image.data.as_ptr() as *mut u16;
+//*ptr.offset(idx) = v
+//}
+//}
+//}
 
 /// Signals that the given map has been fully loaded and from now on
 /// [`Map::get_mut`] should be successful.
@@ -254,16 +270,20 @@ pub struct MapReadyEvent {
 
 ///
 pub fn configure_loaded_assets(
-    maps: Query<Ref<Map>>,
+    //maps: Query<Ref<Map>>,
+    map_materials: ResMut<Assets<Map>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
     mut images: ResMut<Assets<Image>>,
 ) {
+    // TODO: Configure sampler etc.. for atlas image with the new asset preprocessing system?
+    /*
     for ev in ev_asset.iter() {
         for map in maps.iter() {
             match ev {
                 AssetEvent::Added { id }
-                    if *id == map.map_texture.id() || *id == map.atlas_texture.id() =>
+                    if *id == map.atlas_texture.id() =>
                 {
+
                     // Set some sampling options for the atlas texture for nicer looks,
                     // such as avoiding "grid lines" when zooming out or mushy edges.
                     //
@@ -289,40 +309,55 @@ pub fn configure_loaded_assets(
             } // match ev
         } // for map
     } // for ev
+    */
 } // configure_loaded_assets()
 
 /// Check to see if any maps' assets became available and send a MapReadyEvent
 /// if so.
 pub fn update_loading_maps(
-    images: Res<Assets<Image>>,
-    mut maps: Query<(&mut Map, Entity, Option<&MeshManagedByMap>), With<MapLoading>>,
+    //images: Res<Assets<Image>>,
+    map_materials: Res<Assets<Map>>,
+    // TODO: We should have a general marker component that
+    // could also duplicate some of the materials metadata if need be
+    // (at the cost of risking to be out of sync with the material)
+    mut maps: Query<(Entity, &Handle<Map>, Option<&MeshManagedByMap>), With<MapLoading>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    mut send_map_ready_event: EventWriter<MapReadyEvent>,
+    //mut send_map_ready_event: EventWriter<MapReadyEvent>,
 ) {
-    for (mut map, entity, manage_mesh) in maps.iter_mut() {
-        if map.is_loaded(images.as_ref()) {
-            commands.entity(entity).remove::<MapLoading>();
-            map.update(images.as_ref());
-
-            if manage_mesh.is_some() {
-                let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
-                    size: map.world_size(),
-                    flip: false,
-                })));
-                commands.entity(entity).insert(mesh);
+    // TODO
+    for (entity, map_handle, manage_mesh) in maps.iter_mut() {
+        let map = match map_materials.get(map_handle) {
+            Some(x) => x,
+            None => {
+                warn!("No map material");
+                continue;
             }
+        };
 
-            debug!("Map loaded: {:?}", map.map_size());
-            send_map_ready_event.send(MapReadyEvent { map: entity });
+        //if map.is_loaded(images.as_ref()) {
+        commands.entity(entity).remove::<MapLoading>();
+        //map.update(images.as_ref());
+
+        if manage_mesh.is_some() {
+            let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
+                // TODO DEBUG
+                size: map.world_size(),
+                flip: false,
+            })));
+            commands.entity(entity).insert(mesh);
         }
+
+        debug!("Map loaded: {:?}", map.map_size());
+        //send_map_ready_event.send(MapReadyEvent { map: entity });
+        //}
     }
 }
 
-pub fn apply_map_transforms(
-    mut maps: Query<(&mut Map, &GlobalTransform), Changed<GlobalTransform>>,
+pub fn apply_map_transforms(//mut maps: Query<(&mut Map, &GlobalTransform), Changed<GlobalTransform>>,
 ) {
-    for (mut map, transform) in &mut maps {
-        map.map_uniform.apply_transform(transform.clone());
-    }
+    // TODO
+    //for (mut map, transform) in &mut maps {
+    //map.map_uniform.apply_transform(transform.clone());
+    //}
 }

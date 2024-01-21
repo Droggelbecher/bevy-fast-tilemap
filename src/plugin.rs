@@ -10,6 +10,7 @@ use bevy::{
         render_resource::SpecializedRenderPipelines,
         Render, RenderApp, RenderSet,
     },
+    sprite::Material2dPlugin,
 };
 
 use crate::map::Map;
@@ -34,7 +35,7 @@ pub struct FastTileMapPlugin;
 
 impl Plugin for FastTileMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<Map>::default());
+        app.add_plugins(Material2dPlugin::<Map>::default());
         app.add_event::<MapReadyEvent>().add_systems(
             Update,
             (configure_loaded_assets, update_loading_maps).chain(),

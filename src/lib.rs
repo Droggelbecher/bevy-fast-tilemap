@@ -30,13 +30,13 @@ pub mod shader;
 pub mod tile_projection;
 
 pub mod prelude {
-    pub use crate::bundle::MapBundle;
-    pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
+    //pub use crate::bundle::MapBundle;
+    pub use crate::map::{Map, MapReadyEvent, MeshManagedByMap};
     pub use crate::plugin::FastTileMapPlugin;
     pub use crate::tile_projection::{TileProjection, AXONOMETRIC, IDENTITY};
 }
 
-pub use crate::bundle::MapBundle;
-pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
+//pub use crate::bundle::MapBundle;
+pub use crate::map::{Map, MapReadyEvent, MeshManagedByMap};
 pub use crate::plugin::FastTileMapPlugin;
 pub use crate::tile_projection::{TileProjection, AXONOMETRIC, IDENTITY};
