@@ -1,8 +1,8 @@
 use bevy::{
     math::{mat2, vec2, vec3, Vec3Swizzles},
     prelude::*,
+    render::render_resource::AsBindGroup,
     render::render_resource::ShaderType,
-    render::render_resource::{AsBindGroup, ShaderRef},
 };
 
 use crate::tile_projection::IDENTITY;
@@ -129,6 +129,7 @@ impl MapUniform {
         self.local_to_map(local)
     }
 
+    /*
     pub(crate) fn update_map_size(&mut self, map_size: UVec2) -> bool {
         if self.map_size == map_size {
             return false;
@@ -138,6 +139,7 @@ impl MapUniform {
         self.update_world_size();
         true
     }
+    */
 
     pub(crate) fn update_world_size(&mut self) {
         // World Size

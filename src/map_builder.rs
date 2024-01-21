@@ -2,8 +2,8 @@ use crate::map::{Map, MapIndexer};
 use crate::map_uniform::MapUniform;
 use bevy::math::uvec2;
 use bevy::prelude::*;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
-use std::mem::size_of;
+//use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
+//use std::mem::size_of;
 
 use crate::tile_projection::TileProjection;
 
@@ -93,7 +93,6 @@ impl MapBuilder {
 
         initializer(&mut MapIndexer { map: &mut self.map });
 
-        //self.map.map_texture = images.add(map_image);
         self.map.map_uniform.update_inverse_projection();
         self.map.map_uniform.update_world_size();
 
@@ -102,7 +101,7 @@ impl MapBuilder {
 
     /// Build the map component and immediately initialize the map
     /// data with the given initializer callback.
-    pub fn build_and_set<F>(self, images: &mut ResMut<Assets<Image>>, mut initializer: F) -> Map
+    pub fn build_and_set<F>(self, mut initializer: F) -> Map
     where
         F: FnMut(UVec2) -> u32,
     {

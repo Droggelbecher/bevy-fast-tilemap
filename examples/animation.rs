@@ -7,8 +7,7 @@ use bevy::{
     sprite::MaterialMesh2dBundle,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{map::MapLoading, FastTileMapPlugin, Map, MeshManagedByMap};
-//use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_fast_tilemap::{map::MapLoading, FastTileMapPlugin, Map, MapBundle, MeshManagedByMap};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -46,9 +45,7 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<Map>>,
-    //mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -57,24 +54,19 @@ fn startup(
         asset_server.load("pixel_tiles_16.png"),
         vec2(16., 16.),
     )
-    .build();
-    //.build_and_initialize(&mut images, |m| {
-    //// Initialize using a closure
-    //// Set all tiles in layer 0 to index 4
-    //for y in 0..m.size().y {
-    //for x in 0..m.size().y {
-    //m.set(x, y, ((x + y) % 4 + 1) as u16);
-    //}
-    //}
-    //});
-
-    //commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
+    .build_and_initialize(|m| {
+        // Initialize using a closure
+        // Set all tiles in layer 0 to index 4
+        for y in 0..m.size().y {
+            for x in 0..m.size().y {
+                m.set(x, y, ((x + y) % 4 + 1) as u32);
+            }
+        }
+    });
 
     commands.spawn((
         MaterialMesh2dBundle {
-            //material: materials.add(ColorMaterial::from(Color::GREEN)),
             mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-            //transform: Transform::default().with_scale(Vec3::splat(128.)),
             material: materials.add(map),
             ..default()
         },
@@ -82,36 +74,37 @@ fn startup(
         MapLoading::default(),
     ));
 
-    /*
     let map = Map::builder(
         uvec2(50, 50),
         asset_server.load("pixel_tiles_16.png"),
         vec2(16., 16.),
     )
-    .build(&mut images);
+    .build();
 
-    let mut bundle = MapBundle::new(map);
-    bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
+    let bundle = MapBundle {
+        material: materials.add(map),
+        transform: Transform::default().with_translation(vec3(0., 0., 1.)),
+        ..default()
+    };
 
     commands
         .spawn(bundle)
         .insert(MeshManagedByMap)
         .insert(AnimationLayer);
-    */
 }
 
-fn update_map(mut images: ResMut<Assets<Image>>, maps: Query<&Map, With<AnimationLayer>>) {
-    /*
-    for map in maps.iter() {
+fn update_map(
+    mut map_materials: ResMut<Assets<Map>>,
+    maps: Query<&Handle<Map>, With<AnimationLayer>>,
+) {
+    for map_handle in maps.iter() {
         // Get the indexer into the map texture
-        let mut m = match map.get_mut(&mut *images) {
-            Err(e) => {
-                // Map texture is not available
-                warn!("no map: {:?}", e);
-                continue;
-            }
-            Ok(x) => x,
+        let Some(map) = map_materials.get_mut(map_handle) else {
+            warn!("No map material");
+            continue;
         };
+
+        let mut m = map.indexer_mut();
 
         let k = 10;
         let y_min = m.size().y / 2 - k;
@@ -132,5 +125,4 @@ fn update_map(mut images: ResMut<Assets<Image>>, maps: Query<&Map, With<Animatio
             }
         }
     }
-    */
 }

@@ -2,14 +2,11 @@
 
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    math::{uvec2, vec2, vec3},
+    math::{uvec2, vec2},
     prelude::*,
-    sprite::MaterialMesh2dBundle,
-    sprite::Mesh2dHandle,
     window::PresentMode,
 };
 use bevy_fast_tilemap::{bundle::MapBundle, FastTileMapPlugin, Map};
-//use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -31,7 +28,6 @@ fn main() {
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
             FastTileMapPlugin::default(),
-            //WorldInspectorPlugin::new(),
         ))
         .add_systems(Startup, startup)
         .add_systems(FixedUpdate, update_map)
@@ -46,7 +42,6 @@ struct AnimationLayer;
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
@@ -66,62 +61,8 @@ fn startup(
         }
     });
 
-    //commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
-
     commands.spawn(MapBundle {
         material: materials.add(map),
         ..default()
     });
-
-    /*
-    let map = Map::builder(
-        uvec2(50, 50),
-        asset_server.load("pixel_tiles_16.png"),
-        vec2(16., 16.),
-    )
-    .build(&mut images);
-
-    let mut bundle = MapBundle::new(map);
-    bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
-
-    commands
-        .spawn(bundle)
-        .insert(MeshManagedByMap)
-        .insert(AnimationLayer);
-    */
-}
-
-fn update_map(mut images: ResMut<Assets<Image>>, maps: Query<&Map, With<AnimationLayer>>) {
-    /*
-    for map in maps.iter() {
-        // Get the indexer into the map texture
-        let mut m = match map.get_mut(&mut *images) {
-            Err(e) => {
-                // Map texture is not available
-                warn!("no map: {:?}", e);
-                continue;
-            }
-            Ok(x) => x,
-        };
-
-        let k = 10;
-        let y_min = m.size().y / 2 - k;
-        let x_min = m.size().x / 2 - k;
-        let y_max = m.size().y / 2 + k + 1;
-        let x_max = m.size().x / 2 + k + 1;
-
-        for y in y_min..y_max {
-            for x in x_min..x_max {
-                // Tile index transitions, since our animation is ridiculously short,
-                // we can list them here explicitly
-                let t = match m.at(x, y) {
-                    6 => 7,
-                    7 => 8,
-                    _ => 6,
-                };
-                m.set(x, y, t);
-            }
-        }
-    }
-    */
 }

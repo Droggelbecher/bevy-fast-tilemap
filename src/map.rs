@@ -1,10 +1,10 @@
 use bevy::sprite::Material2d;
 use bevy::{
-    math::{vec2, Vec3Swizzles},
+    math::Vec3Swizzles,
     prelude::*,
     render::render_resource::ShaderRef,
     render::{
-        render_resource::{AsBindGroup, SamplerDescriptor},
+        render_resource::AsBindGroup,
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
     sprite::Mesh2dHandle,
@@ -62,6 +62,10 @@ impl Map {
     /// Create a [`MapBuilder`] for configuring your map.
     pub fn builder(map_size: UVec2, atlas_texture: Handle<Image>, tile_size: Vec2) -> MapBuilder {
         MapBuilder::new(map_size, atlas_texture, tile_size)
+    }
+
+    pub fn indexer_mut(&mut self) -> MapIndexer {
+        MapIndexer { map: self }
     }
 
     /// Dimensions of this map in tiles.
@@ -173,10 +177,12 @@ impl<'a> MapIndexer<'a> {
         self.map.map_texture[idx] = v;
     }
 
+    /*
     fn assert_size(&self) {
         let s = (self.map.map_size().x * self.map.map_size().y) as usize;
         assert!(self.map.map_texture.len() == s);
     }
+    */
 }
 
 /// Signals that the given map has been fully loaded and from now on
@@ -193,7 +199,7 @@ pub fn configure_loaded_assets(
     mut images: ResMut<Assets<Image>>,
     map_handles: Query<&Handle<Map>>,
 ) {
-    for ev in ev_asset.iter() {
+    for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
             let Some(map) = map_materials.get(map_handle) else {
                 warn!("No map material");
@@ -234,15 +240,11 @@ pub fn configure_loaded_assets(
 pub fn update_loading_maps(
     images: Res<Assets<Image>>,
     mut map_materials: ResMut<Assets<Map>>,
-    // TODO: We should have a general marker component that
-    // could also duplicate some of the materials metadata if need be
-    // (at the cost of risking to be out of sync with the material)
     mut maps: Query<(Entity, &Handle<Map>, Option<&MeshManagedByMap>), With<MapLoading>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     //mut send_map_ready_event: EventWriter<MapReadyEvent>,
 ) {
-    // TODO
     for (entity, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
             warn!("No map material");
@@ -256,7 +258,6 @@ pub fn update_loading_maps(
         if manage_mesh.is_some() {
             info!("Adding mesh");
             let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
-                // TODO DEBUG
                 size: map.world_size(),
                 flip: false,
             })));
