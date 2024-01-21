@@ -243,7 +243,12 @@ impl<'a> MapIndexer<'a> {
 
     /// Get tile at given position.
     pub fn at(&self, x: u32, y: u32) -> u32 {
-        self.assert_size();
+        //self.assert_size();
+
+        // ensure x/y do not go out of bounds individually (even if the final index is in-bounds)
+        if x >= self.size().x || y >= self.size().y {
+            return 0;
+        }
         let idx = y as usize * self.size().x as usize + x as usize;
         self.map.map_texture[idx]
     }
@@ -255,7 +260,11 @@ impl<'a> MapIndexer<'a> {
 
     /// Set tile at given position.
     pub fn set(&mut self, x: u32, y: u32, v: u32) {
-        self.assert_size();
+        //self.assert_size();
+        // ensure x/y do not go out of bounds individually (even if the final index is in-bounds)
+        if x >= self.size().x || y >= self.size().y {
+            return;
+        }
         let idx = y as usize * self.size().x as usize + x as usize;
         self.map.map_texture[idx] = v;
     }
@@ -345,6 +354,7 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
+            info!("Adding mesh");
             let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
                 // TODO DEBUG
                 size: map.world_size(),
@@ -359,10 +369,19 @@ pub fn update_loading_maps(
     }
 }
 
-pub fn apply_map_transforms(//mut maps: Query<(&mut Map, &GlobalTransform), Changed<GlobalTransform>>,
+pub fn apply_map_transforms(
+    mut maps: Query<(&Handle<Map>, &GlobalTransform), Changed<GlobalTransform>>,
+    mut map_materials: ResMut<Assets<Map>>,
 ) {
     // TODO
-    //for (mut map, transform) in &mut maps {
-    //map.map_uniform.apply_transform(transform.clone());
-    //}
+    for (map_handle, transform) in &mut maps {
+        let map = match map_materials.get_mut(map_handle) {
+            Some(x) => x,
+            None => {
+                warn!("No map material");
+                continue;
+            }
+        };
+        map.map_uniform.apply_transform(transform.clone());
+    }
 }

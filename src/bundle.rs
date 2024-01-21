@@ -1,4 +1,5 @@
-use crate::map::{Map, MapLoading};
+use crate::map::{Map, MapLoading, MeshManagedByMap};
+use bevy::sprite::MaterialMesh2dBundle;
 use bevy::{prelude::*, sprite::Mesh2dHandle};
 
 // Bundle of components you should typically have for a map.
@@ -6,26 +7,26 @@ use bevy::{prelude::*, sprite::Mesh2dHandle};
 // a) insert a [`crate::map::MeshManagedByMap`] or
 // b) override the [`bevy::sprite::Mesh2dHandle`] component with a custom mesh yourself (see
 // `examples/custom_mesh.rs`)
-/*
 #[derive(Bundle, Clone, Default)]
 pub struct MapBundle {
-    material_mesh_bundle: MaterialMeshBundle,
+    //pub material_mesh2d_bundle: MaterialMesh2dBundle<Map>,
     pub loading: MapLoading,
+    pub mesh_managed_by_map: MeshManagedByMap,
 
-    //pub mesh: Mesh2dHandle,
-    //pub map: Map,
-    //pub transform: Transform,
-    //pub global_transform: GlobalTransform,
-    //pub visibility: Visibility,
-    //pub inherited_visibility: InheritedVisibility,
+    pub material: Handle<Map>,
+    pub mesh: Mesh2dHandle,
+    pub transform: Transform,
+    pub global_transform: GlobalTransform,
+    pub visibility: Visibility,
+    pub inherited_visibility: InheritedVisibility,
+    pub view_visibility: ViewVisibility,
 }
 
 impl MapBundle {
-    pub fn new(map: Map) -> Self {
+    pub fn new(map: Map, materials: &mut Assets<Map>) -> Self {
         Self {
-            MaterialMeshBundle {
-                material: materials.add(map)
-            map, ..default() }
+            material: materials.add(map),
+            ..default()
+        }
     }
 }
-*/

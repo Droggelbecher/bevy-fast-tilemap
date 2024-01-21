@@ -7,7 +7,7 @@ use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_fast_tilemap::{
-    FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap, AXONOMETRIC,
+    bundle::MapBundle, map::MapIndexer, FastTileMapPlugin, Map, MeshManagedByMap, AXONOMETRIC,
 };
 use rand::Rng;
 
@@ -41,6 +41,7 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -57,9 +58,12 @@ fn startup(
     // y-axis of their world position (tiles higher up are considered further away).
     .with_projection(AXONOMETRIC)
     .with_perspective_overhang()
-    .build_and_initialize(&mut images, init_map);
+    .build_and_initialize(init_map);
 
-    commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
+    commands.spawn(MapBundle {
+        material: materials.add(map),
+        ..Default::default()
+    });
 } // startup
 
 /// Fill the map with a random pattern

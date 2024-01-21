@@ -356,27 +356,9 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
 fn fragment(
     in: VertexOutput
 ) -> @location(0) vec4<f32> {
-    // XXX TODO DEBUG
-    // DEBUG: Render atlas texture for testing
-    //return textureSample(
-    //    atlas_texture, atlas_sampler, in.uv
-    //);
-    // DEBUG: Render a single tile TODO XXX
-    /*
-    var tile_start = vec2<f32>(0.0, 0.0);
-    var tile_offset = in.uv * 64.0;
-    var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;
-    var total_offset = tile_start + rect_offset;
-    return textureSample(
-        atlas_texture, atlas_sampler, total_offset / map.atlas_size
-    );
-    */
-
-
     var world_position = in.world_position.xy;
 
-    // XXX TODO DEBUG Pink background for debugging
-    var color = vec4<f32>(1.0, 0.0, 1.0, 1.0);
+    var color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
     var pos = world_to_tile_and_offset(world_position);
     var index = get_tile_index(pos.tile);
@@ -385,7 +367,9 @@ fn fragment(
         color = render_perspective_underhangs(color, pos);
     }
 
-    color = blend(color, sample_tile(map, index, pos.offset));
+    if is_valid_tile(map, pos.tile) {
+        color = blend(color, sample_tile(map, index, pos.offset));
+    }
 
     if map.overhang_mode == 0u {
         color = render_dominance_overhangs(color, index, pos);

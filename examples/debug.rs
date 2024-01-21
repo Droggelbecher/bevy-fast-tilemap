@@ -5,9 +5,10 @@ use bevy::{
     math::{uvec2, vec2, vec3},
     prelude::*,
     sprite::MaterialMesh2dBundle,
+    sprite::Mesh2dHandle,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{map::MapLoading, FastTileMapPlugin, Map, MeshManagedByMap};
+use bevy_fast_tilemap::{bundle::MapBundle, FastTileMapPlugin, Map};
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod mouse_controls_camera;
@@ -46,9 +47,7 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<Map>>,
-    //mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -69,17 +68,10 @@ fn startup(
 
     //commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
 
-    commands.spawn((
-        MaterialMesh2dBundle {
-            //material: materials.add(ColorMaterial::from(Color::GREEN)),
-            mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-            //transform: Transform::default().with_scale(Vec3::splat(128.)),
-            material: materials.add(map),
-            ..default()
-        },
-        MeshManagedByMap::default(),
-        MapLoading::default(),
-    ));
+    commands.spawn(MapBundle {
+        material: materials.add(map),
+        ..default()
+    });
 
     /*
     let map = Map::builder(
