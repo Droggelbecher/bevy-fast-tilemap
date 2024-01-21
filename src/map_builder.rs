@@ -1,4 +1,4 @@
-use crate::map::Map;
+use crate::map::{Map, MapIndexer};
 use crate::map_uniform::MapUniform;
 use bevy::math::uvec2;
 use bevy::prelude::*;
@@ -77,35 +77,21 @@ impl MapBuilder {
 
     /// Build the map component.
     pub fn build(self) -> Map {
-        self.build_and_initialize(|| {})
+        self.build_and_initialize(|_| {})
     }
 
     /// Build the map component and immediately initialize the map
     /// data with the given initializer callback.
     pub fn build_and_initialize<F>(mut self, initializer: F) -> Map
     where
-        F: FnOnce(),
+        F: FnOnce(&mut MapIndexer),
     {
-        //let mut map_image = Image::new(
-        //Extent3d {
-        //width: self.map.map_size().x,
-        //height: self.map.map_size().y,
-        //depth_or_array_layers: 1,
-        //},
-        //TextureDimension::D2,
-        //vec![0u8; (self.map.map_size().x * self.map.map_size().y) as usize * size_of::<u16>()],
-        //TextureFormat::R16Uint,
-        //);
-        //map_image.texture_descriptor.usage = TextureUsages::STORAGE_BINDING
-        //| TextureUsages::COPY_DST
-        //| TextureUsages::TEXTURE_BINDING;
-        //map_image.texture_descriptor.mip_level_count = 1;
+        self.map.map_texture.resize(
+            (self.map.map_size().x * self.map.map_size().y) as usize,
+            0u32,
+        );
 
-        // TODO
-        //initializer(&mut MapIndexer {
-        //image: &mut map_image,
-        //size: self.map.map_uniform.map_size,
-        //});
+        initializer(&mut MapIndexer { map: &mut self.map });
 
         //self.map.map_texture = images.add(map_image);
         self.map.map_uniform.update_inverse_projection();
@@ -118,19 +104,17 @@ impl MapBuilder {
     /// data with the given initializer callback.
     pub fn build_and_set<F>(self, images: &mut ResMut<Assets<Image>>, mut initializer: F) -> Map
     where
-        F: FnMut(UVec2) -> u16,
+        F: FnMut(UVec2) -> u32,
     {
         let sx = self.map.map_size().x;
         let sy = self.map.map_size().y;
-        // TODO
-        self.build()
 
-        //self.build_and_initialize(images, |m: &mut MapIndexer| {
-        //for y in 0..sy {
-        //for x in 0..sx {
-        //m.set(x, y, initializer(uvec2(x, y)));
-        //}
-        //}
-        //})
+        self.build_and_initialize(|m: &mut MapIndexer| {
+            for y in 0..sy {
+                for x in 0..sx {
+                    m.set(x, y, initializer(uvec2(x, y)));
+                }
+            }
+        })
     } // build_and_set()
 }

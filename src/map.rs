@@ -25,12 +25,12 @@ pub struct Map {
     /// Texture containing the tile IDs (one per each pixel)
     #[storage(100)]
     //pub map_texture: Handle<Image>,
-    pub map_texture: Vec<u32>,
+    pub(crate) map_texture: Vec<u32>,
 
     /// Atlas texture with the individual tiles
     #[texture(101)]
     #[sampler(102)]
-    pub atlas_texture: Handle<Image>,
+    pub(crate) atlas_texture: Handle<Image>,
     // True iff the necessary images for this map are loaded
 }
 
@@ -136,11 +136,11 @@ impl Map {
         if images.get(&self.map_texture).is_none() {
             return false;
         }
+        */
 
         if images.get(&self.atlas_texture).is_none() {
             return false;
         }
-        */
         // TODO
 
         true
@@ -159,14 +159,6 @@ impl Map {
             }
         };
 
-        let atlas_texture = match images.get(&self.atlas_texture) {
-            Some(x) => x,
-            None => {
-                warn!("No atlas texture");
-                return false;
-            }
-        };
-
         let a = self.map_uniform.update_map_size(map_texture.size());
         let b = self
             .map_uniform
@@ -175,7 +167,18 @@ impl Map {
         a || b
         */
         // TODO
-        true
+        let atlas_texture = match images.get(&self.atlas_texture) {
+            Some(x) => x,
+            None => {
+                warn!("No atlas texture");
+                return false;
+            }
+        };
+
+        let b = self
+            .map_uniform
+            .update_atlas_size(atlas_texture.size().as_vec2());
+        b
     }
 
     // Get mutable access to map layers via a `MapIndexer`.
@@ -214,52 +217,54 @@ impl Map {
 // Indexer into a map.
 // Internally holds a mutable reference to the underlying texture.
 // See [`Map::get_mut`] for a usage example.
-//#[derive(Debug)]
-//pub struct MapIndexer<'a> {
-//pub(crate) image: &'a mut Image,
-//// TODO: We can get size from image.texture_descriptor.size
-//pub(crate) size: UVec2,
-//}
+#[derive(Debug)]
+pub struct MapIndexer<'a> {
+    pub(crate) map: &'a mut Map,
+    //pub(crate) image: &'a mut Image,
+    //// TODO: We can get size from image.texture_descriptor.size
+    //pub(crate) size: UVec2,
+}
 
-//impl<'a> MapIndexer<'a> {
-///// Size of the map being indexed.
-//pub fn size(&self) -> UVec2 {
-//self.size
-//}
+impl<'a> MapIndexer<'a> {
+    /// Size of the map being indexed.
+    pub fn size(&self) -> UVec2 {
+        self.map.map_size()
+    }
 
-///// Get tile at given position.
-//pub fn at_ivec(&self, i: IVec2) -> u16 {
-//self.at(i.x as u32, i.y as u32)
-//}
+    /// Get tile at given position.
+    pub fn at_ivec(&self, i: IVec2) -> u32 {
+        self.at(i.x as u32, i.y as u32)
+    }
 
-///// Get tile at given position.
-//pub fn at_uvec(&self, i: UVec2) -> u16 {
-//self.at(i.x, i.y)
-//}
+    ///// Get tile at given position.
+    pub fn at_uvec(&self, i: UVec2) -> u32 {
+        self.at(i.x, i.y)
+    }
 
-///// Get tile at given position.
-//pub fn at(&self, x: u32, y: u32) -> u16 {
-//let idx = y as isize * self.size.x as isize + x as isize;
-//unsafe {
-//let ptr = self.image.data.as_ptr() as *const u16;
-//*ptr.offset(idx)
-//}
-//}
+    /// Get tile at given position.
+    pub fn at(&self, x: u32, y: u32) -> u32 {
+        self.assert_size();
+        let idx = y as usize * self.size().x as usize + x as usize;
+        self.map.map_texture[idx]
+    }
 
-///// Set tile at given position.
-//pub fn set_uvec(&mut self, i: UVec2, v: u16) {
-//self.set(i.x, i.y, v)
-//}
+    /// Set tile at given position.
+    pub fn set_uvec(&mut self, i: UVec2, v: u32) {
+        self.set(i.x, i.y, v)
+    }
 
-///// Set tile at given position.
-//pub fn set(&mut self, x: u32, y: u32, v: u16) {
-//let idx = y as isize * self.size.x as isize + x as isize;
-//unsafe {
-//let ptr = self.image.data.as_ptr() as *mut u16;
-//*ptr.offset(idx) = v
-//}
-//}
-//}
+    /// Set tile at given position.
+    pub fn set(&mut self, x: u32, y: u32, v: u32) {
+        self.assert_size();
+        let idx = y as usize * self.size().x as usize + x as usize;
+        self.map.map_texture[idx] = v;
+    }
+
+    fn assert_size(&self) {
+        let s = (self.map.map_size().x * self.map.map_size().y) as usize;
+        assert!(self.map.map_texture.len() == s);
+    }
+}
 
 /// Signals that the given map has been fully loaded and from now on
 /// [`Map::get_mut`] should be successful.
@@ -315,8 +320,8 @@ pub fn configure_loaded_assets(
 /// Check to see if any maps' assets became available and send a MapReadyEvent
 /// if so.
 pub fn update_loading_maps(
-    //images: Res<Assets<Image>>,
-    map_materials: Res<Assets<Map>>,
+    images: Res<Assets<Image>>,
+    mut map_materials: ResMut<Assets<Map>>,
     // TODO: We should have a general marker component that
     // could also duplicate some of the materials metadata if need be
     // (at the cost of risking to be out of sync with the material)
@@ -327,7 +332,7 @@ pub fn update_loading_maps(
 ) {
     // TODO
     for (entity, map_handle, manage_mesh) in maps.iter_mut() {
-        let map = match map_materials.get(map_handle) {
+        let map = match map_materials.get_mut(map_handle) {
             Some(x) => x,
             None => {
                 warn!("No map material");
@@ -337,7 +342,7 @@ pub fn update_loading_maps(
 
         //if map.is_loaded(images.as_ref()) {
         commands.entity(entity).remove::<MapLoading>();
-        //map.update(images.as_ref());
+        map.update(images.as_ref());
 
         if manage_mesh.is_some() {
             let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {

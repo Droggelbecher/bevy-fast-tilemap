@@ -159,6 +159,8 @@ fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -
 }
 
 /// Sample tile from the tile atlas
+/// tile_index: Index of the tile in the atlas
+/// tile_offset: Offset from tile anchor point in pixel/world coordinates
 fn sample_tile(
     map: Map,
     tile_index: u32,
@@ -241,9 +243,7 @@ fn world_to_tile_and_offset(
 ///
 fn get_tile_index(map_position: vec2<i32>) -> u32 {
     //return u32(textureLoad(map_texture, map_position).r);
-    //return map_texture[map_position.y * i32(map.map_size.x) + map_position.x];
-    // XXX TODO DEBUG
-    return 3u;
+    return map_texture[map_position.y * i32(map.map_size.x) + map_position.x];
 }
 
 fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
@@ -362,9 +362,17 @@ fn fragment(
     //    atlas_texture, atlas_sampler, in.uv
     //);
     // DEBUG: Render a single tile TODO XXX
-    return sample_tile(map, 3u, in.uv * 16);
+    /*
+    var tile_start = vec2<f32>(0.0, 0.0);
+    var tile_offset = in.uv * 64.0;
+    var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;
+    var total_offset = tile_start + rect_offset;
+    return textureSample(
+        atlas_texture, atlas_sampler, total_offset / map.atlas_size
+    );
+    */
 
-/*
+
     var world_position = in.world_position.xy;
 
     // XXX TODO DEBUG Pink background for debugging
@@ -388,5 +396,4 @@ fn fragment(
     }
 
     return color;
-    */
 }
