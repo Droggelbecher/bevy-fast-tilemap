@@ -6,9 +6,7 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{
-    FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap, AXONOMETRIC,
-};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, AXONOMETRIC};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -60,10 +58,7 @@ fn startup(
     // Build the map is to provide an initializer callback here.
     .build_and_initialize(reset_map);
 
-    commands
-        .spawn(MapBundle::new(map, materials.as_mut()))
-        // Have the map manage our mesh so it always has the right size
-        .insert(MeshManagedByMap);
+    commands.spawn(MapBundle::new(map, materials.as_mut()));
 } // startup
 
 /// Fill the map with a chessboard pattern.

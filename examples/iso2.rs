@@ -6,9 +6,7 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{
-    FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap, AXONOMETRIC,
-};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, AXONOMETRIC};
 use rand::Rng;
 
 mod mouse_controls_camera;

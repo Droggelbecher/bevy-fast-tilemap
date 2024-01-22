@@ -4,10 +4,9 @@ use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     math::{uvec2, vec2, vec3},
     prelude::*,
-    sprite::MaterialMesh2dBundle,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{map::MapLoading, FastTileMapPlugin, Map, MapBundle, MeshManagedByMap};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -44,7 +43,6 @@ struct AnimationLayer;
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
@@ -64,15 +62,10 @@ fn startup(
         }
     });
 
-    commands.spawn((
-        MaterialMesh2dBundle {
-            mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-            material: materials.add(map),
-            ..default()
-        },
-        MeshManagedByMap::default(),
-        MapLoading::default(),
-    ));
+    commands.spawn(MapBundle {
+        material: materials.add(map),
+        ..default()
+    });
 
     let map = Map::builder(
         uvec2(50, 50),
@@ -87,10 +80,7 @@ fn startup(
         ..default()
     };
 
-    commands
-        .spawn(bundle)
-        .insert(MeshManagedByMap)
-        .insert(AnimationLayer);
+    commands.spawn(bundle).insert(AnimationLayer);
 }
 
 fn update_map(

@@ -1,4 +1,4 @@
-#import bevy_sprite::mesh2d_bindings mesh
+#import bevy_sprite::mesh2d_bindings::mesh
 
 struct Map {
     /// Size of the map, in tiles.
