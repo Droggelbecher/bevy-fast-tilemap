@@ -168,7 +168,6 @@ impl<'a> MapIndexer<'a> {
 
     /// Set tile at given position.
     pub fn set(&mut self, x: u32, y: u32, v: u32) {
-        //self.assert_size();
         // ensure x/y do not go out of bounds individually (even if the final index is in-bounds)
         if x >= self.size().x || y >= self.size().y {
             return;
@@ -176,20 +175,6 @@ impl<'a> MapIndexer<'a> {
         let idx = y as usize * self.size().x as usize + x as usize;
         self.map.map_texture[idx] = v;
     }
-
-    /*
-    fn assert_size(&self) {
-        let s = (self.map.map_size().x * self.map.map_size().y) as usize;
-        assert!(self.map.map_texture.len() == s);
-    }
-    */
-}
-
-/// Signals that the given map has been fully loaded and from now on
-/// [`Map::get_mut`] should be successful.
-#[derive(Debug, Event)]
-pub struct MapReadyEvent {
-    pub map: Entity,
 }
 
 ///
@@ -235,7 +220,23 @@ pub fn configure_loaded_assets(
     } // for ev
 } // configure_loaded_assets()
 
-/// Check to see if any maps' assets became available and send a MapReadyEvent
+pub fn log_map_events(
+    mut ev_asset: EventReader<AssetEvent<Map>>,
+    map_handles: Query<&Handle<Map>>,
+) {
+    for ev in ev_asset.read() {
+        for map_handle in map_handles.iter() {
+            match ev {
+                AssetEvent::Modified { id } if *id == map_handle.id() => {
+                    debug!("Map modified");
+                }
+                _ => (),
+            }
+        }
+    }
+}
+
+/// Check to see if any maps' assets became available
 /// if so.
 pub fn update_loading_maps(
     images: Res<Assets<Image>>,
@@ -243,7 +244,6 @@ pub fn update_loading_maps(
     mut maps: Query<(Entity, &Handle<Map>, Option<&MeshManagedByMap>), With<MapLoading>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    //mut send_map_ready_event: EventWriter<MapReadyEvent>,
 ) {
     for (entity, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
@@ -251,7 +251,6 @@ pub fn update_loading_maps(
             continue;
         };
 
-        //if map.is_loaded(images.as_ref()) {
         commands.entity(entity).remove::<MapLoading>();
         map.update(images.as_ref());
 
@@ -265,8 +264,6 @@ pub fn update_loading_maps(
         }
 
         debug!("Map loaded: {:?}", map.map_size());
-        //send_map_ready_event.send(MapReadyEvent { map: entity });
-        //}
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::map::{
-    apply_map_transforms, configure_loaded_assets, update_loading_maps, MapReadyEvent,
+    apply_map_transforms, configure_loaded_assets, log_map_events, update_loading_maps,
 };
 use bevy::{prelude::*, sprite::Material2dPlugin};
 
@@ -13,9 +13,9 @@ pub struct FastTileMapPlugin;
 impl Plugin for FastTileMapPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<Map>::default());
-        app.add_event::<MapReadyEvent>().add_systems(
+        app.add_systems(
             Update,
-            (configure_loaded_assets, update_loading_maps).chain(),
+            (configure_loaded_assets, update_loading_maps, log_map_events).chain(),
         );
         app.add_systems(Update, apply_map_transforms);
     }

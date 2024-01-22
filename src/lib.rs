@@ -26,6 +26,6 @@ pub mod shader;
 pub mod tile_projection;
 
 pub use crate::bundle::MapBundle;
-pub use crate::map::{Map, MapIndexer, MapReadyEvent, MeshManagedByMap};
+pub use crate::map::{Map, MapIndexer, MeshManagedByMap};
 pub use crate::plugin::FastTileMapPlugin;
 pub use crate::tile_projection::{TileProjection, AXONOMETRIC, IDENTITY};

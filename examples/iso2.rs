@@ -40,7 +40,7 @@ fn main() {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -81,9 +81,9 @@ fn startup(
     // Therefore its a good idea to limit the number of levels looked upwards here.
     // The default is 0 which disables this feature.
     .with_dominance_overhang(3)
-    .build_and_initialize(&mut images, init_map);
+    .build_and_initialize(init_map);
 
-    commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
+    commands.spawn(MapBundle::new(map, materials.as_mut()));
 } // startup
 
 /// Fill the map with a random pattern
@@ -100,10 +100,12 @@ fn init_map(m: &mut MapIndexer) {
 fn show_coordinate(
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut camera_query: Query<(&GlobalTransform, &Camera), With<OrthographicProjection>>,
-    maps: Query<&Map>,
+    maps: Query<&Handle<Map>>,
+    mut materials: ResMut<Assets<Map>>,
 ) {
-    for event in cursor_moved_events.iter() {
-        for map in maps.iter() {
+    for event in cursor_moved_events.read() {
+        for map_handle in maps.iter() {
+            let map = materials.get_mut(map_handle).unwrap();
             for (global, camera) in camera_query.iter_mut() {
                 // Translate viewport coordinates to world coordinates
                 if let Some(world) = camera

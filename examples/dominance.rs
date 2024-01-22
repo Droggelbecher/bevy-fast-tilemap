@@ -6,9 +6,7 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{
-    FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap, IDENTITY,
-};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, IDENTITY};
 use rand::Rng;
 
 mod mouse_controls_camera;
@@ -40,7 +38,7 @@ fn main() {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -68,9 +66,9 @@ fn startup(
     // and for every neighbor which can be a drastic performance hit.
     // Therefore its a good idea to limit the number of levels looked upwards here.
     .with_dominance_overhang(3)
-    .build_and_initialize(&mut images, init_map);
+    .build_and_initialize(init_map);
 
-    commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
+    commands.spawn(MapBundle::new(map, materials.as_mut()));
 } // startup
 
 /// Fill the map with a random pattern
@@ -87,10 +85,13 @@ fn init_map(m: &mut MapIndexer) {
 fn show_coordinate(
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut camera_query: Query<(&GlobalTransform, &Camera), With<OrthographicProjection>>,
-    maps: Query<&Map>,
+    maps: Query<&Handle<Map>>,
+    materials: Res<Assets<Map>>,
 ) {
-    for event in cursor_moved_events.iter() {
-        for map in maps.iter() {
+    for event in cursor_moved_events.read() {
+        for map_handle in maps.iter() {
+            let map = materials.get(map_handle).unwrap();
+
             for (global, camera) in camera_query.iter_mut() {
                 // Translate viewport coordinates to world coordinates
                 if let Some(world) = camera
