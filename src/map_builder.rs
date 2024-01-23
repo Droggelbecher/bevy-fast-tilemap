@@ -2,8 +2,6 @@ use crate::map::{Map, MapIndexer};
 use crate::map_uniform::MapUniform;
 use bevy::math::uvec2;
 use bevy::prelude::*;
-//use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages};
-//use std::mem::size_of;
 
 use crate::tile_projection::TileProjection;
 

@@ -129,18 +129,6 @@ impl MapUniform {
         self.local_to_map(local)
     }
 
-    /*
-    pub(crate) fn update_map_size(&mut self, map_size: UVec2) -> bool {
-        if self.map_size == map_size {
-            return false;
-        }
-
-        self.map_size = map_size;
-        self.update_world_size();
-        true
-    }
-    */
-
     pub(crate) fn update_world_size(&mut self) {
         // World Size
         //

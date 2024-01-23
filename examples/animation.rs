@@ -28,7 +28,6 @@ fn main() {
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
             FastTileMapPlugin::default(),
-            //WorldInspectorPlugin::new(),
         ))
         .add_systems(Startup, startup)
         .add_systems(FixedUpdate, update_map)
