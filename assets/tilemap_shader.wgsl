@@ -59,7 +59,6 @@ struct Map {
 var<uniform> map: Map;
 
 @group(1) @binding(100)
-//var map_texture: texture_storage_2d<r16uint, read>;
 var<storage> map_texture: array<u32>;
 
 @group(1) @binding(101)
@@ -69,8 +68,7 @@ var atlas_texture: texture_2d<f32>;
 var atlas_sampler: sampler;
 
 #import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
-//#import bevy_sprite::mesh2d_functions mesh2d_position_local_to_clip, mesh2d_position_local_to_world
-//#import bevy_sprite::mesh2d::mesh2d::Vertex
+
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
 #ifdef VERTEX_POSITIONS
@@ -89,21 +87,8 @@ struct Vertex {
     @location(4) color: vec4<f32>,
 #endif
 };
+
 #import bevy_sprite::mesh2d_vertex_output::VertexOutput
-
-/*
-struct Vertex {
-    @builtin(instance_index) instance_index: u32,
-    @location(0) position: vec3<f32>,
-    @location(1) normal: vec3<f32>,
-    @location(2) uv: vec2<f32>,
-};
-
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) world_position: vec4<f32>,
-};
-*/
 
 /// Custom vertex shader for passing along the UV coordinate
 @vertex
