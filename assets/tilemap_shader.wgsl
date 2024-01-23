@@ -1,4 +1,4 @@
-#import bevy_sprite::mesh2d_bindings mesh
+#import bevy_sprite::mesh2d_bindings::mesh
 
 struct Map {
     /// Size of the map, in tiles.
@@ -56,36 +56,49 @@ struct Map {
 };
 
 @group(1) @binding(0)
-var map_texture: texture_storage_2d<r16uint, read>;
-
-@group(1) @binding(1)
-var atlas_texture: texture_2d<f32>;
-
-@group(1) @binding(2)
-var atlas_sampler: sampler;
-
-@group(1) @binding(3)
 var<uniform> map: Map;
 
-#import bevy_sprite::mesh2d_functions mesh2d_position_local_to_clip, mesh2d_position_local_to_world
+@group(1) @binding(100)
+var<storage> map_texture: array<u32>;
+
+@group(1) @binding(101)
+var atlas_texture: texture_2d<f32>;
+
+@group(1) @binding(102)
+var atlas_sampler: sampler;
+
+#import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
 struct Vertex {
+    @builtin(instance_index) instance_index: u32,
+#ifdef VERTEX_POSITIONS
     @location(0) position: vec3<f32>,
+#endif
+#ifdef VERTEX_NORMALS
     @location(1) normal: vec3<f32>,
+#endif
+#ifdef VERTEX_UVS
     @location(2) uv: vec2<f32>,
+#endif
+#ifdef VERTEX_TANGENTS
+    @location(3) tangent: vec4<f32>,
+#endif
+#ifdef VERTEX_COLORS
+    @location(4) color: vec4<f32>,
+#endif
 };
 
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) world_position: vec4<f32>,
-};
+#import bevy_sprite::mesh2d_vertex_output::VertexOutput
 
 /// Custom vertex shader for passing along the UV coordinate
 @vertex
 fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
-    out.clip_position = mesh2d_position_local_to_clip(mesh.model, vec4<f32>(v.position, 1.0));
-    out.world_position = mesh2d_position_local_to_world(mesh.model, vec4<f32>(v.position, 1.0));
+
+    var model: mat4x4<f32> = get_model_matrix(v.instance_index);
+
+    out.position = mesh2d_position_local_to_clip(model, vec4<f32>(v.position, 1.0));
+    out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
     return out;
 }
 
@@ -131,6 +144,8 @@ fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -
 }
 
 /// Sample tile from the tile atlas
+/// tile_index: Index of the tile in the atlas
+/// tile_offset: Offset from tile anchor point in pixel/world coordinates
 fn sample_tile(
     map: Map,
     tile_index: u32,
@@ -212,7 +227,8 @@ fn world_to_tile_and_offset(
 
 ///
 fn get_tile_index(map_position: vec2<i32>) -> u32 {
-    return u32(textureLoad(map_texture, map_position).r);
+    //return u32(textureLoad(map_texture, map_position).r);
+    return map_texture[map_position.y * i32(map.map_size.x) + map_position.x];
 }
 
 fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
@@ -266,7 +282,7 @@ fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>) -
 
 fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) -> vec4<f32> {
     var max_index = min(map.n_tiles.x * map.n_tiles.y, index + map.max_overhang_levels);
-    var color = color;
+    var c = color;
 
     // Note: For some reason on OSX, the use of for loops fails silently (produces pure red output
     // in our case), while a loop { ... } seems to work just fine.
@@ -275,49 +291,49 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
         if idx >= max_index { break; }
 
         // first render all the diagonal overhangs
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1, -1)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1, -1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  1)));
 
         // Now all the orthogonal ones
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1)));
-        color = blend(color, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1)));
 
         idx++;
     }
 
-    return color;
+    return c;
 }
 
 fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32> {
-    var color = color;
-    if (map.perspective_overhang_mask & 0x03u) == 0x03u { color = blend(color, sample_neighbor(pos, vec2<i32>( -1, -1))); }
-    if (map.perspective_overhang_mask & 0x06u) == 0x06u { color = blend(color, sample_neighbor(pos, vec2<i32>( -1,  1))); }
-    if (map.perspective_overhang_mask & 0x09u) == 0x09u { color = blend(color, sample_neighbor(pos, vec2<i32>(  1, -1))); }
-    if (map.perspective_overhang_mask & 0x0cu) == 0x0cu { color = blend(color, sample_neighbor(pos, vec2<i32>(  1,  1))); }
+    var c = color;
+    if (map.perspective_overhang_mask & 0x03u) == 0x03u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1))); }
+    if (map.perspective_overhang_mask & 0x06u) == 0x06u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1))); }
+    if (map.perspective_overhang_mask & 0x09u) == 0x09u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1))); }
+    if (map.perspective_overhang_mask & 0x0cu) == 0x0cu { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1))); }
 
-    if (map.perspective_overhang_mask & 0x01u) == 0x01u { color = blend(color, sample_neighbor(pos, vec2<i32>(  0, -1))); }
-    if (map.perspective_overhang_mask & 0x02u) == 0x02u { color = blend(color, sample_neighbor(pos, vec2<i32>( -1,  0))); }
-    if (map.perspective_overhang_mask & 0x04u) == 0x04u { color = blend(color, sample_neighbor(pos, vec2<i32>(  0,  1))); }
-    if (map.perspective_overhang_mask & 0x08u) == 0x08u { color = blend(color, sample_neighbor(pos, vec2<i32>(  1,  0))); }
-    return color;
+    if (map.perspective_overhang_mask & 0x01u) == 0x01u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1))); }
+    if (map.perspective_overhang_mask & 0x02u) == 0x02u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0))); }
+    if (map.perspective_overhang_mask & 0x04u) == 0x04u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1))); }
+    if (map.perspective_overhang_mask & 0x08u) == 0x08u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0))); }
+    return c;
 }
 
 fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32> {
-    var color = color;
-    if (map.perspective_overhang_mask & 0x01u) == 0x01u { color = blend(color, sample_neighbor(pos, vec2<i32>(  0,  1))); }
-    if (map.perspective_overhang_mask & 0x02u) == 0x02u { color = blend(color, sample_neighbor(pos, vec2<i32>(  1,  0))); }
-    if (map.perspective_overhang_mask & 0x04u) == 0x04u { color = blend(color, sample_neighbor(pos, vec2<i32>(  0, -1))); }
-    if (map.perspective_overhang_mask & 0x08u) == 0x08u { color = blend(color, sample_neighbor(pos, vec2<i32>( -1,  0))); }
+    var c = color;
+    if (map.perspective_overhang_mask & 0x01u) == 0x01u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1))); }
+    if (map.perspective_overhang_mask & 0x02u) == 0x02u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0))); }
+    if (map.perspective_overhang_mask & 0x04u) == 0x04u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1))); }
+    if (map.perspective_overhang_mask & 0x08u) == 0x08u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0))); }
 
-    if (map.perspective_overhang_mask & 0x03u) == 0x03u { color = blend(color, sample_neighbor(pos, vec2<i32>(  1,  1))); }
-    if (map.perspective_overhang_mask & 0x06u) == 0x06u { color = blend(color, sample_neighbor(pos, vec2<i32>(  1, -1))); }
-    if (map.perspective_overhang_mask & 0x09u) == 0x09u { color = blend(color, sample_neighbor(pos, vec2<i32>( -1,  1))); }
-    if (map.perspective_overhang_mask & 0x0cu) == 0x0cu { color = blend(color, sample_neighbor(pos, vec2<i32>( -1, -1))); }
-    return color;
+    if (map.perspective_overhang_mask & 0x03u) == 0x03u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1))); }
+    if (map.perspective_overhang_mask & 0x06u) == 0x06u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1))); }
+    if (map.perspective_overhang_mask & 0x09u) == 0x09u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1))); }
+    if (map.perspective_overhang_mask & 0x0cu) == 0x0cu { c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1))); }
+    return c;
 }
 
 
@@ -336,7 +352,9 @@ fn fragment(
         color = render_perspective_underhangs(color, pos);
     }
 
-    color = blend(color, sample_tile(map, index, pos.offset));
+    if is_valid_tile(map, pos.tile) {
+        color = blend(color, sample_tile(map, index, pos.offset));
+    }
 
     if map.overhang_mode == 0u {
         color = render_dominance_overhangs(color, index, pos);

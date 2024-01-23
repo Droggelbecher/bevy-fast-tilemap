@@ -26,7 +26,7 @@ Checkout ![screenshots/](screenshots/) for more.
 The whole map is rendered as a single quad and a custom shader cares for rendering the
 correct tiles at the correct position.
 
-Thus each map works with two textures: One with integer data type, constructed and maintained
+Thus each map works with a material, constructed and maintained
 internally for storing for each tile position which tile index should be displayed there. And the
 other being a tile atlas that contains all the tiles. This one should be provided by you (see [assets/](assets/) for
 atlas examples).
@@ -55,6 +55,7 @@ Check out the [examples/](examples/) folder to get an overview.
 You can run the examples like this:
 
 ```bash
+cargo run --example animation
 cargo run --example updates
 cargo run --example layers
 cargo run --example iso
@@ -72,3 +73,4 @@ cargo run --example bench
 |0.10.1|0.3.0|
 |0.10.1|0.4.0|
 |0.11.0|0.5.0|
+|0.12.0|0.6.0|

@@ -1,12 +1,13 @@
 use bevy::{
     math::{mat2, vec2, vec3, Vec3Swizzles},
     prelude::*,
+    render::render_resource::AsBindGroup,
     render::render_resource::ShaderType,
 };
 
 use crate::tile_projection::IDENTITY;
 
-#[derive(ShaderType, Clone, Debug, Reflect)]
+#[derive(ShaderType, Clone, Debug, Reflect, AsBindGroup)]
 pub struct MapUniform {
     /// Size of the map, in tiles.
     /// Will be derived from underlying map texture.
@@ -126,16 +127,6 @@ impl MapUniform {
         let local = self.global_inverse_transform_matrix * world
             + self.global_inverse_transform_translation;
         self.local_to_map(local)
-    }
-
-    pub(crate) fn update_map_size(&mut self, map_size: UVec2) -> bool {
-        if self.map_size == map_size {
-            return false;
-        }
-
-        self.map_size = map_size;
-        self.update_world_size();
-        true
     }
 
     pub(crate) fn update_world_size(&mut self) {

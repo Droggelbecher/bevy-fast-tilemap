@@ -8,7 +8,7 @@ use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -47,7 +47,7 @@ struct MapLayer(i32);
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<Map>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands.spawn(Camera2dBundle::default());
@@ -60,12 +60,12 @@ fn startup(
         // Tile Size
         vec2(16., 16.),
     )
-    .build_and_initialize(&mut images, |m| {
+    .build_and_initialize(|m| {
         // Initialize using a closure
         // Set all tiles in layer 0 to index 4
         for y in 0..m.size().y {
             for x in 0..m.size().y {
-                m.set(x, y, ((x + y) % 4 + 1) as u16);
+                m.set(x, y, ((x + y) % 4 + 1) as u32);
             }
         }
     });
@@ -73,9 +73,11 @@ fn startup(
     let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Circle::new(300.0))));
 
     commands
-        .spawn(MapBundle::new(map))
+        .spawn(MapBundle::new(map, materials.as_mut()))
         .insert(MapLayer(0))
-        // Rather than `MeshManagedByMap`, use our own custom mesh here
+        // Remove the `MeshManagedByMap` marker component so the map doesn't try to resize it
+        .remove::<MeshManagedByMap>()
+        // Insert our custom mesh
         .insert(mesh.clone());
 
     let map = Map::builder(
@@ -83,9 +85,9 @@ fn startup(
         asset_server.load("pixel_tiles_16.png"),
         vec2(16., 16.),
     )
-    .build_and_initialize(&mut images, initialize_layer1);
+    .build_and_initialize(initialize_layer1);
 
-    let mut bundle = MapBundle::new(map);
+    let mut bundle = MapBundle::new(map, materials.as_mut());
     // Higher z value means "closer to the camera"
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
@@ -104,7 +106,7 @@ fn initialize_layer1(m: &mut MapIndexer) {
 
     for y in y_min..y_max {
         for x in x_min..x_max {
-            m.set(x, y, 11u16);
+            m.set(x, y, 11u32);
             //m.set(x, y, (x % 12) as u16);
         } // for x
     } // for y

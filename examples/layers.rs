@@ -6,7 +6,7 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::math::{uvec2, vec2, vec3};
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer};
 
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
@@ -45,7 +45,7 @@ struct MapLayer(i32);
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -57,33 +57,28 @@ fn startup(
         // Tile Size
         vec2(16., 16.),
     )
-    .build_and_set(&mut images, |pos| {
+    .build_and_set(|pos| {
         // Initialize using a closure
         // Set all tiles in layer 0 to index 4
-        ((pos.x + pos.y) % 4 + 1) as u16
+        ((pos.x + pos.y) % 4 + 1) as u32
     });
 
     commands
-        .spawn(MapBundle::new(map))
-        .insert(MapLayer(0))
-        // Have the map manage our mesh so it always has the right size
-        .insert(MeshManagedByMap);
+        .spawn(MapBundle::new(map, materials.as_mut()))
+        .insert(MapLayer(0));
 
     let map = Map::builder(
         uvec2(51, 51),
         asset_server.load("pixel_tiles_16.png"),
         vec2(16., 16.),
     )
-    .build_and_initialize(&mut images, initialize_layer1);
+    .build_and_initialize(initialize_layer1);
 
-    let mut bundle = MapBundle::new(map);
+    let mut bundle = MapBundle::new(map, materials.as_mut());
     // Higher z value means "closer to the camera"
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
-    commands
-        .spawn(bundle)
-        .insert(MapLayer(1))
-        .insert(MeshManagedByMap);
+    commands.spawn(bundle).insert(MapLayer(1));
 }
 
 fn initialize_layer1(m: &mut MapIndexer) {
@@ -98,7 +93,7 @@ fn initialize_layer1(m: &mut MapIndexer) {
 
     for y in y_min..y_max {
         for x in x_min..x_max {
-            m.set(x, y, (x % 6) as u16 + 6u16);
+            m.set(x, y, (x % 6) as u32 + 6u32);
             //m.set(x, y, (x % 12) as u16);
         } // for x
     } // for y

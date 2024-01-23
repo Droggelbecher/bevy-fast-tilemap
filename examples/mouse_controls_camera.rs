@@ -33,7 +33,7 @@ fn mouse_controls_camera(
         &mut OrthographicProjection,
     )>,
 ) {
-    for event in mouse_motion_events.iter() {
+    for event in mouse_motion_events.read() {
         if mouse_button.pressed(MouseButton::Left) || mouse_button.pressed(MouseButton::Right) {
             for (_, mut transform, _, _) in camera_query.iter_mut() {
                 transform.translation.x -= event.delta.x * transform.scale.x;
@@ -43,7 +43,7 @@ fn mouse_controls_camera(
     }
 
     let mut wheel_y = 0.;
-    for event in mouse_wheel_events.iter() {
+    for event in mouse_wheel_events.read() {
         wheel_y += event.y;
     }
 

@@ -7,8 +7,8 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapReadyEvent, MeshManagedByMap};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle};
+//use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 
 mod mouse_controls_camera;
@@ -29,19 +29,19 @@ fn main() {
             }),
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
-            WorldInspectorPlugin::new(),
+            //WorldInspectorPlugin::new(),
             MouseControlsCameraPlugin::default(),
             FastTileMapPlugin::default(),
         ))
         .add_systems(Startup, startup)
-        .add_systems(Update, (initialize_map, change_map))
+        .add_systems(Update, change_map)
         .run();
 }
 
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut images: ResMut<Assets<Image>>,
+    mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -55,16 +55,17 @@ fn startup(
         // Tile Size
         vec2(16., 16.),
     )
-    .build(&mut images);
+    .build();
 
-    commands.spawn(MapBundle::new(map)).insert(MeshManagedByMap);
+    commands.spawn(MapBundle::new(map, materials.as_mut()));
 }
 
 /// Check whether the map is ready to be filled with contents and do so.
 /// This way the map gets initialized as soon as its texture is available in the asset server.
 /// See the other examples for the slightly more convenient immediate initialization.
+/*
 fn initialize_map(
-    mut evs: EventReader<MapReadyEvent>,
+    //mut evs: EventReader<MapReadyEvent>,
     mut images: ResMut<Assets<Image>>,
     mut maps: Query<&mut Map>,
 ) {
@@ -87,21 +88,15 @@ fn initialize_map(
         }
     } // for ev
 } // generate_map
+*/
 
 /// Update random patches of tile indices in the map
-fn change_map(mut images: ResMut<Assets<Image>>, maps: Query<&Map>) {
+fn change_map(mut materials: ResMut<Assets<Map>>, maps: Query<&Handle<Map>>) {
     let mut rng = rand::thread_rng();
 
-    for map in maps.iter() {
-        // Get the indexer into the map texture
-        let mut m = match map.get_mut(&mut *images) {
-            Err(e) => {
-                // Map texture is not available
-                warn!("no map: {:?}", e);
-                continue;
-            }
-            Ok(x) => x,
-        };
+    for map_handle in maps.iter() {
+        let map = materials.get_mut(map_handle).unwrap();
+        let mut m = map.indexer_mut();
 
         let k = rng.gen_range(5..50);
         let x_min = rng.gen_range(0..m.size().x - k);
