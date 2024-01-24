@@ -182,12 +182,8 @@ impl Map {
     /// Call this when map size changed or assets may have become available.
     /// Should not be necessary to call this if only map contents changed.
     pub fn update(&mut self, images: &Assets<Image>) -> bool {
-        let atlas_texture = match images.get(&self.atlas_texture) {
-            Some(x) => x,
-            None => {
-                warn!("No atlas texture");
-                return false;
-            }
+        let Some(atlas_texture) = images.get(&self.atlas_texture) else {
+            return false;
         };
 
         self.map_uniform
@@ -284,7 +280,6 @@ pub fn configure_loaded_assets(
     for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
             let Some(map) = map_materials.get(map_handle) else {
-                warn!("No map material");
                 continue;
             };
 
@@ -309,6 +304,9 @@ pub fn configure_loaded_assets(
                         if let Some(ref mut view_descriptor) = atlas.texture_view_descriptor {
                             view_descriptor.mip_level_count = Some(4);
                         }
+                    }
+                    else {
+                        warn!("Map atlas just added but not found?!");
                     }
                 }
                 _ => (),
@@ -352,7 +350,9 @@ pub fn update_loading_maps(
 ) {
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
-            warn!("No map material");
+            continue;
+        };
+        let Some(_) = images.get(map.atlas_texture.clone()) else {
             continue;
         };
 
@@ -360,8 +360,6 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
-            debug!("Adding mesh for {entity:?}");
-
             let mut mesh = Mesh::from(shape::Quad {
                 size: map.world_size(),
                 flip: false,
