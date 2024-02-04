@@ -1,4 +1,5 @@
 #import bevy_sprite::mesh2d_bindings::mesh
+#import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
 struct Map {
     /// Size of the map, in tiles.
@@ -54,10 +55,12 @@ struct Map {
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
 
+/*
     desaturation: f32,
     tint: vec4<f32>,
     mix_color: vec4<f32>,
     mix_level: f32,
+    */
 };
 
 @group(1) @binding(0)
@@ -72,28 +75,22 @@ var atlas_texture: texture_2d<f32>;
 @group(1) @binding(102)
 var atlas_sampler: sampler;
 
-#import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
-#ifdef VERTEX_POSITIONS
     @location(0) position: vec3<f32>,
-#endif
-#ifdef VERTEX_NORMALS
-    @location(1) normal: vec3<f32>,
-#endif
-#ifdef VERTEX_UVS
-    @location(2) uv: vec2<f32>,
-#endif
-#ifdef VERTEX_TANGENTS
-    @location(3) tangent: vec4<f32>,
-#endif
-#ifdef VERTEX_COLORS
-    @location(4) color: vec4<f32>,
-#endif
+    @location(1) mix_color: vec4<f32>,
 };
 
-#import bevy_sprite::mesh2d_vertex_output::VertexOutput
+struct VertexOutput {
+    // this is `clip position` when the struct is used as a vertex stage output
+    // and `frag coord` when used as a fragment stage input
+    @builtin(position) position: vec4<f32>,
+    @location(0) world_position: vec4<f32>,
+    @location(1) mix_color: vec4<f32>,
+}
+
+//#import bevy_sprite::mesh2d_vertex_output::VertexOutput
 
 /// Custom vertex shader for passing along the UV coordinate
 @vertex
@@ -104,6 +101,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     out.position = mesh2d_position_local_to_clip(model, vec4<f32>(v.position, 1.0));
     out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
+    out.mix_color = v.mix_color;
     return out;
 }
 
@@ -342,11 +340,11 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
 }
 
 fn desaturate(color: vec4<f32>, amount: f32) -> vec4<f32> {
-	var luminance = vec4<f32>(0.299, 0.587, 0.114, 0.0);
-	var gr = dot(luminance, color);
+    var luminance = vec4<f32>(0.299, 0.587, 0.114, 0.0);
+    var gr = dot(luminance, color);
     var gray = vec4<f32>(gr, gr, gr, color.a);
     var amnt = vec4<f32>(amount, amount, amount, amount);
-	return mix(color, gray, amnt);
+    return mix(color, gray, amnt);
 }
 
 
@@ -377,8 +375,11 @@ fn fragment(
         color = render_perspective_overhangs(color, pos);
     }
 
+    /*
     color = desaturate(color, map.desaturation) * map.tint;
     color = color * map.tint;
     color = mix(color, vec4<f32>(map.mix_color.rgb, map.mix_color.a * color.a), map.mix_level);
+    */
+    color = mix(color, vec4<f32>(in.mix_color.rgb, color.a), in.mix_color.a);
     return color;
 }

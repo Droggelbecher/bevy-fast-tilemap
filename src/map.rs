@@ -2,13 +2,20 @@ use bevy::{
     math::Vec3Swizzles,
     prelude::*,
     render::{
-        render_resource::{AsBindGroup, ShaderRef},
+        mesh::MeshVertexAttribute,
+        render_resource::{AsBindGroup, ShaderRef, VertexFormat},
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
     sprite::{Material2d, Mesh2dHandle},
 };
 
 use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
+
+const ATTRIBUTE_MIX_COLOR: MeshVertexAttribute =
+    MeshVertexAttribute::new("MixColor", 988779055, VertexFormat::Float32x4);
+
+// TODO: It seems bevy will reupload map_texture to the GPU even when just map_uniform changes,
+// which is prohibitely slow
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
@@ -20,7 +27,7 @@ pub struct Map {
     pub(crate) map_uniform: MapUniform,
 
     /// Texture containing the tile IDs (one per each pixel)
-    #[storage(100)]
+    #[storage(100, read_only)]
     pub(crate) map_texture: Vec<u32>,
 
     /// Atlas texture with the individual tiles
@@ -29,9 +36,31 @@ pub struct Map {
     pub(crate) atlas_texture: Handle<Image>,
 }
 
+#[derive(Component, Default, Clone, Debug)]
+pub struct MapAttributes {
+    pub mix_color: Vec<Vec4>,
+}
+
 impl Material2d for Map {
+    fn vertex_shader() -> ShaderRef {
+        "tilemap_shader.wgsl".into()
+    }
+
     fn fragment_shader() -> ShaderRef {
         "tilemap_shader.wgsl".into()
+    }
+
+    fn specialize(
+        descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
+        layout: &bevy::render::mesh::MeshVertexBufferLayout,
+        _key: bevy::sprite::Material2dKey<Self>,
+    ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
+        let vertex_layout = layout.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            ATTRIBUTE_MIX_COLOR.at_shader_location(1),
+        ])?;
+        descriptor.vertex.buffers = vec![vertex_layout];
+        Ok(())
     }
 }
 
@@ -122,6 +151,7 @@ impl Map {
             .update_atlas_size(atlas_texture.size().as_vec2())
     }
 
+    /*
     pub fn set_desaturation(&mut self, desaturation: f32) {
         self.map_uniform.set_desaturation(desaturation);
     }
@@ -137,6 +167,7 @@ impl Map {
     pub fn set_mix_level(&mut self, level: f32) {
         self.map_uniform.set_mix_level(level);
     }
+    */
 } // impl Map
 
 // Indexer into a map.
@@ -253,11 +284,19 @@ pub fn log_map_events(
 pub fn update_loading_maps(
     images: Res<Assets<Image>>,
     mut map_materials: ResMut<Assets<Map>>,
-    mut maps: Query<(Entity, &Handle<Map>, Option<&MeshManagedByMap>), With<MapLoading>>,
+    mut maps: Query<
+        (
+            Entity,
+            Option<&MapAttributes>,
+            &Handle<Map>,
+            Option<&MeshManagedByMap>,
+        ),
+        With<MapLoading>,
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (entity, map_handle, manage_mesh) in maps.iter_mut() {
+    for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
             warn!("No map material");
             continue;
@@ -267,15 +306,46 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
-            info!("Adding mesh for {entity:?}");
-            let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
+            debug!("Adding mesh for {entity:?}");
+
+            let mut mesh = Mesh::from(shape::Quad {
                 size: map.world_size(),
                 flip: false,
-            })));
+            });
+
+            if let Some(attr) = attributes {
+                mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
+            }
+
+            let mesh = Mesh2dHandle(meshes.add(mesh));
             commands.entity(entity).insert(mesh);
         }
 
         debug!("Map loaded: {:?}", map.map_size());
+    }
+}
+
+/// Update mesh if MapAttributes change
+pub fn update_map_vertex_attributes(
+    map_materials: ResMut<Assets<Map>>,
+    maps: Query<(Entity, &Handle<Map>, &MapAttributes), Changed<MapAttributes>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut commands: Commands,
+) {
+    for (entity, map_handle, attr) in maps.iter() {
+        let Some(map) = map_materials.get(map_handle) else {
+            warn!("No map material");
+            continue;
+        };
+
+        let mut mesh = Mesh::from(shape::Quad {
+            size: map.world_size(),
+            flip: false,
+        });
+
+        mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
+        let mesh = Mesh2dHandle(meshes.add(mesh));
+        commands.entity(entity).insert(mesh);
     }
 }
 

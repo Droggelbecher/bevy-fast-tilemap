@@ -1,4 +1,4 @@
-use crate::map::{Map, MapLoading, MeshManagedByMap};
+use crate::map::{Map, MapAttributes, MapLoading, MeshManagedByMap};
 use bevy::{prelude::*, sprite::Mesh2dHandle};
 
 // Bundle of components you should typically have for a map.
@@ -6,6 +6,7 @@ use bevy::{prelude::*, sprite::Mesh2dHandle};
 pub struct MapBundle {
     pub loading: MapLoading,
     pub mesh_managed_by_map: MeshManagedByMap,
+    pub attributes: MapAttributes,
 
     pub material: Handle<Map>,
     pub mesh: Mesh2dHandle,
