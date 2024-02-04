@@ -68,12 +68,6 @@ pub struct MapUniform {
     /// (derived) global world pos -> fractional 2d map index
     pub(crate) global_inverse_transform_matrix: Mat3,
     pub(crate) global_inverse_transform_translation: Vec3,
-    /*
-    pub(crate) desaturate: f32,
-    pub(crate) tint: Vec4,
-    pub(crate) mix_color: Vec4,
-    pub(crate) mix_level: f32,
-    */
 }
 
 impl Default for MapUniform {
@@ -98,10 +92,6 @@ impl Default for MapUniform {
             inverse_projection: default(),
             global_inverse_transform_matrix: default(),
             global_inverse_transform_translation: default(),
-            //mix_color: Vec4::new(1.0, 1.0, 1.0, 1.0),
-            //mix_level: 0.0,
-            //tint: Vec4::new(1.0, 1.0, 1.0, 1.0),
-            //desaturate: 0.0,
         }
     }
 }
@@ -215,24 +205,6 @@ impl MapUniform {
         }
         self.perspective_overhang_mask = mask;
     }
-
-    /*
-    pub(crate) fn set_desaturation(&mut self, desaturation: f32) {
-        self.desaturate = desaturation;
-    }
-
-    pub(crate) fn set_tint(&mut self, tint: Vec4) {
-        self.tint = tint;
-    }
-
-    pub(crate) fn set_mix_color(&mut self, color: Vec4) {
-        self.mix_color = color;
-    }
-
-    pub(crate) fn set_mix_level(&mut self, level: f32) {
-        self.mix_level = level;
-    }
-    */
 
     fn update_n_tiles(&mut self) {
         let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;

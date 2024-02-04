@@ -13,9 +13,8 @@ use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 
 const ATTRIBUTE_MIX_COLOR: MeshVertexAttribute =
     MeshVertexAttribute::new("MixColor", 988779055, VertexFormat::Float32x4);
-
-// TODO: It seems bevy will reupload map_texture to the GPU even when just map_uniform changes,
-// which is prohibitely slow
+const ATTRIBUTE_MIX_LEVEL: MeshVertexAttribute =
+    MeshVertexAttribute::new("MixLevel", 988779056, VertexFormat::Float32);
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
@@ -36,9 +35,11 @@ pub struct Map {
     pub(crate) atlas_texture: Handle<Image>,
 }
 
+/// Per-vertex attributes for map
 #[derive(Component, Default, Clone, Debug)]
 pub struct MapAttributes {
     pub mix_color: Vec<Vec4>,
+    pub mix_level: Vec<f32>,
 }
 
 impl Material2d for Map {
@@ -58,6 +59,7 @@ impl Material2d for Map {
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             ATTRIBUTE_MIX_COLOR.at_shader_location(1),
+            ATTRIBUTE_MIX_LEVEL.at_shader_location(2),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
@@ -150,24 +152,6 @@ impl Map {
         self.map_uniform
             .update_atlas_size(atlas_texture.size().as_vec2())
     }
-
-    /*
-    pub fn set_desaturation(&mut self, desaturation: f32) {
-        self.map_uniform.set_desaturation(desaturation);
-    }
-
-    pub fn set_tint(&mut self, tint: Vec4) {
-        self.map_uniform.set_tint(tint);
-    }
-
-    pub fn set_mix_color(&mut self, color: Vec4) {
-        self.map_uniform.set_mix_color(color);
-    }
-
-    pub fn set_mix_level(&mut self, level: f32) {
-        self.map_uniform.set_mix_level(level);
-    }
-    */
 } // impl Map
 
 // Indexer into a map.
@@ -314,7 +298,9 @@ pub fn update_loading_maps(
             });
 
             if let Some(attr) = attributes {
-                mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
+                mesh = mesh
+                    .with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone())
+                    .with_inserted_attribute(ATTRIBUTE_MIX_LEVEL, attr.mix_level.clone());
             }
 
             let mesh = Mesh2dHandle(meshes.add(mesh));
@@ -343,7 +329,9 @@ pub fn update_map_vertex_attributes(
             flip: false,
         });
 
-        mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
+        mesh = mesh
+            .with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone())
+            .with_inserted_attribute(ATTRIBUTE_MIX_LEVEL, attr.mix_level.clone());
         let mesh = Mesh2dHandle(meshes.add(mesh));
         commands.entity(entity).insert(mesh);
     }

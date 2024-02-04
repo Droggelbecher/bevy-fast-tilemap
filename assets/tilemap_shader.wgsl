@@ -54,13 +54,6 @@ struct Map {
     /// [derived] Iverse of global transform of the entity holding the map as transformation matrix & offset.
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
-
-/*
-    desaturation: f32,
-    tint: vec4<f32>,
-    mix_color: vec4<f32>,
-    mix_level: f32,
-    */
 };
 
 @group(1) @binding(0)
@@ -80,6 +73,7 @@ struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
     @location(1) mix_color: vec4<f32>,
+    @location(2) mix_level: f32,
 };
 
 struct VertexOutput {
@@ -88,9 +82,8 @@ struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
     @location(1) mix_color: vec4<f32>,
+    @location(2) mix_level: f32,
 }
-
-//#import bevy_sprite::mesh2d_vertex_output::VertexOutput
 
 /// Custom vertex shader for passing along the UV coordinate
 @vertex
@@ -102,6 +95,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.position = mesh2d_position_local_to_clip(model, vec4<f32>(v.position, 1.0));
     out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
     out.mix_color = v.mix_color;
+    out.mix_level = v.mix_level;
     return out;
 }
 
@@ -375,11 +369,10 @@ fn fragment(
         color = render_perspective_overhangs(color, pos);
     }
 
-    /*
-    color = desaturate(color, map.desaturation) * map.tint;
-    color = color * map.tint;
-    color = mix(color, vec4<f32>(map.mix_color.rgb, map.mix_color.a * color.a), map.mix_level);
-    */
-    color = mix(color, vec4<f32>(in.mix_color.rgb, color.a), in.mix_color.a);
+    //color = mix(color, vec4<f32>(in.mix_color.rgb, color.a * in.mix_color.a), in.mix_level);
+
+    //color = vec4<f32>(color.rgb, color.a * in.mix_level);
+    color = color * in.mix_color;
+
     return color;
 }
