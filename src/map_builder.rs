@@ -1,7 +1,8 @@
-use crate::map::{Map, MapIndexer};
-use crate::map_uniform::MapUniform;
-use bevy::math::uvec2;
-use bevy::prelude::*;
+use crate::{
+    map::{Map, MapIndexer},
+    map_uniform::MapUniform,
+};
+use bevy::{math::uvec2, prelude::*};
 
 use crate::tile_projection::TileProjection;
 

@@ -3,11 +3,13 @@
 //! Each map is a single quad so the performance overhead should be low for a reasonable amount of
 //! layers.
 
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{uvec2, vec2, vec3};
-use bevy::prelude::*;
-use bevy::sprite::Mesh2dHandle;
-use bevy::window::PresentMode;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::{uvec2, vec2, vec3},
+    prelude::*,
+    sprite::Mesh2dHandle,
+    window::PresentMode,
+};
 use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap};
 
 mod mouse_controls_camera;

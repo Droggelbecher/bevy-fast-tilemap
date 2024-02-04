@@ -53,6 +53,11 @@ struct Map {
     /// [derived] Iverse of global transform of the entity holding the map as transformation matrix & offset.
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
+
+    desaturation: f32,
+    tint: vec4<f32>,
+    mix_color: vec4<f32>,
+    mix_level: f32,
 };
 
 @group(1) @binding(0)
@@ -336,6 +341,14 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
     return c;
 }
 
+fn desaturate(color: vec4<f32>, amount: f32) -> vec4<f32> {
+	var luminance = vec4<f32>(0.299, 0.587, 0.114, 0.0);
+	var gr = dot(luminance, color);
+    var gray = vec4<f32>(gr, gr, gr, color.a);
+    var amnt = vec4<f32>(amount, amount, amount, amount);
+	return mix(color, gray, amnt);
+}
+
 
 @fragment
 fn fragment(
@@ -364,5 +377,8 @@ fn fragment(
         color = render_perspective_overhangs(color, pos);
     }
 
+    color = desaturate(color, map.desaturation) * map.tint;
+    color = color * map.tint;
+    color = mix(color, vec4<f32>(map.mix_color.rgb, map.mix_color.a * color.a), map.mix_level);
     return color;
 }

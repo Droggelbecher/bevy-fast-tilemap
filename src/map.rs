@@ -1,21 +1,18 @@
-use bevy::sprite::Material2d;
 use bevy::{
     math::Vec3Swizzles,
     prelude::*,
-    render::render_resource::ShaderRef,
     render::{
-        render_resource::AsBindGroup,
+        render_resource::{AsBindGroup, ShaderRef},
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
-    sprite::Mesh2dHandle,
+    sprite::{Material2d, Mesh2dHandle},
 };
 
 use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
-#[derive(Asset, Debug, Component, Clone, Default, Reflect, AsBindGroup)]
-#[reflect(Component)]
+#[derive(Asset, Debug, Clone, Default, Reflect, AsBindGroup)]
 pub struct Map {
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
@@ -30,7 +27,6 @@ pub struct Map {
     #[texture(101)]
     #[sampler(102)]
     pub(crate) atlas_texture: Handle<Image>,
-    // True iff the necessary images for this map are loaded
 }
 
 impl Material2d for Map {
@@ -124,6 +120,22 @@ impl Map {
 
         self.map_uniform
             .update_atlas_size(atlas_texture.size().as_vec2())
+    }
+
+    pub fn set_desaturation(&mut self, desaturation: f32) {
+        self.map_uniform.set_desaturation(desaturation);
+    }
+
+    pub fn set_tint(&mut self, tint: Vec4) {
+        self.map_uniform.set_tint(tint);
+    }
+
+    pub fn set_mix_color(&mut self, color: Vec4) {
+        self.map_uniform.set_mix_color(color);
+    }
+
+    pub fn set_mix_level(&mut self, level: f32) {
+        self.map_uniform.set_mix_level(level);
     }
 } // impl Map
 
@@ -255,7 +267,7 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
-            info!("Adding mesh");
+            info!("Adding mesh for {entity:?}");
             let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
                 size: map.world_size(),
                 flip: false,
