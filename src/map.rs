@@ -1,5 +1,6 @@
+use bevy::render::render_resource::ShaderDefVal;
 use bevy::{
-    math::Vec3Swizzles,
+    math::{mat2, vec2, vec3, Vec3Swizzles},
     prelude::*,
     render::{
         mesh::MeshVertexAttribute,
@@ -9,7 +10,7 @@ use bevy::{
     sprite::{Material2d, Mesh2dHandle},
 };
 
-use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
+use crate::{map_builder::MapBuilder, map_uniform::MapUniform, shader::SHADER_HANDLE};
 
 const ATTRIBUTE_MIX_COLOR: MeshVertexAttribute =
     MeshVertexAttribute::new("MixColor", 988779055, VertexFormat::Float32x4);
@@ -19,6 +20,7 @@ const ATTRIBUTE_MIX_LEVEL: MeshVertexAttribute =
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
 #[derive(Asset, Debug, Clone, Default, Reflect, AsBindGroup)]
+#[bind_group_data(MapKey)]
 pub struct Map {
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
@@ -33,6 +35,21 @@ pub struct Map {
     #[texture(101)]
     #[sampler(102)]
     pub(crate) atlas_texture: Handle<Image>,
+
+    pub(crate) perspective_defs: Vec<String>,
+}
+
+#[derive(Eq, PartialEq, Hash, Clone)]
+pub struct MapKey {
+    pub(crate) perspective_defs: Vec<String>,
+}
+
+impl From<&Map> for MapKey {
+    fn from(map: &Map) -> Self {
+        MapKey {
+            perspective_defs: map.perspective_defs.clone(),
+        }
+    }
 }
 
 /// Per-vertex attributes for map
@@ -44,24 +61,37 @@ pub struct MapAttributes {
 
 impl Material2d for Map {
     fn vertex_shader() -> ShaderRef {
-        "tilemap_shader.wgsl".into()
+        ShaderRef::Handle(SHADER_HANDLE)
     }
 
     fn fragment_shader() -> ShaderRef {
-        "tilemap_shader.wgsl".into()
+        ShaderRef::Handle(SHADER_HANDLE)
     }
 
     fn specialize(
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
         layout: &bevy::render::mesh::MeshVertexBufferLayout,
-        _key: bevy::sprite::Material2dKey<Self>,
+        key: bevy::sprite::Material2dKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             ATTRIBUTE_MIX_COLOR.at_shader_location(1),
             ATTRIBUTE_MIX_LEVEL.at_shader_location(2),
         ])?;
+        info!("SPECIALIZE");
         descriptor.vertex.buffers = vec![vertex_layout];
+
+        //let mask = key.bind_group_data.perspective_overhang_mask;
+
+        let fragment = descriptor.fragment.as_mut().unwrap();
+
+
+        for def in key.bind_group_data.perspective_defs.iter() {
+            fragment.shader_defs.push(ShaderDefVal::Bool(def.clone(), true));
+        }
+
+        //fragment.shader_defs.push(ShaderDefVal::UInt("PERSPECTIVE_OVERHANG_MASK".into(), mask));
+
         Ok(())
     }
 }
@@ -152,6 +182,37 @@ impl Map {
         self.map_uniform
             .update_atlas_size(atlas_texture.size().as_vec2())
     }
+
+    pub(crate) fn update_inverse_projection(&mut self) {
+        self.map_uniform.inverse_projection =
+            mat2(self.map_uniform.projection.x_axis.xy(), self.map_uniform.projection.y_axis.xy()).inverse();
+
+        // Iterate through the four "straight" neighboring map directions, and figure
+        // out which of these have negative Z-values after projection to the world.
+        // These are exactly the directions we should "overlap" in the shader in perspective
+        // overhang mode.
+        //let mut mask = 0u32;
+        //let flags = [0x01u32, 0x02, 0x04, 0x08];
+        let offsets = [
+            (vec2(0.0, -1.0), "ZN", "NN"),
+            (vec2(-1.0, 0.0), "NZ", "NN"),
+            (vec2(0.0, 1.0), "ZP", "PP"),
+            (vec2(1.0, 0.0), "PZ", "PP"),
+        ];
+
+        let mut defs = Vec::new();
+
+        info!("UPDATE INVERSE PROJECTION");
+        for (offset, def0, def1) in offsets.iter() {
+            if self.map_uniform.map_to_local(offset.extend(0.0)).z < 0.0 {
+                defs.push(format!("PERSPECTIVE_UNDER_{}", def0));
+                defs.push(format!("PERSPECTIVE_UNDER_{}", def1));
+            }
+        }
+        info!("Defs={:?}", defs);
+        self.perspective_defs = defs;
+    }
+
 } // impl Map
 
 // Indexer into a map.

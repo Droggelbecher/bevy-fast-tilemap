@@ -35,7 +35,7 @@ struct Map {
 
     overhang_mode: u32,
     max_overhang_levels: u32,
-    perspective_overhang_mask: u32, // TODO: Remove
+    //perspective_overhang_mask: u32, // TODO: Remove
 
     // -----
     /// [derived] Size of the map in world units necessary to display
@@ -178,10 +178,6 @@ fn sample_tile(
     // Outer padding is not taken into account
     var max_overhang = map.inner_padding / 2.0;
 
-    var color = textureSample(
-        atlas_texture, atlas_sampler, total_offset / map.atlas_size
-    );
-
     // Outside of "our" part of the padding, dont render anything as part of this tile,
     // as it might be used for overhang of a neighbouring tile in the tilemap
     if rect_offset.x < -max_overhang.x
@@ -189,15 +185,27 @@ fn sample_tile(
         || rect_offset.x > (map.tile_size.x + max_overhang.x)
         || rect_offset.y > (map.tile_size.y + max_overhang.y)
     {
-        color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
+/*
+    var color = textureSample(
+        atlas_texture, atlas_sampler, total_offset / map.atlas_size
+    );
+    */
+    var color = sample(atlas_texture, atlas_sampler, total_offset / map.atlas_size);
+
     return color;
 }
 
+fn sample(atlas_texture: texture_2d<f32>, atlas_sampler: sampler, uv: vec2<f32>) -> vec4<f32> {
+    return textureSample(atlas_texture, atlas_sampler, uv);
+}
+
+/// 2d map tile position and offset in map tile coordinates
 struct MapPosition {
-    // The 2d tile position on the map
+    /// The 2d tile position on the map
     tile: vec2<i32>,
-    // Offset in pixels/world coordinates from the reference position of that tile
+    /// Offset in pixels/world coordinates from the reference position of that tile
     offset: vec2<f32>
 };
 
@@ -243,12 +251,25 @@ fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
     return true;
 }
 
+/// 
+///
+/// tile_index: Tile index in the atlas
+/// pos: The original map position
+/// tile_offset: The offset of the tile (in number of whole tiles) to sample from
 fn sample_neighbor_tile_index(tile_index: u32, pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+    // Position in the neighboring tile (in world coordinates),
+    // that matches 'pos' in the original tile
+    // TODO: precompute this for the 8 possible offsets.
+    // This has the potential to go from ~25fps to ~40fps
     var overhang = (map.projection * vec3<f32>(vec2<f32>(-tile_offset), 0.0)).xy * map.tile_size;
+    //var overhang = vec2<f32>(0.0, 0.0);
+
     var offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
     return sample_tile(map, tile_index, offset);
 }
 
+/// pos: The map position to sample
+/// tile_offset: The offset of the tile (in number of whole tiles) to sample from
 fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
     // integral position of the neighbouring tile
     var tile = pos.tile + tile_offset;
@@ -305,8 +326,57 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
     return c;
 }
 
+/// Render underhangs for perspective projection
+/// color: The color of the current fragment so far
+/// pos: The position of the current fragment as map position
 fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32> {
     var c = color;
+
+    // TODO:
+    // - [x] If alpha is 1 there is no underhang to render
+    // - [ ] For each of the underhang directions we have, figure out,
+    //   if it applies for the current fragments position
+    // - [ ] If so, sample from neighbor.
+    // - [ ] Can we do that without invocing the projection
+    //       matrix another time?
+
+    // Form is PERSPECTIVE_UNDER_{X}{Y}
+    // whereas {X} and {Y} are replaced with one of:
+    // N: Negative (-1)
+    // P: Positive (1)
+    // Z: Zero (0)
+    /*
+    #ifdef PERSPECTIVE_UNDER_NN
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
+    #endif
+    */
+    #ifdef PERSPECTIVE_UNDER_NP
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1)));
+    #endif
+    #ifdef PERSPECTIVE_UNDER_PN
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1)));
+    #endif
+    /*
+    #ifdef PERSPECTIVE_UNDER_PP
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
+    #endif
+    */
+
+    #ifdef PERSPECTIVE_UNDER_ZN
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1)));
+    #endif
+    #ifdef PERSPECTIVE_UNDER_NZ
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0)));
+    #endif
+    #ifdef PERSPECTIVE_UNDER_ZP
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1)));
+    #endif
+    #ifdef PERSPECTIVE_UNDER_PZ
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0)));
+    #endif
+
+
+/*
     if (map.perspective_overhang_mask & 0x03u) == 0x03u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1))); }
     if (map.perspective_overhang_mask & 0x06u) == 0x06u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1))); }
     if (map.perspective_overhang_mask & 0x09u) == 0x09u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1))); }
@@ -316,11 +386,56 @@ fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32
     if (map.perspective_overhang_mask & 0x02u) == 0x02u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0))); }
     if (map.perspective_overhang_mask & 0x04u) == 0x04u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1))); }
     if (map.perspective_overhang_mask & 0x08u) == 0x08u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0))); }
+*/
     return c;
 }
 
+
 fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32> {
     var c = color;
+
+    #ifdef PERSPECTIVE_UNDER_ZN
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1)));
+    #endif
+
+    //
+    #ifdef PERSPECTIVE_UNDER_NZ
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0)));
+    #endif
+
+    //
+    #ifdef PERSPECTIVE_UNDER_ZP
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1)));
+    #endif
+
+    #ifdef PERSPECTIVE_UNDER_PZ
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0)));
+    #endif
+
+    //
+    /*
+    #ifdef PERSPECTIVE_UNDER_NN
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
+    #endif
+    */
+
+    #ifdef PERSPECTIVE_UNDER_NP
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1)));
+    #endif
+
+    #ifdef PERSPECTIVE_UNDER_PN
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1)));
+    #endif
+
+    //
+    /*
+    #ifdef PERSPECTIVE_UNDER_PP
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
+    #endif
+    */
+
+
+/*
     if (map.perspective_overhang_mask & 0x01u) == 0x01u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1))); }
     if (map.perspective_overhang_mask & 0x02u) == 0x02u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0))); }
     if (map.perspective_overhang_mask & 0x04u) == 0x04u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1))); }
@@ -330,6 +445,7 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
     if (map.perspective_overhang_mask & 0x06u) == 0x06u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1))); }
     if (map.perspective_overhang_mask & 0x09u) == 0x09u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1))); }
     if (map.perspective_overhang_mask & 0x0cu) == 0x0cu { c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1))); }
+*/
     return c;
 }
 
@@ -353,21 +469,32 @@ fn fragment(
     var pos = world_to_tile_and_offset(world_position);
     var index = get_tile_index(pos.tile);
 
-    if map.overhang_mode == 1u {
+    var sample_color = sample_tile(map, index, pos.offset);
+
+    // No overhang/underhang/dominance: ~10ms
+    // Only underhangs: ~16ms
+    // Only overhangs: ~23ms
+    // Over+Under: ~34ms
+
+    if map.overhang_mode == 1u && sample_color.a < 1.0 {
         color = render_perspective_underhangs(color, pos);
     }
 
     if is_valid_tile(map, pos.tile) {
-        color = blend(color, sample_tile(map, index, pos.offset));
+        color = blend(color, sample_color);
     }
 
+/*
     if map.overhang_mode == 0u {
         color = render_dominance_overhangs(color, index, pos);
     }
+    */
 
+    /*
     if map.overhang_mode == 1u {
         color = render_perspective_overhangs(color, pos);
     }
+    */
 
     //color = mix(color, vec4<f32>(in.mix_color.rgb, color.a * in.mix_color.a), in.mix_level);
 

@@ -92,7 +92,7 @@ impl MapBuilder {
 
         initializer(&mut MapIndexer { map: &mut self.map });
 
-        self.map.map_uniform.update_inverse_projection();
+        self.map.update_inverse_projection();
         self.map.map_uniform.update_world_size();
 
         self.map
