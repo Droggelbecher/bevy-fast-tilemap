@@ -33,7 +33,7 @@ struct Map {
     global_transform_matrix: mat3x3<f32>,
     global_transform_translation: vec3<f32>,
 
-    overhang_mode: u32,
+    //overhang_mode: u32,
     max_overhang_levels: u32,
     //perspective_overhang_mask: u32, // TODO: Remove
 
@@ -457,21 +457,23 @@ fn fragment(
     var sample_color = sample_tile(map, index, pos.offset);
 
     // TODO: Consider making map.overhang_mode a DEF
-    if map.overhang_mode == 1u && sample_color.a < 1.0 {
+    #ifdef PERSPECTIVE_UNDERHANGS
+    if sample_color.a < 1.0 {
         color = render_perspective_underhangs(color, pos);
     }
+    #endif // PERSPECTIVE_UNDERHANGS
 
     if is_valid_tile(map, pos.tile) {
         color = blend(color, sample_color);
     }
 
-    if map.overhang_mode == 0u {
+    #ifdef DOMINANCE_OVERHANGS
         color = render_dominance_overhangs(color, index, pos);
-    }
+    #endif
 
-    if map.overhang_mode == 1u {
+    #ifdef PERSPECTIVE_OVERHANGS
         color = render_perspective_overhangs(color, pos);
-    }
+    #endif
 
     color = color * in.mix_color;
 

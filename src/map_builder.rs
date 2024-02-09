@@ -23,6 +23,9 @@ impl MapBuilder {
                     tile_size,
                     ..default()
                 },
+                perspective_overhangs: true,
+                perspective_underhangs: true,
+                dominance_overhangs: false,
                 ..default()
             },
         }
@@ -61,7 +64,9 @@ impl MapBuilder {
     /// and for every neighbor which can be a drastic performance hit.
     /// Therefore its a good idea to limit the number of levels looked upwards here.
     pub fn with_dominance_overhang(mut self, max_overhang_levels: u32) -> Self {
-        self.map.map_uniform.overhang_mode = 0;
+        self.map.dominance_overhangs = true;
+        self.map.perspective_overhangs = false;
+        self.map.perspective_underhangs = false;
         self.map.map_uniform.max_overhang_levels = max_overhang_levels;
         self
     }
@@ -70,7 +75,16 @@ impl MapBuilder {
     /// "Perspective" overhang draws the overlap of tiles depending on their "depth" that is the
     /// y-axis of their world position (tiles higher up are considered further away).
     pub fn with_perspective_overhang(mut self) -> Self {
-        self.map.map_uniform.overhang_mode = 1;
+        self.map.dominance_overhangs = false;
+        self.map.perspective_overhangs = true;
+        self.map.perspective_underhangs = true;
+        self
+    }
+
+    pub fn with_overhangs(mut self, dominance: bool, perspective_under: bool, perspective_over: bool) -> Self {
+        self.map.dominance_overhangs = dominance;
+        self.map.perspective_underhangs = perspective_under;
+        self.map.perspective_overhangs = perspective_over;
         self
     }
 

@@ -37,17 +37,26 @@ pub struct Map {
     pub(crate) atlas_texture: Handle<Image>,
 
     pub(crate) perspective_defs: Vec<String>,
+    pub(crate) perspective_underhangs: bool,
+    pub(crate) perspective_overhangs: bool,
+    pub(crate) dominance_overhangs: bool,
 }
 
 #[derive(Eq, PartialEq, Hash, Clone)]
 pub struct MapKey {
     pub(crate) perspective_defs: Vec<String>,
+    pub(crate) perspective_underhangs: bool,
+    pub(crate) perspective_overhangs: bool,
+    pub(crate) dominance_overhangs: bool,
 }
 
 impl From<&Map> for MapKey {
     fn from(map: &Map) -> Self {
         MapKey {
             perspective_defs: map.perspective_defs.clone(),
+            perspective_underhangs: map.perspective_underhangs,
+            perspective_overhangs: map.perspective_overhangs,
+            dominance_overhangs: map.dominance_overhangs,
         }
     }
 }
@@ -81,6 +90,18 @@ impl Material2d for Map {
         descriptor.vertex.buffers = vec![vertex_layout];
 
         let fragment = descriptor.fragment.as_mut().unwrap();
+
+        if key.bind_group_data.perspective_underhangs {
+            fragment.shader_defs.push(ShaderDefVal::Bool("PERSPECTIVE_UNDERHANGS".to_string(), true));
+        }
+
+        if key.bind_group_data.perspective_overhangs {
+            fragment.shader_defs.push(ShaderDefVal::Bool("PERSPECTIVE_OVERHANGS".to_string(), true));
+        }
+
+        if key.bind_group_data.dominance_overhangs {
+            fragment.shader_defs.push(ShaderDefVal::Bool("DOMINANCE_OVERHANGS".to_string(), true));
+        }
 
         for def in key.bind_group_data.perspective_defs.iter() {
             fragment.shader_defs.push(ShaderDefVal::Bool(def.clone(), true));

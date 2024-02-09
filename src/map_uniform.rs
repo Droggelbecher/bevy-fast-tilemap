@@ -37,7 +37,7 @@ pub struct MapUniform {
 
     /// 0=dominance
     /// 1=perspective
-    pub(crate) overhang_mode: u32,
+    //pub(crate) overhang_mode: u32,
 
     /// For overhang_mode==0
     pub(crate) max_overhang_levels: u32,
@@ -83,9 +83,7 @@ impl Default for MapUniform {
             projection: IDENTITY.projection,
             global_transform_matrix: default(),
             global_transform_translation: default(),
-            overhang_mode: default(),
             max_overhang_levels: default(),
-            //perspective_overhang_mask: default(),
             world_size: default(),
             world_offset: default(),
             n_tiles: default(),
