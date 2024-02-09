@@ -73,7 +73,6 @@ struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
     @location(1) mix_color: vec4<f32>,
-    @location(2) mix_level: f32,
 };
 
 struct VertexOutput {
@@ -82,7 +81,6 @@ struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
     @location(1) mix_color: vec4<f32>,
-    @location(2) mix_level: f32,
 }
 
 /// Custom vertex shader for passing along the UV coordinate
@@ -95,7 +93,6 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.position = mesh2d_position_local_to_clip(model, vec4<f32>(v.position, 1.0));
     out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
     out.mix_color = v.mix_color;
-    out.mix_level = v.mix_level;
     return out;
 }
 

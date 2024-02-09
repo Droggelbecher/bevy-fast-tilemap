@@ -14,8 +14,6 @@ use crate::{map_builder::MapBuilder, map_uniform::MapUniform, shader::SHADER_HAN
 
 const ATTRIBUTE_MIX_COLOR: MeshVertexAttribute =
     MeshVertexAttribute::new("MixColor", 988779055, VertexFormat::Float32x4);
-const ATTRIBUTE_MIX_LEVEL: MeshVertexAttribute =
-    MeshVertexAttribute::new("MixLevel", 988779056, VertexFormat::Float32);
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
@@ -65,7 +63,6 @@ impl From<&Map> for MapKey {
 #[derive(Component, Default, Clone, Debug)]
 pub struct MapAttributes {
     pub mix_color: Vec<Vec4>,
-    pub mix_level: Vec<f32>,
 }
 
 impl Material2d for Map {
@@ -85,7 +82,6 @@ impl Material2d for Map {
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             ATTRIBUTE_MIX_COLOR.at_shader_location(1),
-            ATTRIBUTE_MIX_LEVEL.at_shader_location(2),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
 
@@ -371,11 +367,20 @@ pub fn update_loading_maps(
                 flip: false,
             });
 
+            // If a mix color is defined, use it
+            let mut mix_color = Vec::new();
             if let Some(attr) = attributes {
-                mesh = mesh
-                    .with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone())
-                    .with_inserted_attribute(ATTRIBUTE_MIX_LEVEL, attr.mix_level.clone());
+                mix_color.extend(attr.mix_color.iter());
             }
+
+            // If its not defined for all vertices (or for None), fill
+            // up with Vec4::ONE which will not change the color
+            let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
+            if mix_color.len() < l  {
+                mix_color.resize(l, Vec4::ONE);
+            }
+
+            mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, mix_color);
 
             let mesh = Mesh2dHandle(meshes.add(mesh));
             commands.entity(entity).insert(mesh);
@@ -384,6 +389,7 @@ pub fn update_loading_maps(
         debug!("Map loaded: {:?}", map.map_size());
     }
 }
+
 
 /// Update mesh if MapAttributes change
 pub fn update_map_vertex_attributes(
@@ -404,8 +410,7 @@ pub fn update_map_vertex_attributes(
         });
 
         mesh = mesh
-            .with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone())
-            .with_inserted_attribute(ATTRIBUTE_MIX_LEVEL, attr.mix_level.clone());
+            .with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
         let mesh = Mesh2dHandle(meshes.add(mesh));
         commands.entity(entity).insert(mesh);
     }
