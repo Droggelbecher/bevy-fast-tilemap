@@ -192,6 +192,7 @@ fn sample_tile(
         atlas_texture, atlas_sampler, total_offset / map.atlas_size
     );
     */
+    // work around uniformity constraints, but doesnt seem to actually speed things up
     var color = sample(atlas_texture, atlas_sampler, total_offset / map.atlas_size);
 
     return color;
@@ -259,8 +260,8 @@ fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
 fn sample_neighbor_tile_index(tile_index: u32, pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
     // Position in the neighboring tile (in world coordinates),
     // that matches 'pos' in the original tile
-    // TODO: precompute this for the 8 possible offsets.
-    // This has the potential to go from ~25fps to ~40fps
+
+    // TODO: MAYBE Consider precompute this for the 8 possible offsets.
     var overhang = (map.projection * vec3<f32>(vec2<f32>(-tile_offset), 0.0)).xy * map.tile_size;
     //var overhang = vec2<f32>(0.0, 0.0);
 
@@ -332,35 +333,23 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
 fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32> {
     var c = color;
 
-    // TODO:
-    // - [x] If alpha is 1 there is no underhang to render
-    // - [ ] For each of the underhang directions we have, figure out,
-    //   if it applies for the current fragments position
-    // - [ ] If so, sample from neighbor.
-    // - [ ] Can we do that without invocing the projection
-    //       matrix another time?
-
     // Form is PERSPECTIVE_UNDER_{X}{Y}
     // whereas {X} and {Y} are replaced with one of:
     // N: Negative (-1)
     // P: Positive (1)
     // Z: Zero (0)
-    /*
     #ifdef PERSPECTIVE_UNDER_NN
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
     #endif
-    */
     #ifdef PERSPECTIVE_UNDER_NP
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1)));
     #endif
     #ifdef PERSPECTIVE_UNDER_PN
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1)));
     #endif
-    /*
     #ifdef PERSPECTIVE_UNDER_PP
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
     #endif
-    */
 
     #ifdef PERSPECTIVE_UNDER_ZN
         c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1)));
@@ -413,11 +402,9 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
     #endif
 
     //
-    /*
     #ifdef PERSPECTIVE_UNDER_NN
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
     #endif
-    */
 
     #ifdef PERSPECTIVE_UNDER_NP
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1)));
@@ -428,11 +415,9 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
     #endif
 
     //
-    /*
     #ifdef PERSPECTIVE_UNDER_PP
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
     #endif
-    */
 
 
 /*
@@ -471,11 +456,7 @@ fn fragment(
 
     var sample_color = sample_tile(map, index, pos.offset);
 
-    // No overhang/underhang/dominance: ~10ms
-    // Only underhangs: ~16ms
-    // Only overhangs: ~23ms
-    // Over+Under: ~34ms
-
+    // TODO: Consider making map.overhang_mode a DEF
     if map.overhang_mode == 1u && sample_color.a < 1.0 {
         color = render_perspective_underhangs(color, pos);
     }
@@ -484,21 +465,14 @@ fn fragment(
         color = blend(color, sample_color);
     }
 
-/*
     if map.overhang_mode == 0u {
         color = render_dominance_overhangs(color, index, pos);
     }
-    */
 
-    /*
     if map.overhang_mode == 1u {
         color = render_perspective_overhangs(color, pos);
     }
-    */
 
-    //color = mix(color, vec4<f32>(in.mix_color.rgb, color.a * in.mix_color.a), in.mix_level);
-
-    //color = vec4<f32>(color.rgb, color.a * in.mix_level);
     color = color * in.mix_color;
 
     return color;
