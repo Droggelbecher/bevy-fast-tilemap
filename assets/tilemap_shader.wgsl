@@ -341,12 +341,15 @@ fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32
     #ifdef PERSPECTIVE_UNDER_NN
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
     #endif
+
     #ifdef PERSPECTIVE_UNDER_NP
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1)));
     #endif
+
     #ifdef PERSPECTIVE_UNDER_PN
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1)));
     #endif
+
     #ifdef PERSPECTIVE_UNDER_PP
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
     #endif
@@ -354,28 +357,19 @@ fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32
     #ifdef PERSPECTIVE_UNDER_ZN
         c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1)));
     #endif
+
     #ifdef PERSPECTIVE_UNDER_NZ
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0)));
     #endif
+
     #ifdef PERSPECTIVE_UNDER_ZP
         c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1)));
     #endif
+
     #ifdef PERSPECTIVE_UNDER_PZ
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0)));
     #endif
 
-
-/*
-    if (map.perspective_overhang_mask & 0x03u) == 0x03u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1))); }
-    if (map.perspective_overhang_mask & 0x06u) == 0x06u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1))); }
-    if (map.perspective_overhang_mask & 0x09u) == 0x09u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1))); }
-    if (map.perspective_overhang_mask & 0x0cu) == 0x0cu { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1))); }
-
-    if (map.perspective_overhang_mask & 0x01u) == 0x01u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1))); }
-    if (map.perspective_overhang_mask & 0x02u) == 0x02u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0))); }
-    if (map.perspective_overhang_mask & 0x04u) == 0x04u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1))); }
-    if (map.perspective_overhang_mask & 0x08u) == 0x08u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0))); }
-*/
     return c;
 }
 
@@ -387,12 +381,10 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
         c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1)));
     #endif
 
-    //
     #ifdef PERSPECTIVE_UNDER_NZ
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0)));
     #endif
 
-    //
     #ifdef PERSPECTIVE_UNDER_ZP
         c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1)));
     #endif
@@ -401,7 +393,6 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0)));
     #endif
 
-    //
     #ifdef PERSPECTIVE_UNDER_NN
         c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
     #endif
@@ -414,23 +405,10 @@ fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32>
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1)));
     #endif
 
-    //
     #ifdef PERSPECTIVE_UNDER_PP
         c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
     #endif
 
-
-/*
-    if (map.perspective_overhang_mask & 0x01u) == 0x01u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1))); }
-    if (map.perspective_overhang_mask & 0x02u) == 0x02u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0))); }
-    if (map.perspective_overhang_mask & 0x04u) == 0x04u { c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1))); }
-    if (map.perspective_overhang_mask & 0x08u) == 0x08u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0))); }
-
-    if (map.perspective_overhang_mask & 0x03u) == 0x03u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1))); }
-    if (map.perspective_overhang_mask & 0x06u) == 0x06u { c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1))); }
-    if (map.perspective_overhang_mask & 0x09u) == 0x09u { c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1))); }
-    if (map.perspective_overhang_mask & 0x0cu) == 0x0cu { c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1))); }
-*/
     return c;
 }
 
@@ -448,15 +426,12 @@ fn fragment(
     in: VertexOutput
 ) -> @location(0) vec4<f32> {
     var world_position = in.world_position.xy;
-
     var color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-
     var pos = world_to_tile_and_offset(world_position);
     var index = get_tile_index(pos.tile);
 
     var sample_color = sample_tile(map, index, pos.offset);
 
-    // TODO: Consider making map.overhang_mode a DEF
     #ifdef PERSPECTIVE_UNDERHANGS
     if sample_color.a < 1.0 {
         color = render_perspective_underhangs(color, pos);
