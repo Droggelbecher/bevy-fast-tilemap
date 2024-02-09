@@ -78,19 +78,13 @@ impl Material2d for Map {
             ATTRIBUTE_MIX_COLOR.at_shader_location(1),
             ATTRIBUTE_MIX_LEVEL.at_shader_location(2),
         ])?;
-        info!("SPECIALIZE");
         descriptor.vertex.buffers = vec![vertex_layout];
 
-        //let mask = key.bind_group_data.perspective_overhang_mask;
-
         let fragment = descriptor.fragment.as_mut().unwrap();
-
 
         for def in key.bind_group_data.perspective_defs.iter() {
             fragment.shader_defs.push(ShaderDefVal::Bool(def.clone(), true));
         }
-
-        //fragment.shader_defs.push(ShaderDefVal::UInt("PERSPECTIVE_OVERHANG_MASK".into(), mask));
 
         Ok(())
     }
@@ -191,25 +185,23 @@ impl Map {
         // out which of these have negative Z-values after projection to the world.
         // These are exactly the directions we should "overlap" in the shader in perspective
         // overhang mode.
-        //let mut mask = 0u32;
-        //let flags = [0x01u32, 0x02, 0x04, 0x08];
         let offsets = [
-            (vec2(0.0, -1.0), "ZN", "NN"),
-            (vec2(-1.0, 0.0), "NZ", "NN"),
-            (vec2(0.0, 1.0), "ZP", "PP"),
-            (vec2(1.0, 0.0), "PZ", "PP"),
+            (vec2(0.0, -1.0), "ZN"),
+            (vec2(-1.0, -1.0), "NN"),
+            (vec2(-1.0, 0.0), "NZ"),
+            (vec2(-1.0, 1.0), "NP"),
+            (vec2(0.0, 1.0), "ZP"),
+            (vec2(1.0, 1.0), "PP"),
+            (vec2(1.0, 0.0), "PZ"),
+            (vec2(1.0, -1.0), "PN"),
         ];
 
         let mut defs = Vec::new();
-
-        info!("UPDATE INVERSE PROJECTION");
-        for (offset, def0, def1) in offsets.iter() {
+        for (offset, def) in offsets.iter() {
             if self.map_uniform.map_to_local(offset.extend(0.0)).z < 0.0 {
-                defs.push(format!("PERSPECTIVE_UNDER_{}", def0));
-                defs.push(format!("PERSPECTIVE_UNDER_{}", def1));
+                defs.push(format!("PERSPECTIVE_UNDER_{}", def));
             }
         }
-        info!("Defs={:?}", defs);
         self.perspective_defs = defs;
     }
 
