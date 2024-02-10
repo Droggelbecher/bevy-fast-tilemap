@@ -8,7 +8,9 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{bundle::MapBundle, map::MapIndexer, FastTileMapPlugin, Map, AXONOMETRIC};
+use bevy_fast_tilemap::{
+    bundle::MapBundle, map::MapIndexer, FastTileMapPlugin, Map, MapAttributes, AXONOMETRIC,
+};
 use rand::Rng;
 
 #[path = "common/mouse_controls_camera.rs"]
@@ -62,6 +64,18 @@ fn startup(
 
     commands.spawn(MapBundle {
         material: materials.add(map),
+        // Optional: apply a color gradient.
+        // MapAttributes define attributes per vertex so they can be changed without
+        // triggering re-upload of the map data to the GPU which can conserve performance
+        // for large maps
+        attributes: MapAttributes {
+            mix_color: vec![
+                Vec4::new(1.0, 0.0, 0.0, 1.0),
+                Vec4::new(0.0, 1.0, 0.0, 1.0),
+                Vec4::new(1.0, 1.0, 1.0, 1.0), // color gets multiplied, so this means no change
+                Vec4::new(0.0, 0.0, 1.0, 1.0),
+            ],
+        },
         ..Default::default()
     });
 } // startup
