@@ -1,8 +1,7 @@
 use bevy::{
-    math::{mat2, vec2, vec3, Vec3Swizzles},
+    math::{vec2, vec3, Vec3Swizzles},
     prelude::*,
-    render::render_resource::AsBindGroup,
-    render::render_resource::ShaderType,
+    render::render_resource::{AsBindGroup, ShaderType},
 };
 
 use crate::tile_projection::IDENTITY;
@@ -38,13 +37,13 @@ pub struct MapUniform {
 
     /// 0=dominance
     /// 1=perspective
-    pub(crate) overhang_mode: u32,
+    //pub(crate) overhang_mode: u32,
 
     /// For overhang_mode==0
     pub(crate) max_overhang_levels: u32,
 
     /// For overhang_mode==1
-    pub(crate) perspective_overhang_mask: u32,
+    //pub(crate) perspective_overhang_mask: u32,
 
     /// (derived) Size of the map in world units necessary to display
     /// all tiles according to projection.
@@ -84,9 +83,7 @@ impl Default for MapUniform {
             projection: IDENTITY.projection,
             global_transform_matrix: default(),
             global_transform_translation: default(),
-            overhang_mode: default(),
             max_overhang_levels: default(),
-            perspective_overhang_mask: default(),
             world_size: default(),
             world_offset: default(),
             n_tiles: default(),
@@ -181,30 +178,6 @@ impl MapUniform {
         let inverse = affine.inverse();
         self.global_inverse_transform_matrix = inverse.matrix3.into();
         self.global_inverse_transform_translation = inverse.translation.into();
-    }
-
-    pub(crate) fn update_inverse_projection(&mut self) {
-        self.inverse_projection =
-            mat2(self.projection.x_axis.xy(), self.projection.y_axis.xy()).inverse();
-
-        // Iterate through the four "straight" neighboring map directions, and figure
-        // out which of these have negative Z-values after projection to the world.
-        // These are exactly the directions we should "overlap" in the shader in perspective
-        // overhang mode.
-        let mut mask = 0u32;
-        let flags = [0x01u32, 0x02, 0x04, 0x08];
-        let offsets = [
-            vec2(0.0, -1.0),
-            vec2(-1.0, 0.0),
-            vec2(0.0, 1.0),
-            vec2(1.0, 0.0),
-        ];
-        for (flag, offset) in flags.iter().zip(offsets) {
-            if self.map_to_local(offset.extend(0.0)).z < 0.0 {
-                mask |= flag;
-            }
-        }
-        self.perspective_overhang_mask = mask;
     }
 
     fn update_n_tiles(&mut self) {

@@ -2,13 +2,16 @@
 //! To keep the math simple instead of strictly isometric, we stick to a projection
 //! where each tile ends up a diamond shape that is twice as wide as high.
 
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{uvec2, vec2};
-use bevy::prelude::*;
-use bevy::window::PresentMode;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::{uvec2, vec2},
+    prelude::*,
+    window::PresentMode,
+};
 use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, AXONOMETRIC};
 use rand::Rng;
 
+#[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
 

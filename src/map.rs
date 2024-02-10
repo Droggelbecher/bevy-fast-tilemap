@@ -1,21 +1,23 @@
-use bevy::sprite::Material2d;
 use bevy::{
-    math::Vec3Swizzles,
+    math::{mat2, vec2, Vec3Swizzles},
     prelude::*,
-    render::render_resource::ShaderRef,
     render::{
-        render_resource::AsBindGroup,
+        mesh::MeshVertexAttribute,
+        render_resource::{AsBindGroup, ShaderDefVal, ShaderRef, VertexFormat},
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
-    sprite::Mesh2dHandle,
+    sprite::{Material2d, Mesh2dHandle},
 };
 
-use crate::{map_builder::MapBuilder, map_uniform::MapUniform};
+use crate::{map_builder::MapBuilder, map_uniform::MapUniform, shader::SHADER_HANDLE};
+
+const ATTRIBUTE_MIX_COLOR: MeshVertexAttribute =
+    MeshVertexAttribute::new("MixColor", 988779055, VertexFormat::Float32x4);
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
-#[derive(Asset, Debug, Component, Clone, Default, Reflect, AsBindGroup)]
-#[reflect(Component)]
+#[derive(Asset, Debug, Clone, Default, Reflect, AsBindGroup)]
+#[bind_group_data(MapKey)]
 pub struct Map {
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
@@ -23,19 +25,96 @@ pub struct Map {
     pub(crate) map_uniform: MapUniform,
 
     /// Texture containing the tile IDs (one per each pixel)
-    #[storage(100)]
+    #[storage(100, read_only)]
     pub(crate) map_texture: Vec<u32>,
 
     /// Atlas texture with the individual tiles
     #[texture(101)]
     #[sampler(102)]
     pub(crate) atlas_texture: Handle<Image>,
-    // True iff the necessary images for this map are loaded
+
+    pub(crate) perspective_defs: Vec<String>,
+    pub(crate) perspective_underhangs: bool,
+    pub(crate) perspective_overhangs: bool,
+    pub(crate) dominance_overhangs: bool,
+}
+
+#[derive(Eq, PartialEq, Hash, Clone)]
+pub struct MapKey {
+    pub(crate) perspective_defs: Vec<String>,
+    pub(crate) perspective_underhangs: bool,
+    pub(crate) perspective_overhangs: bool,
+    pub(crate) dominance_overhangs: bool,
+}
+
+impl From<&Map> for MapKey {
+    fn from(map: &Map) -> Self {
+        MapKey {
+            perspective_defs: map.perspective_defs.clone(),
+            perspective_underhangs: map.perspective_underhangs,
+            perspective_overhangs: map.perspective_overhangs,
+            dominance_overhangs: map.dominance_overhangs,
+        }
+    }
+}
+
+/// Per-vertex attributes for map
+#[derive(Component, Default, Clone, Debug)]
+pub struct MapAttributes {
+    pub mix_color: Vec<Vec4>,
 }
 
 impl Material2d for Map {
+    fn vertex_shader() -> ShaderRef {
+        ShaderRef::Handle(SHADER_HANDLE)
+    }
+
     fn fragment_shader() -> ShaderRef {
-        "tilemap_shader.wgsl".into()
+        ShaderRef::Handle(SHADER_HANDLE)
+    }
+
+    fn specialize(
+        descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
+        layout: &bevy::render::mesh::MeshVertexBufferLayout,
+        key: bevy::sprite::Material2dKey<Self>,
+    ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
+        let vertex_layout = layout.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            ATTRIBUTE_MIX_COLOR.at_shader_location(1),
+        ])?;
+        descriptor.vertex.buffers = vec![vertex_layout];
+
+        let fragment = descriptor.fragment.as_mut().unwrap();
+
+        if key.bind_group_data.perspective_underhangs {
+            fragment.shader_defs.push(ShaderDefVal::Bool(
+                "PERSPECTIVE_UNDERHANGS".to_string(),
+                true,
+            ));
+        }
+
+        if key.bind_group_data.perspective_overhangs {
+            fragment.shader_defs.push(ShaderDefVal::Bool(
+                "PERSPECTIVE_OVERHANGS".to_string(),
+                true,
+            ));
+        }
+
+        if key.bind_group_data.dominance_overhangs {
+            fragment
+                .shader_defs
+                .push(ShaderDefVal::Bool("DOMINANCE_OVERHANGS".to_string(), true));
+        }
+
+        for def in key.bind_group_data.perspective_defs.iter() {
+            fragment
+                .shader_defs
+                .push(ShaderDefVal::Bool(def.clone(), true));
+        }
+
+        debug!("{:?}", fragment.shader_defs);
+
+        Ok(())
     }
 }
 
@@ -114,16 +193,43 @@ impl Map {
     /// Call this when map size changed or assets may have become available.
     /// Should not be necessary to call this if only map contents changed.
     pub fn update(&mut self, images: &Assets<Image>) -> bool {
-        let atlas_texture = match images.get(&self.atlas_texture) {
-            Some(x) => x,
-            None => {
-                warn!("No atlas texture");
-                return false;
-            }
+        let Some(atlas_texture) = images.get(&self.atlas_texture) else {
+            return false;
         };
 
         self.map_uniform
             .update_atlas_size(atlas_texture.size().as_vec2())
+    }
+
+    pub(crate) fn update_inverse_projection(&mut self) {
+        self.map_uniform.inverse_projection = mat2(
+            self.map_uniform.projection.x_axis.xy(),
+            self.map_uniform.projection.y_axis.xy(),
+        )
+        .inverse();
+
+        // Iterate through the four "straight" neighboring map directions, and figure
+        // out which of these have negative Z-values after projection to the world.
+        // These are exactly the directions we should "overlap" in the shader in perspective
+        // overhang mode.
+        let offsets = [
+            (vec2(0.0, -1.0), "ZN"),
+            (vec2(-1.0, -1.0), "NN"),
+            (vec2(-1.0, 0.0), "NZ"),
+            (vec2(-1.0, 1.0), "NP"),
+            (vec2(0.0, 1.0), "ZP"),
+            (vec2(1.0, 1.0), "PP"),
+            (vec2(1.0, 0.0), "PZ"),
+            (vec2(1.0, -1.0), "PN"),
+        ];
+
+        let mut defs = Vec::new();
+        for (offset, def) in offsets.iter() {
+            if self.map_uniform.map_to_local(offset.extend(0.0)).z < 0.0 {
+                defs.push(format!("PERSPECTIVE_UNDER_{}", def));
+            }
+        }
+        self.perspective_defs = defs;
     }
 } // impl Map
 
@@ -187,7 +293,7 @@ pub fn configure_loaded_assets(
     for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
             let Some(map) = map_materials.get(map_handle) else {
-                warn!("No map material");
+                warn!("Map gone as its atlas finished loading.");
                 continue;
             };
 
@@ -212,6 +318,8 @@ pub fn configure_loaded_assets(
                         if let Some(ref mut view_descriptor) = atlas.texture_view_descriptor {
                             view_descriptor.mip_level_count = Some(4);
                         }
+                    } else {
+                        warn!("Map atlas just added but not found?!");
                     }
                 }
                 _ => (),
@@ -241,13 +349,23 @@ pub fn log_map_events(
 pub fn update_loading_maps(
     images: Res<Assets<Image>>,
     mut map_materials: ResMut<Assets<Map>>,
-    mut maps: Query<(Entity, &Handle<Map>, Option<&MeshManagedByMap>), With<MapLoading>>,
+    mut maps: Query<
+        (
+            Entity,
+            Option<&MapAttributes>,
+            &Handle<Map>,
+            Option<&MeshManagedByMap>,
+        ),
+        With<MapLoading>,
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (entity, map_handle, manage_mesh) in maps.iter_mut() {
+    for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
-            warn!("No map material");
+            continue;
+        };
+        let Some(_) = images.get(map.atlas_texture.clone()) else {
             continue;
         };
 
@@ -255,15 +373,65 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
-            info!("Adding mesh");
-            let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Quad {
+            let mut mesh = Mesh::from(shape::Quad {
                 size: map.world_size(),
                 flip: false,
-            })));
+            });
+
+            // If a mix color is defined, use it
+            let mut mix_color = Vec::new();
+            if let Some(attr) = attributes {
+                mix_color.extend(attr.mix_color.iter());
+            }
+
+            // If its not defined for all vertices (or for None), fill
+            // up with Vec4::ONE which will not change the color
+            let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
+            if mix_color.len() < l {
+                mix_color.resize(l, Vec4::ONE);
+            }
+
+            mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, mix_color);
+
+            let mesh = Mesh2dHandle(meshes.add(mesh));
             commands.entity(entity).insert(mesh);
         }
 
         debug!("Map loaded: {:?}", map.map_size());
+    }
+}
+
+/// Update mesh if MapAttributes change
+pub fn update_map_vertex_attributes(
+    map_materials: ResMut<Assets<Map>>,
+    maps: Query<(Entity, &Handle<Map>, &MapAttributes), Changed<MapAttributes>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut commands: Commands,
+) {
+    for (entity, map_handle, attr) in maps.iter() {
+        let Some(map) = map_materials.get(map_handle) else {
+            warn!("No map material");
+            continue;
+        };
+
+        let mut mesh = Mesh::from(shape::Quad {
+            size: map.world_size(),
+            flip: false,
+        });
+
+        let mut mix_color = Vec::new();
+        mix_color.extend(attr.mix_color.iter());
+
+        // If its not defined for all vertices (or for None), fill
+        // up with Vec4::ONE which will not change the color
+        let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
+        if mix_color.len() < l {
+            mix_color.resize(l, Vec4::ONE);
+        }
+
+        mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, mix_color);
+        let mesh = Mesh2dHandle(meshes.add(mesh));
+        commands.entity(entity).insert(mesh);
     }
 }
 

@@ -3,13 +3,16 @@
 //! Each map is a single quad so the performance overhead should be low for a reasonable amount of
 //! layers.
 
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
-use bevy::math::{uvec2, vec2, vec3};
-use bevy::prelude::*;
-use bevy::sprite::Mesh2dHandle;
-use bevy::window::PresentMode;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::{uvec2, vec2, vec3},
+    prelude::*,
+    sprite::Mesh2dHandle,
+    window::PresentMode,
+};
 use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap};
 
+#[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
 
@@ -34,15 +37,6 @@ fn main() {
         .add_systems(Startup, startup)
         .run();
 }
-
-// Completely optional:
-// Add an extra component to keep track of which map layer is which for easy modification later,
-// potentially containing some additional information.
-// Since you likely want the layer to have different z-coordinates you could also use that to
-// distinguish them.
-
-#[derive(Component)]
-struct MapLayer(i32);
 
 fn startup(
     mut commands: Commands,
@@ -74,7 +68,6 @@ fn startup(
 
     commands
         .spawn(MapBundle::new(map, materials.as_mut()))
-        .insert(MapLayer(0))
         // Remove the `MeshManagedByMap` marker component so the map doesn't try to resize it
         .remove::<MeshManagedByMap>()
         // Insert our custom mesh
@@ -91,7 +84,7 @@ fn startup(
     // Higher z value means "closer to the camera"
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
-    commands.spawn(bundle).insert(MapLayer(1)).insert(mesh);
+    commands.spawn(bundle).insert(mesh);
 }
 
 fn initialize_layer1(m: &mut MapIndexer) {
