@@ -38,15 +38,6 @@ fn main() {
         .run();
 }
 
-// Completely optional:
-// Add an extra component to keep track of which map layer is which for easy modification later,
-// potentially containing some additional information.
-// Since you likely want the layer to have different z-coordinates you could also use that to
-// distinguish them.
-
-#[derive(Component)]
-struct MapLayer(i32);
-
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -77,7 +68,6 @@ fn startup(
 
     commands
         .spawn(MapBundle::new(map, materials.as_mut()))
-        .insert(MapLayer(0))
         // Remove the `MeshManagedByMap` marker component so the map doesn't try to resize it
         .remove::<MeshManagedByMap>()
         // Insert our custom mesh
@@ -94,7 +84,7 @@ fn startup(
     // Higher z value means "closer to the camera"
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 
-    commands.spawn(bundle).insert(MapLayer(1)).insert(mesh);
+    commands.spawn(bundle).insert(mesh);
 }
 
 fn initialize_layer1(m: &mut MapIndexer) {
