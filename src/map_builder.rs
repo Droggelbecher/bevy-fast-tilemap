@@ -81,7 +81,12 @@ impl MapBuilder {
         self
     }
 
-    pub fn with_overhangs(mut self, dominance: bool, perspective_under: bool, perspective_over: bool) -> Self {
+    pub fn with_overhangs(
+        mut self,
+        dominance: bool,
+        perspective_under: bool,
+        perspective_over: bool,
+    ) -> Self {
         self.map.dominance_overhangs = dominance;
         self.map.perspective_underhangs = perspective_under;
         self.map.perspective_overhangs = perspective_over;

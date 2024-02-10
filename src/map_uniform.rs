@@ -1,5 +1,5 @@
 use bevy::{
-    math::{mat2, vec2, vec3, Vec3Swizzles},
+    math::{vec2, vec3, Vec3Swizzles},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderType},
 };

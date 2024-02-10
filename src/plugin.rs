@@ -4,8 +4,10 @@ use crate::map::{
 };
 use bevy::{prelude::*, sprite::Material2dPlugin};
 
-use crate::map::Map;
-use crate::shader::{SHADER_CODE, SHADER_HANDLE};
+use crate::{
+    map::Map,
+    shader::{SHADER_CODE, SHADER_HANDLE},
+};
 
 /// Plugin for fast tilemap.
 /// Add this to you app and then spawn one or multiple maps use [`crate::map_builder::MapBuilder`].

@@ -11,6 +11,7 @@ use bevy::{
 use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, AXONOMETRIC};
 use rand::Rng;
 
+#[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
 

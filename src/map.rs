@@ -1,10 +1,9 @@
-use bevy::render::render_resource::ShaderDefVal;
 use bevy::{
-    math::{mat2, vec2, vec3, Vec3Swizzles},
+    math::{mat2, vec2, Vec3Swizzles},
     prelude::*,
     render::{
         mesh::MeshVertexAttribute,
-        render_resource::{AsBindGroup, ShaderRef, VertexFormat},
+        render_resource::{AsBindGroup, ShaderDefVal, ShaderRef, VertexFormat},
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
     sprite::{Material2d, Mesh2dHandle},
@@ -88,19 +87,29 @@ impl Material2d for Map {
         let fragment = descriptor.fragment.as_mut().unwrap();
 
         if key.bind_group_data.perspective_underhangs {
-            fragment.shader_defs.push(ShaderDefVal::Bool("PERSPECTIVE_UNDERHANGS".to_string(), true));
+            fragment.shader_defs.push(ShaderDefVal::Bool(
+                "PERSPECTIVE_UNDERHANGS".to_string(),
+                true,
+            ));
         }
 
         if key.bind_group_data.perspective_overhangs {
-            fragment.shader_defs.push(ShaderDefVal::Bool("PERSPECTIVE_OVERHANGS".to_string(), true));
+            fragment.shader_defs.push(ShaderDefVal::Bool(
+                "PERSPECTIVE_OVERHANGS".to_string(),
+                true,
+            ));
         }
 
         if key.bind_group_data.dominance_overhangs {
-            fragment.shader_defs.push(ShaderDefVal::Bool("DOMINANCE_OVERHANGS".to_string(), true));
+            fragment
+                .shader_defs
+                .push(ShaderDefVal::Bool("DOMINANCE_OVERHANGS".to_string(), true));
         }
 
         for def in key.bind_group_data.perspective_defs.iter() {
-            fragment.shader_defs.push(ShaderDefVal::Bool(def.clone(), true));
+            fragment
+                .shader_defs
+                .push(ShaderDefVal::Bool(def.clone(), true));
         }
 
         Ok(())
@@ -191,8 +200,11 @@ impl Map {
     }
 
     pub(crate) fn update_inverse_projection(&mut self) {
-        self.map_uniform.inverse_projection =
-            mat2(self.map_uniform.projection.x_axis.xy(), self.map_uniform.projection.y_axis.xy()).inverse();
+        self.map_uniform.inverse_projection = mat2(
+            self.map_uniform.projection.x_axis.xy(),
+            self.map_uniform.projection.y_axis.xy(),
+        )
+        .inverse();
 
         // Iterate through the four "straight" neighboring map directions, and figure
         // out which of these have negative Z-values after projection to the world.
@@ -217,7 +229,6 @@ impl Map {
         }
         self.perspective_defs = defs;
     }
-
 } // impl Map
 
 // Indexer into a map.
@@ -304,8 +315,7 @@ pub fn configure_loaded_assets(
                         if let Some(ref mut view_descriptor) = atlas.texture_view_descriptor {
                             view_descriptor.mip_level_count = Some(4);
                         }
-                    }
-                    else {
+                    } else {
                         warn!("Map atlas just added but not found?!");
                     }
                 }
@@ -374,7 +384,7 @@ pub fn update_loading_maps(
             // If its not defined for all vertices (or for None), fill
             // up with Vec4::ONE which will not change the color
             let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
-            if mix_color.len() < l  {
+            if mix_color.len() < l {
                 mix_color.resize(l, Vec4::ONE);
             }
 
@@ -387,7 +397,6 @@ pub fn update_loading_maps(
         debug!("Map loaded: {:?}", map.map_size());
     }
 }
-
 
 /// Update mesh if MapAttributes change
 pub fn update_map_vertex_attributes(
@@ -407,8 +416,7 @@ pub fn update_map_vertex_attributes(
             flip: false,
         });
 
-        mesh = mesh
-            .with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
+        mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
         let mesh = Mesh2dHandle(meshes.add(mesh));
         commands.entity(entity).insert(mesh);
     }
