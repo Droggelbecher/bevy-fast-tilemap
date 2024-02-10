@@ -33,9 +33,7 @@ struct Map {
     global_transform_matrix: mat3x3<f32>,
     global_transform_translation: vec3<f32>,
 
-    //overhang_mode: u32,
     max_overhang_levels: u32,
-    //perspective_overhang_mask: u32, // TODO: Remove
 
     // -----
     /// [derived] Size of the map in world units necessary to display
@@ -249,7 +247,7 @@ fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
     return true;
 }
 
-/// 
+///
 ///
 /// tile_index: Tile index in the atlas
 /// pos: The original map position
@@ -258,9 +256,8 @@ fn sample_neighbor_tile_index(tile_index: u32, pos: MapPosition, tile_offset: ve
     // Position in the neighboring tile (in world coordinates),
     // that matches 'pos' in the original tile
 
-    // TODO: MAYBE Consider precompute this for the 8 possible offsets.
+    // TODO: Consider precomputing this before shader instantiation for the 8 possible offsets.
     var overhang = (map.projection * vec3<f32>(vec2<f32>(-tile_offset), 0.0)).xy * map.tile_size;
-    //var overhang = vec2<f32>(0.0, 0.0);
 
     var offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
     return sample_tile(map, tile_index, offset);
