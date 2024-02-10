@@ -112,6 +112,8 @@ impl Material2d for Map {
                 .push(ShaderDefVal::Bool(def.clone(), true));
         }
 
+        debug!("{:?}", fragment.shader_defs);
+
         Ok(())
     }
 }
@@ -291,6 +293,7 @@ pub fn configure_loaded_assets(
     for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
             let Some(map) = map_materials.get(map_handle) else {
+                warn!("Map gone as its atlas finished loading.");
                 continue;
             };
 
@@ -360,11 +363,16 @@ pub fn update_loading_maps(
 ) {
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
+            // TODO
+            info!("update_loading_maps: No map");
             continue;
         };
         let Some(_) = images.get(map.atlas_texture.clone()) else {
+            info!("update_loading_maps: No atlas");
             continue;
         };
+
+        info!("update_loading_maps: Updating");
 
         commands.entity(entity).remove::<MapLoading>();
         map.update(images.as_ref());
@@ -394,7 +402,8 @@ pub fn update_loading_maps(
             commands.entity(entity).insert(mesh);
         }
 
-        debug!("Map loaded: {:?}", map.map_size());
+        // TODO: Turn most of these info!s into debug!s
+        info!("Map loaded: {:?}", map.map_size());
     }
 }
 
@@ -410,13 +419,24 @@ pub fn update_map_vertex_attributes(
             warn!("No map material");
             continue;
         };
+        info!("update_map_vertex_attributes");
 
         let mut mesh = Mesh::from(shape::Quad {
             size: map.world_size(),
             flip: false,
         });
 
-        mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, attr.mix_color.clone());
+        let mut mix_color = Vec::new();
+        mix_color.extend(attr.mix_color.iter());
+
+        // If its not defined for all vertices (or for None), fill
+        // up with Vec4::ONE which will not change the color
+        let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
+        if mix_color.len() < l {
+            mix_color.resize(l, Vec4::ONE);
+        }
+
+        mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, mix_color);
         let mesh = Mesh2dHandle(meshes.add(mesh));
         commands.entity(entity).insert(mesh);
     }
@@ -431,6 +451,7 @@ pub fn apply_map_transforms(
             warn!("No map material");
             continue;
         };
+        info!("apply_map_transforms");
         map.map_uniform.apply_transform(transform.clone());
     }
 }

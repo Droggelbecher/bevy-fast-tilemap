@@ -74,7 +74,7 @@ fn init_map(m: &mut MapIndexer) {
             m.set(x, y, rng.gen_range(1..4));
         }
     }
-} // reset_map
+}
 
 /// Highlight the currently hovered tile red, reset all other tiles
 fn show_coordinate(
