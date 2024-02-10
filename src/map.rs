@@ -363,16 +363,11 @@ pub fn update_loading_maps(
 ) {
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
-            // TODO
-            info!("update_loading_maps: No map");
             continue;
         };
         let Some(_) = images.get(map.atlas_texture.clone()) else {
-            info!("update_loading_maps: No atlas");
             continue;
         };
-
-        info!("update_loading_maps: Updating");
 
         commands.entity(entity).remove::<MapLoading>();
         map.update(images.as_ref());
@@ -402,8 +397,7 @@ pub fn update_loading_maps(
             commands.entity(entity).insert(mesh);
         }
 
-        // TODO: Turn most of these info!s into debug!s
-        info!("Map loaded: {:?}", map.map_size());
+        debug!("Map loaded: {:?}", map.map_size());
     }
 }
 
@@ -419,7 +413,6 @@ pub fn update_map_vertex_attributes(
             warn!("No map material");
             continue;
         };
-        info!("update_map_vertex_attributes");
 
         let mut mesh = Mesh::from(shape::Quad {
             size: map.world_size(),
@@ -451,7 +444,6 @@ pub fn apply_map_transforms(
             warn!("No map material");
             continue;
         };
-        info!("apply_map_transforms");
         map.map_uniform.apply_transform(transform.clone());
     }
 }
