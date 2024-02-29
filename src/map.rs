@@ -373,8 +373,6 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
-            info!("---- Updating mesh for map");
-
             let mut mesh = Mesh::from(Rectangle {
                 half_size: map.world_size() / 2.0,
             });
