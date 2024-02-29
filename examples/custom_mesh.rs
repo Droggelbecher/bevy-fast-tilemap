@@ -64,7 +64,7 @@ fn startup(
         }
     });
 
-    let mesh = Mesh2dHandle(meshes.add(Mesh::from(Circle::new(0.3))));
+    let mesh = Mesh2dHandle(meshes.add(Mesh::from(Circle::new(300.0))));
 
     commands
         // Bundle without the `MeshManagedByMap` marker component so the map will not touch the mesh
