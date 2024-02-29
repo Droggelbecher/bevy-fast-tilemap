@@ -54,16 +54,16 @@ struct Map {
     global_inverse_transform_translation: vec3<f32>,
 };
 
-@group(1) @binding(0)
+@group(2) @binding(0)
 var<uniform> map: Map;
 
-@group(1) @binding(100)
+@group(2) @binding(100)
 var<storage> map_texture: array<u32>;
 
-@group(1) @binding(101)
+@group(2) @binding(101)
 var atlas_texture: texture_2d<f32>;
 
-@group(1) @binding(102)
+@group(2) @binding(102)
 var atlas_sampler: sampler;
 
 

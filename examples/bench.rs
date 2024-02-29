@@ -10,7 +10,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
@@ -34,7 +34,7 @@ fn startup(
     )
     .build();
 
-    commands.spawn(MapBundle::new(map, materials.as_mut()));
+    commands.spawn(MapBundleManaged::new(map, materials.as_mut()));
 }
 
 fn main() {

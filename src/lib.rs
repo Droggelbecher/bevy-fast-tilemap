@@ -26,7 +26,7 @@ pub mod shader;
 pub mod tile_projection;
 
 pub use crate::{
-    bundle::MapBundle,
+    bundle::{MapBundleManaged, MapBundleUnmanaged},
     map::{Map, MapAttributes, MapIndexer, MeshManagedByMap},
     plugin::FastTileMapPlugin,
     tile_projection::{TileProjection, AXONOMETRIC, IDENTITY},

@@ -9,7 +9,7 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_fast_tilemap::{
-    bundle::MapBundle, map::MapIndexer, FastTileMapPlugin, Map, MapAttributes, AXONOMETRIC,
+    bundle::MapBundleManaged, map::MapIndexer, FastTileMapPlugin, Map, MapAttributes, AXONOMETRIC,
 };
 use rand::Rng;
 
@@ -62,7 +62,7 @@ fn startup(
     .with_perspective_overhang()
     .build_and_initialize(init_map);
 
-    commands.spawn(MapBundle {
+    commands.spawn(MapBundleManaged {
         material: materials.add(map),
         // Optional: apply a color gradient.
         // MapAttributes define attributes per vertex so they can be changed without

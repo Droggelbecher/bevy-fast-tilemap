@@ -8,7 +8,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, IDENTITY};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged, MapIndexer, IDENTITY};
 use rand::Rng;
 
 #[path = "common/mouse_controls_camera.rs"]
@@ -71,7 +71,7 @@ fn startup(
     .with_dominance_overhang(3)
     .build_and_initialize(init_map);
 
-    commands.spawn(MapBundle::new(map, materials.as_mut()));
+    commands.spawn(MapBundleManaged::new(map, materials.as_mut()));
 } // startup
 
 /// Fill the map with a random pattern

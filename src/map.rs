@@ -373,9 +373,8 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
-            let mut mesh = Mesh::from(shape::Quad {
-                size: map.world_size(),
-                flip: false,
+            let mut mesh = Mesh::from(Rectangle {
+                half_size: map.world_size() / 2.0,
             });
 
             // If a mix color is defined, use it
@@ -404,20 +403,32 @@ pub fn update_loading_maps(
 /// Update mesh if MapAttributes change
 pub fn update_map_vertex_attributes(
     map_materials: ResMut<Assets<Map>>,
-    maps: Query<(Entity, &Handle<Map>, &MapAttributes), Changed<MapAttributes>>,
+    maps: Query<
+        (
+            Entity,
+            &Handle<Map>,
+            &MapAttributes,
+            Option<&Mesh2dHandle>,
+            Option<&MeshManagedByMap>,
+        ),
+        Changed<MapAttributes>,
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (entity, map_handle, attr) in maps.iter() {
+    for (entity, map_handle, attr, mesh_handle, manage_mesh) in maps.iter() {
         let Some(map) = map_materials.get(map_handle) else {
             warn!("No map material");
             continue;
         };
 
-        let mut mesh = Mesh::from(shape::Quad {
-            size: map.world_size(),
-            flip: false,
-        });
+        let mut mesh = if manage_mesh.is_some() {
+            Mesh::from(Rectangle {
+                half_size: map.world_size() / 2.0,
+            })
+        } else {
+            meshes.get(mesh_handle.unwrap().0.clone()).unwrap().clone()
+        };
 
         let mut mix_color = Vec::new();
         mix_color.extend(attr.mix_color.iter());

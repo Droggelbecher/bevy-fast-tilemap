@@ -6,7 +6,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
@@ -62,7 +62,7 @@ fn startup(
         }
     });
 
-    commands.spawn(MapBundle {
+    commands.spawn(MapBundleManaged {
         material: materials.add(map),
         ..default()
     });
@@ -74,7 +74,7 @@ fn startup(
     )
     .build();
 
-    let bundle = MapBundle {
+    let bundle = MapBundleManaged {
         material: materials.add(map),
         transform: Transform::default().with_translation(vec3(0., 0., 1.)),
         ..default()
