@@ -12,7 +12,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 
@@ -63,7 +63,7 @@ fn startup(
     )
     .build();
 
-    commands.spawn(MapBundle::new(map, materials.as_mut()));
+    commands.spawn(MapBundleManaged::new(map, materials.as_mut()));
 }
 
 /// Update random patches of tile indices in the map

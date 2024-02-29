@@ -373,9 +373,10 @@ pub fn update_loading_maps(
         map.update(images.as_ref());
 
         if manage_mesh.is_some() {
-            let mut mesh = Mesh::from(shape::Quad {
-                size: map.world_size(),
-                flip: false,
+            info!("---- Updating mesh for map");
+
+            let mut mesh = Mesh::from(Rectangle {
+                half_size: map.world_size() / 2.0,
             });
 
             // If a mix color is defined, use it
@@ -414,9 +415,8 @@ pub fn update_map_vertex_attributes(
             continue;
         };
 
-        let mut mesh = Mesh::from(shape::Quad {
-            size: map.world_size(),
-            flip: false,
+        let mut mesh = Mesh::from(Rectangle {
+            half_size: map.world_size() / 2.0,
         });
 
         let mut mix_color = Vec::new();

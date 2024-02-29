@@ -10,7 +10,7 @@ use bevy::{
     sprite::Mesh2dHandle,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, MeshManagedByMap};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged, MapBundleUnmanaged, MapIndexer};
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
@@ -64,12 +64,11 @@ fn startup(
         }
     });
 
-    let mesh = Mesh2dHandle(meshes.add(Mesh::from(shape::Circle::new(300.0))));
+    let mesh = Mesh2dHandle(meshes.add(Mesh::from(Circle::new(0.3))));
 
     commands
-        .spawn(MapBundle::new(map, materials.as_mut()))
-        // Remove the `MeshManagedByMap` marker component so the map doesn't try to resize it
-        .remove::<MeshManagedByMap>()
+        // Bundle without the `MeshManagedByMap` marker component so the map will not touch the mesh
+        .spawn(MapBundleUnmanaged::new(map, materials.as_mut()))
         // Insert our custom mesh
         .insert(mesh.clone());
 
@@ -80,7 +79,7 @@ fn startup(
     )
     .build_and_initialize(initialize_layer1);
 
-    let mut bundle = MapBundle::new(map, materials.as_mut());
+    let mut bundle = MapBundleManaged::new(map, materials.as_mut());
     // Higher z value means "closer to the camera"
     bundle.transform = Transform::default().with_translation(vec3(0., 0., 1.));
 

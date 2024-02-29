@@ -23,7 +23,7 @@ impl Plugin for MouseControlsCameraPlugin {
 /// Use RMB for panning
 /// Use scroll wheel for zooming
 fn mouse_controls_camera(
-    mouse_button: Res<Input<MouseButton>>,
+    mouse_button: Res<ButtonInput<MouseButton>>,
     mut mouse_motion_events: EventReader<MouseMotion>,
     mut mouse_wheel_events: EventReader<MouseWheel>,
     mut camera_query: Query<(

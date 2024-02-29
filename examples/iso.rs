@@ -8,7 +8,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundle, MapIndexer, AXONOMETRIC};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged, MapIndexer, AXONOMETRIC};
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
@@ -61,7 +61,7 @@ fn startup(
     // Build the map is to provide an initializer callback here.
     .build_and_initialize(reset_map);
 
-    commands.spawn(MapBundle::new(map, materials.as_mut()));
+    commands.spawn(MapBundleManaged::new(map, materials.as_mut()));
 } // startup
 
 /// Fill the map with a chessboard pattern.
