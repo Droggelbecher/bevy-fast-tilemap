@@ -3,7 +3,10 @@ use bevy::{
     prelude::*,
     render::{
         mesh::MeshVertexAttribute,
-        render_resource::{AsBindGroup, ShaderDefVal, ShaderRef, VertexFormat},
+        render_resource::{
+            encase::internal::WriteInto, AsBindGroup, ShaderDefVal, ShaderRef, ShaderSize,
+            ShaderType, VertexFormat,
+        },
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
     sprite::{Material2d, Mesh2dHandle},
@@ -15,16 +18,27 @@ const ATTRIBUTE_MAP_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("MapPosition", 988779054, VertexFormat::Float32x2);
 const ATTRIBUTE_MIX_COLOR: MeshVertexAttribute =
     MeshVertexAttribute::new("MixColor", 988779055, VertexFormat::Float32x4);
+const ATTRIBUTE_ANIMATION_STATE: MeshVertexAttribute =
+    MeshVertexAttribute::new("AnimationState", 988779056, VertexFormat::Float32);
+
+#[derive(Debug, Clone, Default, Reflect, AsBindGroup, ShaderType)]
+pub struct DefaultUserData {
+    x: u32,
+}
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
 #[derive(Asset, Debug, Clone, Default, Reflect, AsBindGroup)]
 #[bind_group_data(MapKey)]
-pub struct Map {
+pub struct Map<UserData = DefaultUserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
     #[uniform(0)]
-    pub map_uniform: MapUniform,
+    pub(crate) map_uniform: MapUniform<UserData>,
 
     /// Texture containing the tile IDs (one per each pixel)
     #[storage(100, read_only)]
@@ -49,8 +63,12 @@ pub struct MapKey {
     pub(crate) dominance_overhangs: bool,
 }
 
-impl From<&Map> for MapKey {
-    fn from(map: &Map) -> Self {
+impl<UserData> From<&Map<UserData>> for MapKey
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
+    fn from(map: &Map<UserData>) -> Self {
         MapKey {
             perspective_defs: map.perspective_defs.clone(),
             perspective_underhangs: map.perspective_underhangs,
@@ -65,6 +83,7 @@ impl From<&Map> for MapKey {
 pub struct MapAttributes {
     pub mix_color: Vec<Vec4>,
     pub map_position: Vec<Vec2>,
+    pub animation_state: Vec<f32>,
 }
 
 impl MapAttributes {
@@ -126,6 +145,7 @@ impl Material2d for Map {
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             ATTRIBUTE_MAP_POSITION.at_shader_location(1),
             ATTRIBUTE_MIX_COLOR.at_shader_location(2),
+            ATTRIBUTE_ANIMATION_STATE.at_shader_location(3),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
 
@@ -327,6 +347,26 @@ impl<'a> MapIndexer<'a> {
         let idx = y as usize * self.size().x as usize + x as usize;
         self.map.map_texture[idx] = v;
     }
+
+    pub fn world_to_map(&self, world: Vec2) -> Vec2 {
+        self.map.world_to_map(world)
+    }
+
+    pub fn map_to_world_3d(&self, map_position: Vec3) -> Vec3 {
+        self.map.map_to_world_3d(map_position)
+    }
+
+    pub fn map_to_local_3d(&self, map_position: Vec3) -> Vec3 {
+        self.map.map_to_local_3d(map_position)
+    }
+
+    pub fn map_to_local(&self, map_position: Vec2) -> Vec2 {
+        self.map.map_to_local(map_position)
+    }
+
+    pub fn world_to_map_3d(&self, world: Vec3) -> Vec3 {
+        self.map.world_to_map_3d(world)
+    }
 }
 
 ///
@@ -406,6 +446,7 @@ pub fn update_loading_maps(
     >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
+    time: Res<Time>,
 ) {
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
@@ -425,6 +466,8 @@ pub fn update_loading_maps(
 
             MapAttributes::set_mix_color(attributes, &mut mesh, &map);
             MapAttributes::set_map_position(attributes, &mut mesh, &map);
+            // TODO XXX animation state
+                // animation_state.resize(l, time.elapsed_seconds_wrapped());
             let mesh = Mesh2dHandle(meshes.add(mesh));
             commands.entity(entity).insert(mesh);
         }
@@ -448,6 +491,7 @@ pub fn update_map_vertex_attributes(
     >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
+    time: Res<Time>,
 ) {
     for (entity, map_handle, attr, mesh_handle, manage_mesh) in maps.iter() {
         let Some(map) = map_materials.get(map_handle) else {
@@ -465,6 +509,8 @@ pub fn update_map_vertex_attributes(
 
         MapAttributes::set_mix_color(Some(attr), &mut mesh, &map);
         MapAttributes::set_map_position(Some(attr), &mut mesh, &map);
+            // TODO XXX animation state
+                // animation_state.resize(l, time.elapsed_seconds_wrapped());
 
         let mesh = Mesh2dHandle(meshes.add(mesh));
         commands.entity(entity).insert(mesh);
