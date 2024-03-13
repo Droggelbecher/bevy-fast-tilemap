@@ -38,6 +38,7 @@ fn mouse_controls_camera(
             for (_, mut transform, _, _) in camera_query.iter_mut() {
                 transform.translation.x -= event.delta.x * transform.scale.x;
                 transform.translation.y += event.delta.y * transform.scale.y;
+                info!("translation: {:?}", transform.translation);
             }
         }
     }
@@ -55,6 +56,7 @@ fn mouse_controls_camera(
                 .scale
                 .max(Vec3::splat(1. / 128.))
                 .min(Vec3::splat(128.));
+            info!("scale: {:?}", transform.scale);
         }
     }
 }

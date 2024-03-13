@@ -15,6 +15,7 @@ use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
+use rand::Rng;
 
 fn startup(
     mut commands: Commands,
@@ -28,11 +29,34 @@ fn startup(
         // Map size (tiles)
         uvec2(1280, 1280),
         // Tile atlas
-        asset_server.load("debug02_80.png"),
+        asset_server.load("debug03_80.png"),
         // Tile size (pixels)
         vec2(80., 80.),
     )
-    .build();
+    .build_and_initialize(|m| {
+        for x in 0..1280 {
+            for y in 0..1280 {
+                m.set(x, y, 4);
+            }
+        }
+    });
+
+    let mut max_err = (Vec2::ZERO, Vec2::ZERO, 0.0);
+
+    for _ in 0..100000 {
+        // Set pos to a random 2d position
+        let rng = &mut rand::thread_rng();
+        let pos = vec2(
+            rng.gen_range(-64000.0..64000.0),
+            rng.gen_range(-64000.0..64000.0),
+        );
+        let pos2 = map.map_to_world_3d(map.world_to_map(pos).extend(0.0));
+        let err = (pos - pos2.xy()).length();
+        if err > max_err.2 {
+            max_err = (pos, pos2.xy(), err);
+        }
+    }
+    error!("max_err: {:?}", max_err);
 
     let mut bundle = MapBundleManaged::new(map, materials.as_mut());
 

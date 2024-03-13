@@ -1,5 +1,5 @@
 use bevy::{
-    math::{mat2, vec2, Vec3Swizzles},
+    math::{dmat2, mat2, vec2, Vec3Swizzles},
     prelude::*,
     render::{
         mesh::MeshVertexAttribute,
@@ -202,11 +202,12 @@ impl Map {
     }
 
     pub(crate) fn update_inverse_projection(&mut self) {
-        self.map_uniform.inverse_projection = mat2(
-            self.map_uniform.projection.x_axis.xy(),
-            self.map_uniform.projection.y_axis.xy(),
+        self.map_uniform.inverse_projection = dmat2(
+            self.map_uniform.projection.x_axis.xy().as_dvec2(),
+            self.map_uniform.projection.y_axis.xy().as_dvec2(),
         )
-        .inverse();
+        .inverse()
+        .as_mat2();
 
         // Iterate through the four "straight" neighboring map directions, and figure
         // out which of these have negative Z-values after projection to the world.
