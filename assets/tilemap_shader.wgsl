@@ -43,13 +43,13 @@ struct Map {
     /// [derived] Offset of the projected map in world coordinates
     world_offset: vec2<f32>,
 
-    /// [derived]
+    /// [derived] Number of tiles in atlas
     n_tiles: vec2<u32>,
 
     /// [derived] local world pos -> fractional 2d map index
     inverse_projection: mat2x2<f32>,
 
-    /// [derived] Iverse of global transform of the entity holding the map as transformation matrix & offset.
+    /// [derived] Inverse of global transform of the entity holding the map as transformation matrix & offset.
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
 };
@@ -175,26 +175,18 @@ fn sample_tile(
 
     // Outside of "our" part of the padding, dont render anything as part of this tile,
     // as it might be used for overhang of a neighbouring tile in the tilemap
-    if rect_offset.x < -max_overhang.x
-        || rect_offset.y < -max_overhang.y
-        || rect_offset.x > (map.tile_size.x + max_overhang.x)
-        || rect_offset.y > (map.tile_size.y + max_overhang.y)
+    if rect_offset.x < -max_overhang.x - 1.0
+        || rect_offset.y < -max_overhang.y - 1.0
+        || rect_offset.x > (map.tile_size.x + max_overhang.x + 1.0)
+        || rect_offset.y > (map.tile_size.y + max_overhang.y + 1.0)
     {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
-/*
     var color = textureSample(
         atlas_texture, atlas_sampler, total_offset / map.atlas_size
     );
-    */
-    // work around uniformity constraints, but doesnt seem to actually speed things up
-    var color = sample(atlas_texture, atlas_sampler, total_offset / map.atlas_size);
 
     return color;
-}
-
-fn sample(atlas_texture: texture_2d<f32>, atlas_sampler: sampler, uv: vec2<f32>) -> vec4<f32> {
-    return textureSample(atlas_texture, atlas_sampler, uv);
 }
 
 /// 2d map tile position and offset in map tile coordinates
@@ -214,6 +206,8 @@ fn world_to_tile_and_offset(
 
     // Map position including fractional part
     var pos = world_to_map(map, world_position);
+
+    //pos = clamp(pos, vec2<f32>(0.0, 0.0), vec2<f32>(map.map_size) + vec2<f32>(1.0, 1.0));
 
     // Integer part of map position (tile coordinate)
     var tile = floor(pos);

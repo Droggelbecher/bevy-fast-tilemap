@@ -27,36 +27,21 @@ fn startup(
     // Create map with (10 * 128) ^ 2 tiles or 1,638,400 tiles.
     let map = Map::builder(
         // Map size (tiles)
-        uvec2(1280, 1280),
+        uvec2(2048, 2048),
         // Tile atlas
-        asset_server.load("debug03_80.png"),
+        //asset_server.load("debug03_80.png"),
+        asset_server.load("debug01.png"),
         // Tile size (pixels)
-        vec2(80., 80.),
+        vec2(64., 64.),
+        //vec2(80., 80.),
     )
     .build_and_initialize(|m| {
-        for x in 0..1280 {
-            for y in 0..1280 {
-                m.set(x, y, 4);
+        for x in 0..m.size().x {
+            for y in 0..m.size().y {
+                m.set(x, y, 11);
             }
         }
     });
-
-    let mut max_err = (Vec2::ZERO, Vec2::ZERO, 0.0);
-
-    for _ in 0..100000 {
-        // Set pos to a random 2d position
-        let rng = &mut rand::thread_rng();
-        let pos = vec2(
-            rng.gen_range(-64000.0..64000.0),
-            rng.gen_range(-64000.0..64000.0),
-        );
-        let pos2 = map.map_to_world_3d(map.world_to_map(pos).extend(0.0));
-        let err = (pos - pos2.xy()).length();
-        if err > max_err.2 {
-            max_err = (pos, pos2.xy(), err);
-        }
-    }
-    error!("max_err: {:?}", max_err);
 
     let mut bundle = MapBundleManaged::new(map, materials.as_mut());
 
