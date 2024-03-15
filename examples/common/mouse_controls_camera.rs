@@ -52,10 +52,10 @@ fn mouse_controls_camera(
         for (_, mut transform, _, mut _ortho) in camera_query.iter_mut() {
             let factor = f32::powf(2., -wheel_y / 2.);
             transform.scale *= vec3(factor, factor, 1.0);
-            transform.scale = transform.scale;
-            //.max(Vec3::splat(1. / 128.))
-            //.min(Vec3::splat(128.));
-            info!("scale: {:?} factor: {:?}", transform.scale, factor);
+            transform.scale = transform.scale
+                .max(Vec3::splat(1. / 128.))
+                .min(Vec3::splat(128.));
+            info!("scale: {:?}", transform.scale);
         }
     }
 }

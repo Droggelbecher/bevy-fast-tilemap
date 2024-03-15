@@ -207,7 +207,7 @@ fn world_to_tile_and_offset(
     // Map position including fractional part
     var pos = world_to_map(map, world_position);
 
-    //pos = clamp(pos, vec2<f32>(0.0, 0.0), vec2<f32>(map.map_size) + vec2<f32>(1.0, 1.0));
+    pos = clamp(pos, vec2<f32>(0.0, 0.0), vec2<f32>(map.map_size) + vec2<f32>(1.0, 1.0));
 
     // Integer part of map position (tile coordinate)
     var tile = floor(pos);

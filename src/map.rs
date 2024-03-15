@@ -1,5 +1,5 @@
 use bevy::{
-    math::{dmat2, mat2, vec2, Vec3Swizzles},
+    math::{dmat2, vec2, Vec3Swizzles},
     prelude::*,
     render::{
         mesh::MeshVertexAttribute,
