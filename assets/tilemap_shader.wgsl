@@ -70,7 +70,8 @@ var atlas_sampler: sampler;
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
-    @location(1) mix_color: vec4<f32>,
+    @location(1) map_position: vec2<f32>,
+    @location(2) mix_color: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -78,7 +79,8 @@ struct VertexOutput {
     // and `frag coord` when used as a fragment stage input
     @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
-    @location(1) mix_color: vec4<f32>,
+    @location(1) map_position: vec2<f32>,
+    @location(2) mix_color: vec4<f32>,
 }
 
 /// Custom vertex shader for passing along the UV coordinate
@@ -91,6 +93,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.position = mesh2d_position_local_to_clip(model, vec4<f32>(v.position, 1.0));
     out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
     out.mix_color = v.mix_color;
+    out.map_position = v.map_position;
     return out;
 }
 
@@ -432,7 +435,19 @@ fn fragment(
 ) -> @location(0) vec4<f32> {
     var world_position = in.world_position.xy;
     var color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    var pos = world_to_tile_and_offset(world_position);
+
+    //var pos = world_to_tile_and_offset(world_position);
+
+    var tile = floor(in.map_position);
+    var map_space_offset = in.map_position - tile;
+
+    var world_space_offset = map.global_transform_matrix * (map.projection *
+    vec3<f32>(map_space_offset, 0.0)) * vec3<f32>(map.tile_size, 1.0);
+
+    var pos: MapPosition;
+    pos.tile = vec2<i32>(tile);
+    pos.offset = vec2<f32>(1.0, -1.0) * world_space_offset.xy;
+
     var index = get_tile_index(pos.tile);
     var is_valid = is_valid_tile(map, pos.tile);
     var sample_color = color;

@@ -11,6 +11,8 @@ use bevy::{
 
 use crate::{map_builder::MapBuilder, map_uniform::MapUniform, shader::SHADER_HANDLE};
 
+const ATTRIBUTE_MAP_POSITION: MeshVertexAttribute =
+    MeshVertexAttribute::new("MapPosition", 988779054, VertexFormat::Float32x2);
 const ATTRIBUTE_MIX_COLOR: MeshVertexAttribute =
     MeshVertexAttribute::new("MixColor", 988779055, VertexFormat::Float32x4);
 
@@ -62,6 +64,48 @@ impl From<&Map> for MapKey {
 #[derive(Component, Default, Clone, Debug)]
 pub struct MapAttributes {
     pub mix_color: Vec<Vec4>,
+    pub map_position: Vec<Vec2>,
+}
+
+impl MapAttributes {
+    fn set_mix_color(attributes: Option<&MapAttributes>, mesh: &mut Mesh, _map: &Map) {
+        let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
+
+        let mut v = vec![Vec4::ONE; l];
+        if let Some(attr) = attributes {
+            if attr.mix_color.len() > v.len() {
+                v.resize(attr.mix_color.len(), Vec4::ONE);
+            }
+            for (i, c) in attr.mix_color.iter().enumerate() {
+                v[i] = *c;
+            }
+        }
+
+        mesh.insert_attribute(ATTRIBUTE_MIX_COLOR, v);
+    }
+
+    fn set_map_position(attributes: Option<&MapAttributes>, mesh: &mut Mesh, map: &Map) {
+        let mut v: Vec<_> = mesh
+            .attribute(Mesh::ATTRIBUTE_POSITION)
+            .unwrap()
+            .as_float3()
+            .unwrap()
+            .iter()
+            .map(|p| map.world_to_map(Vec2::new(p[0], p[1])))
+            .collect();
+
+        if let Some(attr) = attributes {
+            // set the first elements of v to attr.map_position
+            if attr.map_position.len() > v.len() {
+                v.resize(attr.map_position.len(), Vec2::ZERO);
+            }
+            for (i, p) in attr.map_position.iter().enumerate() {
+                v[i] = *p;
+            }
+        }
+
+        mesh.insert_attribute(ATTRIBUTE_MAP_POSITION, v);
+    }
 }
 
 impl Material2d for Map {
@@ -80,7 +124,8 @@ impl Material2d for Map {
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-            ATTRIBUTE_MIX_COLOR.at_shader_location(1),
+            ATTRIBUTE_MAP_POSITION.at_shader_location(1),
+            ATTRIBUTE_MIX_COLOR.at_shader_location(2),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
 
@@ -208,20 +253,6 @@ impl Map {
         );
 
         self.map_uniform.inverse_projection = projection2d.inverse().as_mat2();
-
-        info!(
-            "Inverse projection: {:?}",
-            self.map_uniform.inverse_projection
-        );
-        info!("Projection: {:?}", self.map_uniform.projection);
-        info!(
-            "Inverse * Projection: {:?}",
-            self.map_uniform.inverse_projection * projection2d.as_mat2()
-        );
-        info!(
-            "Is Identity: {:?}",
-            self.map_uniform.inverse_projection * projection2d.as_mat2() == Mat2::IDENTITY
-        );
 
         // Iterate through the four "straight" neighboring map directions, and figure
         // out which of these have negative Z-values after projection to the world.
@@ -392,21 +423,8 @@ pub fn update_loading_maps(
                 half_size: map.world_size() / 2.0,
             });
 
-            // If a mix color is defined, use it
-            let mut mix_color = Vec::new();
-            if let Some(attr) = attributes {
-                mix_color.extend(attr.mix_color.iter());
-            }
-
-            // If its not defined for all vertices (or for None), fill
-            // up with Vec4::ONE which will not change the color
-            let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
-            if mix_color.len() < l {
-                mix_color.resize(l, Vec4::ONE);
-            }
-
-            mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, mix_color);
-
+            MapAttributes::set_mix_color(attributes, &mut mesh, &map);
+            MapAttributes::set_map_position(attributes, &mut mesh, &map);
             let mesh = Mesh2dHandle(meshes.add(mesh));
             commands.entity(entity).insert(mesh);
         }
@@ -445,17 +463,9 @@ pub fn update_map_vertex_attributes(
             meshes.get(mesh_handle.unwrap().0.clone()).unwrap().clone()
         };
 
-        let mut mix_color = Vec::new();
-        mix_color.extend(attr.mix_color.iter());
+        MapAttributes::set_mix_color(Some(attr), &mut mesh, &map);
+        MapAttributes::set_map_position(Some(attr), &mut mesh, &map);
 
-        // If its not defined for all vertices (or for None), fill
-        // up with Vec4::ONE which will not change the color
-        let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
-        if mix_color.len() < l {
-            mix_color.resize(l, Vec4::ONE);
-        }
-
-        mesh = mesh.with_inserted_attribute(ATTRIBUTE_MIX_COLOR, mix_color);
         let mesh = Mesh2dHandle(meshes.add(mesh));
         commands.entity(entity).insert(mesh);
     }
