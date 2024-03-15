@@ -49,8 +49,7 @@ fn startup(
 
     let map = Map::builder(
         // Map size
-        //uvec2(100, 100),
-        uvec2(3, 3),
+        uvec2(100, 100),
         // Tile atlas
         asset_server.load("iso_256x128.png"),
         // Tile size

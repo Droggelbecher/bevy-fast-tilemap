@@ -149,13 +149,18 @@ impl MapUniform {
         }
         self.world_size = high - low;
 
+        // Increase world size by one tile total such that overhangs are fully visible
+        self.world_size += self.tile_size;
+
         // World offset
         //
         // `map.projection` keeps the map coordinate (0, 0) at the world coordinate (0, 0).
         // However after projection we may want the (0, 0) tile to map to a different position than
         // say the top left corner (eg for an iso projection it might be vertically centered).
         // We use `low` from above to figure out how to correctly translate here.
-        self.world_offset = vec2(-0.5, -0.5) * self.world_size - low;
+        //
+        // Move by half a tile so overhangs are not cut off
+        self.world_offset = vec2(-0.5, -0.5) * self.world_size - low + self.tile_size / 2.0;
     }
 
     /// Return true iff this update made the uniform ready

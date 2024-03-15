@@ -179,6 +179,10 @@ fn sample_tile(
         || rect_offset.y < -max_overhang.y - 1.0
         || rect_offset.x > (map.tile_size.x + max_overhang.x + 1.0)
         || rect_offset.y > (map.tile_size.y + max_overhang.y + 1.0)
+    //if rect_offset.x < -max_overhang.x
+    //    || rect_offset.y < -max_overhang.y
+    //    || rect_offset.x >= (map.tile_size.x + max_overhang.x)
+    //    || rect_offset.y >= (map.tile_size.y + max_overhang.y)
     {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
@@ -207,8 +211,6 @@ fn world_to_tile_and_offset(
     // Map position including fractional part
     var pos = world_to_map(map, world_position);
 
-    pos = clamp(pos, vec2<f32>(0.0, 0.0), vec2<f32>(map.map_size) + vec2<f32>(1.0, 1.0));
-
     // Integer part of map position (tile coordinate)
     var tile = floor(pos);
     out.tile = vec2<i32>(tile);
@@ -222,7 +224,6 @@ fn world_to_tile_and_offset(
 
 ///
 fn get_tile_index(map_position: vec2<i32>) -> u32 {
-    //return u32(textureLoad(map_texture, map_position).r);
     return map_texture[map_position.y * i32(map.map_size.x) + map_position.x];
 }
 
@@ -417,8 +418,16 @@ fn fragment(
     var color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     var pos = world_to_tile_and_offset(world_position);
     var index = get_tile_index(pos.tile);
+    var is_valid = is_valid_tile(map, pos.tile);
+    var sample_color = color;
 
-    var sample_color = sample_tile(map, index, pos.offset);
+    if is_valid {
+        sample_color = sample_tile(map, index, pos.offset);
+    }
+    else {
+        // for invalid tile, assume low index so everything overlaps in dominance rendering
+        index = 0u;
+    }
 
     #ifdef PERSPECTIVE_UNDERHANGS
     if sample_color.a < 1.0 {
@@ -426,7 +435,7 @@ fn fragment(
     }
     #endif // PERSPECTIVE_UNDERHANGS
 
-    if is_valid_tile(map, pos.tile) {
+    if is_valid {
         color = blend(color, sample_color);
     }
 
