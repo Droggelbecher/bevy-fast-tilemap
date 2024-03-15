@@ -55,13 +55,13 @@ fn startup(
 
     let map = Map::builder(
         // Map size
-        uvec2(1024, 1024),
+        uvec2(128, 128),
         // Tile atlas
         tiles_texture,
         // Tile Size
         vec2(16., 16.),
     )
-    .build();
+    .build_and_set(|_| 2);
 
     commands.spawn(MapBundleManaged::new(map, materials.as_mut()));
 }
@@ -72,6 +72,9 @@ fn change_map(mut materials: ResMut<Assets<Map>>, maps: Query<&Handle<Map>>) {
 
     for map_handle in maps.iter() {
         let map = materials.get_mut(map_handle).unwrap();
+        map.map_uniform
+            .apply_transform(GlobalTransform::from_translation(Vec3::new(0., 0., 0.)));
+        /*
         let mut m = map.indexer_mut();
 
         let k = rng.gen_range(5..50);
@@ -84,5 +87,6 @@ fn change_map(mut materials: ResMut<Assets<Map>>, maps: Query<&Handle<Map>>) {
                 m.set(x, y, i);
             }
         }
+        */
     }
 } // fn change_map

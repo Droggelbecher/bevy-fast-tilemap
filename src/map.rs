@@ -22,7 +22,7 @@ pub struct Map {
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
     #[uniform(0)]
-    pub(crate) map_uniform: MapUniform,
+    pub map_uniform: MapUniform,
 
     /// Texture containing the tile IDs (one per each pixel)
     #[storage(100, read_only)]
@@ -202,12 +202,26 @@ impl Map {
     }
 
     pub(crate) fn update_inverse_projection(&mut self) {
-        self.map_uniform.inverse_projection = dmat2(
+        let projection2d = dmat2(
             self.map_uniform.projection.x_axis.xy().as_dvec2(),
             self.map_uniform.projection.y_axis.xy().as_dvec2(),
-        )
-        .inverse()
-        .as_mat2();
+        );
+
+        self.map_uniform.inverse_projection = projection2d.inverse().as_mat2();
+
+        info!(
+            "Inverse projection: {:?}",
+            self.map_uniform.inverse_projection
+        );
+        info!("Projection: {:?}", self.map_uniform.projection);
+        info!(
+            "Inverse * Projection: {:?}",
+            self.map_uniform.inverse_projection * projection2d.as_mat2()
+        );
+        info!(
+            "Is Identity: {:?}",
+            self.map_uniform.inverse_projection * projection2d.as_mat2() == Mat2::IDENTITY
+        );
 
         // Iterate through the four "straight" neighboring map directions, and figure
         // out which of these have negative Z-values after projection to the world.

@@ -175,14 +175,30 @@ fn sample_tile(
 
     // Outside of "our" part of the padding, dont render anything as part of this tile,
     // as it might be used for overhang of a neighbouring tile in the tilemap
-    if rect_offset.x < -max_overhang.x - 1.0
-        || rect_offset.y < -max_overhang.y - 1.0
-        || rect_offset.x > (map.tile_size.x + max_overhang.x + 1.0)
-        || rect_offset.y > (map.tile_size.y + max_overhang.y + 1.0)
-    //if rect_offset.x < -max_overhang.x
-    //    || rect_offset.y < -max_overhang.y
-    //    || rect_offset.x >= (map.tile_size.x + max_overhang.x)
-    //    || rect_offset.y >= (map.tile_size.y + max_overhang.y)
+
+    // TODO XXX DEBUG
+    if rect_offset.x < -max_overhang.x {
+        // RED
+        // found by trial and error:
+        // rect.offset.x ~= -1/50_000 for high x (right, ~64*16=1024),
+        // closer to zero farther left
+        return vec4<f32>(-rect_offset.x * 50000.0, 0.0, 0.0, 1.0);
+    }
+    if rect_offset.y < -max_overhang.y {
+        // GREEN
+        return vec4<f32>(0.0, 1.0, 0.0, 1.0);
+    }
+    if rect_offset.x >= (map.tile_size.x + max_overhang.x) {
+        return vec4<f32>(0.0, 0.0, 1.0, 1.0);
+    }
+    if rect_offset.y >= (map.tile_size.y + max_overhang.y) {
+        return vec4<f32>(1.0, 0.0, 1.0, 1.0);
+    }
+
+    if rect_offset.x < -max_overhang.x
+        || rect_offset.y < -max_overhang.y
+        || rect_offset.x >= (map.tile_size.x + max_overhang.x)
+        || rect_offset.y >= (map.tile_size.y + max_overhang.y)
     {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }

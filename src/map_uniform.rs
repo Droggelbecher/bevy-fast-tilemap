@@ -161,6 +161,8 @@ impl MapUniform {
         //
         // Move by half a tile so overhangs are not cut off
         self.world_offset = vec2(-0.5, -0.5) * self.world_size - low + self.tile_size / 2.0;
+        info!("world_size: {:?}", self.world_size);
+        info!("world_offset: {:?}", self.world_offset);
     }
 
     /// Return true iff this update made the uniform ready
@@ -175,7 +177,7 @@ impl MapUniform {
         true
     }
 
-    pub(crate) fn apply_transform(&mut self, transform: GlobalTransform) {
+    pub fn apply_transform(&mut self, transform: GlobalTransform) {
         let affine = transform.compute_transform().compute_affine();
         self.global_transform_matrix = affine.matrix3.into();
         self.global_transform_translation = affine.translation.into();
@@ -183,6 +185,19 @@ impl MapUniform {
         let inverse = affine.inverse();
         self.global_inverse_transform_matrix = inverse.matrix3.into();
         self.global_inverse_transform_translation = inverse.translation.into();
+
+        //info!("G: {:?}", self.global_transform_matrix);
+        //info!("t_G: {:?}", self.global_transform_translation);
+        //info!("G_inv: {:?}", self.global_inverse_transform_matrix);
+        //info!("t_G_inv: {:?}", self.global_inverse_transform_translation);
+
+        // Apply transform to its inverse to check if it's correct
+        //let id = self.global_transform_matrix * self.global_inverse_transform_matrix;
+        //let t_id = self.global_transform_translation + self.global_inverse_transform_translation;
+        //info!("id: {:?}", id);
+        //info!("t_id: {:?}", t_id);
+        //info!("t_G == t_G_inv: {:?}", self.global_transform_translation == self.global_inverse_transform_translation);
+        //info!("G * G_inv == I: {:?}", id == Mat3::from_diagonal(Vec3::splat(1.0)));
     }
 
     fn update_n_tiles(&mut self) {
