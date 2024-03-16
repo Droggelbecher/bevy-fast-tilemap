@@ -41,7 +41,7 @@ where
     pub(crate) map_uniform: MapUniform,
 
     #[uniform(1)]
-    pub(crate) user_data: UserData,
+    pub user_data: UserData,
 
     /// Texture containing the tile IDs (one per each pixel)
     #[storage(100, read_only)]

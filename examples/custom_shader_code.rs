@@ -4,7 +4,7 @@
 
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    math::{ivec2, uvec2, vec2},
+    math::{uvec2, vec2},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderType},
     window::PresentMode,
@@ -22,7 +22,7 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 
 #[derive(Debug, Clone, Default, Reflect, AsBindGroup, ShaderType)]
 struct UserData {
-    cursor_position: IVec2,
+    cursor_position: UVec2,
 }
 
 fn main() {
@@ -48,7 +48,7 @@ fn main() {
 
                 user_data_struct: Some(
                     r#"
-                    cursor_position: vec2<i32>,
+                    cursor_position: vec2<u32>,
                     "#
                     .to_string(),
                 ),
@@ -83,8 +83,11 @@ fn main() {
                         color = color * vec4(1.0, 0.0, 0.0, 1.0);
                     }
 
-                    if tile_position.x == user_data.cursor_position.x && tile_position.y == user_data.cursor_position.y {
-                        color = color * vec4(10.0, 10.0, 10.0, 1.0);
+                    if u32(tile_position.x) == user_data.cursor_position.x && u32(tile_position.y) == user_data.cursor_position.y {
+                        // Highlight the hovered tile ("cursor position") with a white glow
+
+                        var v = (sin(animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
+                        color = color * vec4(v, v, v, 1.0);
                     }
                     "#
                     .to_string(),
@@ -93,7 +96,7 @@ fn main() {
             },
         ))
         .add_systems(Startup, startup)
-        .add_systems(Update, touch_map_attributes)
+        .add_systems(Update, (touch_map_attributes, highlight_hovered))
         .run();
 }
 
@@ -113,7 +116,7 @@ fn startup(
         vec2(256.0, 128.0),
     )
     .with_user_data(UserData {
-        cursor_position: ivec2(50, 50),
+        cursor_position: uvec2(50, 50),
     })
     .with_padding(vec2(256.0, 128.0), vec2(256.0, 128.0), vec2(256.0, 128.0))
     // "Perspective" overhang draws the overlap of tiles depending on their "depth" that is the
@@ -160,3 +163,36 @@ fn touch_map_attributes(mut map_query: Query<&mut MapAttributes>) {
         map.as_mut();
     }
 }
+
+/// Highlight the currently hovered tile red, reset all other tiles
+fn highlight_hovered(
+    mut cursor_moved_events: EventReader<CursorMoved>,
+    mut camera_query: Query<(&GlobalTransform, &Camera), With<OrthographicProjection>>,
+    maps: Query<&Handle<Map<UserData>>>,
+
+    // We'll actually change the map contents for highlighting
+    mut materials: ResMut<Assets<Map<UserData>>>,
+) {
+    for event in cursor_moved_events.read() {
+        for map_handle in maps.iter() {
+            let map = materials.get_mut(map_handle).unwrap();
+
+            for (global, camera) in camera_query.iter_mut() {
+                // Translate viewport coordinates to world coordinates
+                if let Some(world) = camera
+                    .viewport_to_world(global, event.position)
+                    .map(|ray| ray.origin.truncate())
+                {
+                    // The map can convert between world coordinates and map coordinates for us
+                    let coord = map.world_to_map(world);
+
+                    let coord = coord
+                        .as_uvec2()
+                        .clamp(uvec2(0, 0), map.map_size() - uvec2(1, 1));
+
+                    map.user_data.cursor_position = coord;
+                } // if Some(world)
+            } // for (global, camera)
+        } // for map
+    } // for event
+} // highlight_hovered
