@@ -1,6 +1,10 @@
 #import bevy_sprite::mesh2d_bindings::mesh
 #import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
+struct UserData {
+    //#[user_data_struct]
+}
+
 struct Map {
     /// Size of the map, in tiles.
     /// Will be derived from underlying map texture.
@@ -57,6 +61,9 @@ struct Map {
 @group(2) @binding(0)
 var<uniform> map: Map;
 
+@group(2) @binding(1)
+var<uniform> user_data: UserData;
+
 @group(2) @binding(100)
 var<storage> map_texture: array<u32>;
 
@@ -72,6 +79,7 @@ struct Vertex {
     @location(0) position: vec3<f32>,
     @location(1) map_position: vec2<f32>,
     @location(2) mix_color: vec4<f32>,
+    @location(3) animation_state: f32,
 };
 
 struct VertexOutput {
@@ -81,6 +89,7 @@ struct VertexOutput {
     @location(0) world_position: vec4<f32>,
     @location(1) map_position: vec2<f32>,
     @location(2) mix_color: vec4<f32>,
+    @location(3) animation_state: f32,
 }
 
 /// Custom vertex shader for passing along the UV coordinate
@@ -94,6 +103,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
     out.mix_color = v.mix_color;
     out.map_position = v.map_position;
+    out.animation_state = v.animation_state;
     return out;
 }
 
@@ -119,8 +129,9 @@ fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -
 /// tile_offset: Offset from tile anchor point in pixel/world coordinates
 fn sample_tile(
     map: Map,
-    tile_index: u32,
-    tile_offset: vec2<f32>,
+    tile_index_: u32,
+    pos: MapPosition,
+    animation_state: f32,
 ) -> vec4<f32> {
 
     /*
@@ -143,6 +154,13 @@ fn sample_tile(
 
     */
 
+    // Mutable copy of the parameters so pre_sample_code below can change these if necessary
+    var tile_index = tile_index_;
+    var tile_offset = pos.offset;
+    var tile_position = pos.tile;
+
+    //#[pre_sample_code]
+
     var tile_start = atlas_index_to_position(map, tile_index);
     var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;
     var total_offset = tile_start + rect_offset;
@@ -164,6 +182,8 @@ fn sample_tile(
     var color = textureSample(
         atlas_texture, atlas_sampler, total_offset / map.atlas_size
     );
+
+    //#[post_sample_code]
 
     return color;
 }
@@ -202,20 +222,22 @@ fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
 /// tile_index: Tile index in the atlas
 /// pos: The original map position
 /// tile_offset: The offset of the tile (in number of whole tiles) to sample from
-fn sample_neighbor_tile_index(tile_index: u32, pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+fn sample_neighbor_tile_index(tile_index: u32, pos_: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
     // Position in the neighboring tile (in world coordinates),
     // that matches 'pos' in the original tile
 
     // TODO: Consider precomputing this before shader instantiation for the 8 possible offsets.
     var overhang = (map.projection * vec3<f32>(vec2<f32>(-tile_offset), 0.0)).xy * map.tile_size;
 
-    var offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
-    return sample_tile(map, tile_index, offset);
+    var pos = pos_;
+    pos.tile = pos.tile + tile_offset;
+    pos.offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
+    return sample_tile(map, tile_index, pos, animation_state);
 }
 
 /// pos: The map position to sample
 /// tile_offset: The offset of the tile (in number of whole tiles) to sample from
-fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
     // integral position of the neighbouring tile
     var tile = pos.tile + tile_offset;
     if !is_valid_tile(map, tile) {
@@ -224,10 +246,10 @@ fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
 
     // kind of tile being displayed at that position
     var tile_index = get_tile_index(tile);
-    return sample_neighbor_tile_index(tile_index, pos, tile_offset);
+    return sample_neighbor_tile_index(tile_index, pos, tile_offset, animation_state);
 }
 
-fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>) -> vec4<f32> {
+fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
     // integral position of the neighbouring tile
     var tile = pos.tile + tile_offset;
     if !is_valid_tile(map, tile) {
@@ -237,13 +259,13 @@ fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>) -
     // kind of tile being displayed at that position
     var tile_index = get_tile_index(tile);
     if tile_index >= index {
-        return sample_neighbor_tile_index(tile_index, pos, tile_offset);
+        return sample_neighbor_tile_index(tile_index, pos, tile_offset, animation_state);
     }
 
     return vec4<f32>(0.0, 0.0, 0.0, 0.0);
 }
 
-fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) -> vec4<f32> {
+fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition, animation_state: f32) -> vec4<f32> {
     var max_index = min(map.n_tiles.x * map.n_tiles.y, index + map.max_overhang_levels);
     var c = color;
 
@@ -254,16 +276,16 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
         if idx >= max_index { break; }
 
         // first render all the diagonal overhangs
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1)));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1)));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1, -1)));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1), animation_state));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1), animation_state));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1, -1), animation_state));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  1), animation_state));
 
         // Now all the orthogonal ones
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0)));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0)));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1)));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1)));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0), animation_state));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0), animation_state));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1), animation_state));
+        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1), animation_state));
 
         idx++;
     }
@@ -274,7 +296,7 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition) ->
 /// Render underhangs for perspective projection
 /// color: The color of the current fragment so far
 /// pos: The position of the current fragment as map position
-fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32> {
+fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition, animation_state: f32) -> vec4<f32> {
     var c = color;
 
     // Form is PERSPECTIVE_UNDER_{X}{Y}
@@ -283,74 +305,74 @@ fn render_perspective_underhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32
     // P: Positive (1)
     // Z: Zero (0)
     #ifdef PERSPECTIVE_UNDER_NN
-        c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_NP
-        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_PN
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_PP
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_ZN
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_NZ
-        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_ZP
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_PZ
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0), animation_state));
     #endif
 
     return c;
 }
 
 
-fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition) -> vec4<f32> {
+fn render_perspective_overhangs(color: vec4<f32>, pos: MapPosition, animation_state: f32) -> vec4<f32> {
     var c = color;
 
     #ifdef PERSPECTIVE_UNDER_ZN
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0,  1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_NZ
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  0), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_ZP
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  0, -1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_PZ
-        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  0), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_NN
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1,  1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_NP
-        c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>(  1, -1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_PN
-        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1,  1), animation_state));
     #endif
 
     #ifdef PERSPECTIVE_UNDER_PP
-        c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1)));
+        c = blend(c, sample_neighbor(pos, vec2<i32>( -1, -1), animation_state));
     #endif
 
     return c;
@@ -388,7 +410,7 @@ fn fragment(
     var sample_color = color;
 
     if is_valid {
-        sample_color = sample_tile(map, index, pos.offset);
+        sample_color = sample_tile(map, index, pos, in.animation_state);
     }
     else {
         // for invalid tile, assume low index so (almost) everything overlaps in dominance rendering
@@ -397,7 +419,7 @@ fn fragment(
 
     #ifdef PERSPECTIVE_UNDERHANGS
     if sample_color.a < 1.0 {
-        color = render_perspective_underhangs(color, pos);
+        color = render_perspective_underhangs(color, pos, in.animation_state);
     }
     #endif // PERSPECTIVE_UNDERHANGS
 
@@ -406,11 +428,11 @@ fn fragment(
     }
 
     #ifdef DOMINANCE_OVERHANGS
-        color = render_dominance_overhangs(color, index, pos);
+        color = render_dominance_overhangs(color, index, pos, in.animation_state);
     #endif
 
     #ifdef PERSPECTIVE_OVERHANGS
-        color = render_perspective_overhangs(color, pos);
+        color = render_perspective_overhangs(color, pos, in.animation_state);
     #endif
 
     color = color * in.mix_color;
