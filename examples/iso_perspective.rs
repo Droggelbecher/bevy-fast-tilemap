@@ -83,16 +83,6 @@ fn startup(
     });
 } // startup
 
-/// Fill the map with a random pattern
-fn init_map(m: &mut MapIndexer) {
-    let mut rng = rand::thread_rng();
-    for y in 0..m.size().y {
-        for x in 0..m.size().x {
-            m.set(x, y, rng.gen_range(1..4));
-        }
-    }
-}
-
 /// Highlight the currently hovered tile red, reset all other tiles
 fn show_coordinate(
     mut cursor_moved_events: EventReader<CursorMoved>,
