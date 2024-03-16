@@ -13,15 +13,6 @@ use crate::{
     shader::{SHADER_CODE, SHADER_HANDLE},
 };
 
-/*
-pub struct FastTileMapPlugin<UserData = DefaultUserData> {
-    pub pre_sample_code: Option<String>,
-    pub post_sample_code: Option<String>,
-    pub user_data_struct: Option<String>,
-    pub _user_data: std::marker::PhantomData<UserData>,
-}
-*/
-
 /// Plugin for fast tilemap.
 /// Add this to you app and then spawn one or multiple maps use [`crate::map_builder::MapBuilder`].
 pub type FastTileMapPlugin = CustomFastTileMapPlugin<DefaultUserData>;
@@ -35,19 +26,6 @@ pub struct CustomFastTileMapPlugin<UserData = DefaultUserData> {
     pub user_data_struct: Option<String>,
     pub _user_data: std::marker::PhantomData<UserData>,
 }
-
-/*
-impl Default for CustomFastTileMapPlugin<DefaultUserData> {
-    fn default() -> Self {
-        Self {
-            pre_sample_code: None,
-            post_sample_code: None,
-            user_data_struct: None,
-            _user_data: Default::default(),
-        }
-    }
-}
-*/
 
 impl<UserData> Plugin for CustomFastTileMapPlugin<UserData>
 where
