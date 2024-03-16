@@ -1,13 +1,21 @@
 use crate::map::{Map, MapAttributes, MapLoading, MeshManagedByMap};
-use bevy::{prelude::*, sprite::Mesh2dHandle};
+use bevy::{
+    prelude::*,
+    render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
+    sprite::Mesh2dHandle,
+};
 
 // Bundle of components you should typically have for a map.
 #[derive(Bundle, Clone, Default)]
-pub struct MapBundleUnmanaged {
+pub struct MapBundleUnmanaged<UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     pub loading: MapLoading,
     pub attributes: MapAttributes,
 
-    pub material: Handle<Map>,
+    pub material: Handle<Map<UserData>>,
     pub mesh: Mesh2dHandle,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
@@ -16,8 +24,12 @@ pub struct MapBundleUnmanaged {
     pub view_visibility: ViewVisibility,
 }
 
-impl MapBundleUnmanaged {
-    pub fn new(map: Map, materials: &mut Assets<Map>) -> Self {
+impl<UserData> MapBundleUnmanaged<UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
+    pub fn new(map: Map<UserData>, materials: &mut Assets<Map<UserData>>) -> Self {
         Self {
             material: materials.add(map),
             ..default()
@@ -27,11 +39,15 @@ impl MapBundleUnmanaged {
 
 // Bundle of components you should typically have for a map.
 #[derive(Bundle, Clone, Default)]
-pub struct MapBundleManaged {
+pub struct MapBundleManaged<UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     pub loading: MapLoading,
     pub attributes: MapAttributes,
 
-    pub material: Handle<Map>,
+    pub material: Handle<Map<UserData>>,
     pub mesh: Mesh2dHandle,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
@@ -42,8 +58,12 @@ pub struct MapBundleManaged {
     pub mesh_managed_by_map: MeshManagedByMap,
 }
 
-impl MapBundleManaged {
-    pub fn new(map: Map, materials: &mut Assets<Map>) -> Self {
+impl<UserData> MapBundleManaged<UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
+    pub fn new(map: Map<UserData>, materials: &mut Assets<Map<UserData>>) -> Self {
         Self {
             material: materials.add(map),
             ..default()

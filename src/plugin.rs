@@ -2,7 +2,11 @@ use crate::map::{
     apply_map_transforms, configure_loaded_assets, log_map_events, update_loading_maps,
     update_map_vertex_attributes,
 };
-use bevy::{prelude::*, sprite::Material2dPlugin};
+use bevy::{
+    prelude::*,
+    render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
+    sprite::Material2dPlugin,
+};
 
 use crate::{
     map::Map,
@@ -12,17 +16,29 @@ use crate::{
 /// Plugin for fast tilemap.
 /// Add this to you app and then spawn one or multiple maps use [`crate::map_builder::MapBuilder`].
 #[derive(Default)]
-pub struct FastTileMapPlugin {
+pub struct FastTileMapPlugin<UserData> {
     pub pre_sample_code: Option<String>,
     pub post_sample_code: Option<String>,
+    pub user_data_struct: Option<String>,
+    pub _user_data: std::marker::PhantomData<UserData>,
 }
 
-impl Plugin for FastTileMapPlugin {
+impl<UserData> Plugin for FastTileMapPlugin<UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     fn build(&self, app: &mut App) {
-        app.add_plugins(Material2dPlugin::<Map>::default());
+        app.add_plugins(Material2dPlugin::<Map<UserData>>::default());
         let mut shaders = app.world.resource_mut::<Assets<Shader>>();
 
         let mut code = SHADER_CODE.to_string();
+        let user_data_struct = self
+            .user_data_struct
+            .clone()
+            .unwrap_or("x: u32,".to_string());
+        code = code.replace("//#[user_data_struct]", &user_data_struct);
+
         if let Some(pre_sample_code) = &self.pre_sample_code {
             code = code.replace("//#[pre_sample_code]", pre_sample_code);
         }
@@ -34,10 +50,15 @@ impl Plugin for FastTileMapPlugin {
         app.add_systems(
             Update,
             (
-                (configure_loaded_assets, update_loading_maps, log_map_events).chain(),
-                update_map_vertex_attributes,
+                (
+                    configure_loaded_assets::<UserData>,
+                    update_loading_maps::<UserData>,
+                    log_map_events::<UserData>,
+                )
+                    .chain(),
+                update_map_vertex_attributes::<UserData>,
             ),
         );
-        app.add_systems(Update, apply_map_transforms);
+        app.add_systems(Update, apply_map_transforms::<UserData>);
     }
 }

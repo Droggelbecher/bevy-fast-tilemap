@@ -3,6 +3,7 @@
 
 struct UserData {
     //#[user_data_struct]
+    //x: u32,
 }
 
 struct Map {
@@ -57,11 +58,15 @@ struct Map {
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
 
-    user_data: UserData,
+
+    //user_data: UserData,
 };
 
 @group(2) @binding(0)
 var<uniform> map: Map;
+
+@group(2) @binding(1)
+var<uniform> user_data: UserData;
 
 @group(2) @binding(100)
 var<storage> map_texture: array<u32>;
@@ -129,7 +134,8 @@ fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -
 fn sample_tile(
     map: Map,
     tile_index_: u32,
-    tile_offset_: vec2<f32>,
+    //tile_offset_: vec2<f32>,
+    pos: MapPosition,
     animation_state: f32,
 ) -> vec4<f32> {
 
@@ -155,7 +161,8 @@ fn sample_tile(
 
     // Mutable copy of the parameters so pre_sample_code below can change these if necessary
     var tile_index = tile_index_;
-    var tile_offset = tile_offset_;
+    var tile_offset = pos.offset;
+    var tile_position = pos.tile;
 
     //#[pre_sample_code]
 
@@ -220,15 +227,17 @@ fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
 /// tile_index: Tile index in the atlas
 /// pos: The original map position
 /// tile_offset: The offset of the tile (in number of whole tiles) to sample from
-fn sample_neighbor_tile_index(tile_index: u32, pos: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
+fn sample_neighbor_tile_index(tile_index: u32, pos_: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
     // Position in the neighboring tile (in world coordinates),
     // that matches 'pos' in the original tile
 
     // TODO: Consider precomputing this before shader instantiation for the 8 possible offsets.
     var overhang = (map.projection * vec3<f32>(vec2<f32>(-tile_offset), 0.0)).xy * map.tile_size;
 
-    var offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
-    return sample_tile(map, tile_index, offset, animation_state);
+    var pos = pos_;
+    pos.tile = pos.tile + tile_offset;
+    pos.offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
+    return sample_tile(map, tile_index, pos, animation_state);
 }
 
 /// pos: The map position to sample
@@ -406,7 +415,7 @@ fn fragment(
     var sample_color = color;
 
     if is_valid {
-        sample_color = sample_tile(map, index, pos.offset);
+        sample_color = sample_tile(map, index, pos, in.animation_state);
     }
     else {
         // for invalid tile, assume low index so (almost) everything overlaps in dominance rendering
@@ -415,7 +424,7 @@ fn fragment(
 
     #ifdef PERSPECTIVE_UNDERHANGS
     if sample_color.a < 1.0 {
-        color = render_perspective_underhangs(color, pos, animation_state);
+        color = render_perspective_underhangs(color, pos, in.animation_state);
     }
     #endif // PERSPECTIVE_UNDERHANGS
 
@@ -424,11 +433,11 @@ fn fragment(
     }
 
     #ifdef DOMINANCE_OVERHANGS
-        color = render_dominance_overhangs(color, index, pos, animation_state);
+        color = render_dominance_overhangs(color, index, pos, in.animation_state);
     #endif
 
     #ifdef PERSPECTIVE_OVERHANGS
-        color = render_perspective_overhangs(color, pos, animation_state);
+        color = render_perspective_overhangs(color, pos, in.animation_state);
     #endif
 
     color = color * in.mix_color;

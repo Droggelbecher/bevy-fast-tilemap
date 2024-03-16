@@ -4,10 +4,12 @@
 
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    math::{uvec2, vec2},
+    math::{ivec2, uvec2, vec2},
     prelude::*,
+    render::render_resource::{AsBindGroup, ShaderType},
     window::PresentMode,
 };
+
 use bevy_fast_tilemap::{
     bundle::MapBundleManaged, map::MapIndexer, FastTileMapPlugin, Map, MapAttributes, AXONOMETRIC,
 };
@@ -16,6 +18,11 @@ use rand::Rng;
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
+
+#[derive(Debug, Clone, Default, Reflect, AsBindGroup, ShaderType)]
+struct UserData {
+    cursor_position: IVec2,
+}
 
 fn main() {
     App::new()
@@ -33,10 +40,23 @@ fn main() {
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
-            FastTileMapPlugin {
+            FastTileMapPlugin::<UserData> {
                 // This is how you can insert custom code snippeds into tilemap_shader.wgsl.
                 // Note that the code is inserted verbatim, so it requires some understanding of
                 // the inner workings of the shader which may also change in the future.
+
+                user_data_struct: Some(
+                    r#"
+                    cursor_position: vec2<i32>,
+                    "#
+                    .to_string(),
+                ),
+
+                // This code is inserted just before sampling a tile from the texture.
+                // Use this for example to extract some extra information out of the tile index
+                // or change the tile offset to be sampled.
+                // Note that you can even declare variables here to refer to in `post_sample_code`,
+                // as we do with "special".
                 pre_sample_code: Some(
                     r#"
                     // Extract the "special bit" from the index
@@ -54,12 +74,16 @@ fn main() {
                     .to_string(),
                 ),
 
-                // After computation of the base color, apply a red tint for special tiles.
+                // After computation of the base color (the actual sampling step), we apply a red tint for "special" tiles.
                 post_sample_code: Some(
                     r#"
                     if special {
                         // Special tiles are tinted red
                         color = color * vec4(1.0, 0.0, 0.0, 1.0);
+                    }
+
+                    if tile_position.x == user_data.cursor_position.x && tile_position.y == user_data.cursor_position.y {
+                        color = color * vec4(10.0, 10.0, 10.0, 1.0);
                     }
                     "#
                     .to_string(),
@@ -75,11 +99,11 @@ fn main() {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<Map>>,
+    mut materials: ResMut<Assets<Map<UserData>>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let map = Map::builder(
+    let map = Map::<UserData>::builder(
         // Map size
         uvec2(100, 100),
         // Tile atlas
@@ -87,6 +111,9 @@ fn startup(
         // Tile size
         vec2(256.0, 128.0),
     )
+    .with_user_data(UserData {
+        cursor_position: ivec2(50, 50),
+    })
     .with_padding(vec2(256.0, 128.0), vec2(256.0, 128.0), vec2(256.0, 128.0))
     // "Perspective" overhang draws the overlap of tiles depending on their "depth" that is the
     // y-axis of their world position (tiles higher up are considered further away).
@@ -94,14 +121,14 @@ fn startup(
     .with_perspective_overhang()
     .build_and_initialize(init_map);
 
-    commands.spawn(MapBundleManaged {
+    commands.spawn(MapBundleManaged::<UserData> {
         material: materials.add(map),
         ..Default::default()
     });
 } // startup
 
 /// Fill the map with a random pattern
-fn init_map(m: &mut MapIndexer) {
+fn init_map(m: &mut MapIndexer<UserData>) {
     let mut rng = rand::thread_rng();
     for y in 0..m.size().y {
         for x in 0..m.size().x {

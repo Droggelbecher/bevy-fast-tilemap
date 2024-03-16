@@ -1,13 +1,13 @@
 use bevy::{
     math::{vec2, vec3, Vec3Swizzles},
     prelude::*,
-    render::render_resource::{AsBindGroup, ShaderSize, ShaderType},
+    render::render_resource::{AsBindGroup, ShaderType},
 };
 
 use crate::tile_projection::IDENTITY;
 
 #[derive(ShaderType, Clone, Debug, Reflect, AsBindGroup)]
-pub struct MapUniform<UserData: ShaderSize> {
+pub struct MapUniform {
     /// Size of the map, in tiles.
     /// Will be derived from underlying map texture.
     pub(crate) map_size: UVec2,
@@ -68,14 +68,9 @@ pub struct MapUniform<UserData: ShaderSize> {
     /// (derived) global world pos -> fractional 2d map index
     pub(crate) global_inverse_transform_matrix: Mat3,
     pub(crate) global_inverse_transform_translation: Vec3,
-
-    pub(crate) user_data: UserData,
 }
 
-impl<UserData> Default for MapUniform<UserData>
-where
-    UserData: Default + ShaderSize,
-{
+impl Default for MapUniform {
     fn default() -> Self {
         Self {
             map_size: default(),
@@ -95,15 +90,11 @@ where
             inverse_projection: default(),
             global_inverse_transform_matrix: default(),
             global_inverse_transform_translation: default(),
-            user_data: default(),
         }
     }
 }
 
-impl<UserData> MapUniform<UserData>
-where
-    UserData: ShaderSize,
-{
+impl MapUniform {
     pub(crate) fn map_size(&self) -> UVec2 {
         self.map_size
     }

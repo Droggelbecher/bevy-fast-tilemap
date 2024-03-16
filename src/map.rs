@@ -38,7 +38,10 @@ where
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
     #[uniform(0)]
-    pub(crate) map_uniform: MapUniform<UserData>,
+    pub(crate) map_uniform: MapUniform,
+
+    #[uniform(1)]
+    pub(crate) user_data: UserData,
 
     /// Texture containing the tile IDs (one per each pixel)
     #[storage(100, read_only)]
@@ -87,7 +90,7 @@ pub struct MapAttributes {
 }
 
 impl MapAttributes {
-    fn set_mix_color(attributes: Option<&MapAttributes>, mesh: &mut Mesh, _map: &Map) {
+    fn set_mix_color(attributes: Option<&MapAttributes>, mesh: &mut Mesh) {
         let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
 
         let mut v = vec![Vec4::ONE; l];
@@ -103,7 +106,20 @@ impl MapAttributes {
         mesh.insert_attribute(ATTRIBUTE_MIX_COLOR, v);
     }
 
-    fn set_map_position(attributes: Option<&MapAttributes>, mesh: &mut Mesh, map: &Map) {
+    fn set_map_position<UserData>(
+        attributes: Option<&MapAttributes>,
+        mesh: &mut Mesh,
+        map: &Map<UserData>,
+    ) where
+        UserData: AsBindGroup
+            + Reflect
+            + Clone
+            + Default
+            + TypePath
+            + ShaderType
+            + WriteInto
+            + ShaderSize,
+    {
         let mut v: Vec<_> = mesh
             .attribute(Mesh::ATTRIBUTE_POSITION)
             .unwrap()
@@ -125,9 +141,27 @@ impl MapAttributes {
 
         mesh.insert_attribute(ATTRIBUTE_MAP_POSITION, v);
     }
+
+    fn set_animation_state(attributes: Option<&MapAttributes>, mesh: &mut Mesh, time: &Time) {
+        let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
+        let mut v = vec![time.elapsed_seconds_wrapped(); l];
+        if let Some(attr) = attributes {
+            if attr.animation_state.len() > v.len() {
+                v.resize(attr.animation_state.len(), 0.0);
+            }
+            for (i, s) in attr.animation_state.iter().enumerate() {
+                v[i] = *s;
+            }
+        }
+        mesh.insert_attribute(ATTRIBUTE_ANIMATION_STATE, v);
+    }
 }
 
-impl Material2d for Map {
+impl<UserData> Material2d for Map<UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     fn vertex_shader() -> ShaderRef {
         ShaderRef::Handle(SHADER_HANDLE)
     }
@@ -202,14 +236,22 @@ pub struct MeshManagedByMap;
 #[reflect(Component)]
 pub struct MapLoading;
 
-impl Map {
+impl<UserData> Map<UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     /// Create a [`MapBuilder`] for configuring your map.
-    pub fn builder(map_size: UVec2, atlas_texture: Handle<Image>, tile_size: Vec2) -> MapBuilder {
+    pub fn builder(
+        map_size: UVec2,
+        atlas_texture: Handle<Image>,
+        tile_size: Vec2,
+    ) -> MapBuilder<UserData> {
         MapBuilder::new(map_size, atlas_texture, tile_size)
     }
 
-    pub fn indexer_mut(&mut self) -> MapIndexer {
-        MapIndexer { map: self }
+    pub fn indexer_mut(&mut self) -> MapIndexer<UserData> {
+        MapIndexer::<UserData> { map: self }
     }
 
     /// Dimensions of this map in tiles.
@@ -303,11 +345,19 @@ impl Map {
 // Internally holds a mutable reference to the underlying texture.
 // See [`Map::get_mut`] for a usage example.
 #[derive(Debug)]
-pub struct MapIndexer<'a> {
-    pub(crate) map: &'a mut Map,
+pub struct MapIndexer<'a, UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
+    pub(crate) map: &'a mut Map<UserData>,
 }
 
-impl<'a> MapIndexer<'a> {
+impl<'a, UserData> MapIndexer<'a, UserData>
+where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     /// Size of the map being indexed.
     pub fn size(&self) -> UVec2 {
         self.map.map_size()
@@ -370,12 +420,15 @@ impl<'a> MapIndexer<'a> {
 }
 
 ///
-pub fn configure_loaded_assets(
-    map_materials: ResMut<Assets<Map>>,
+pub fn configure_loaded_assets<UserData>(
+    map_materials: ResMut<Assets<Map<UserData>>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
     mut images: ResMut<Assets<Image>>,
-    map_handles: Query<&Handle<Map>>,
-) {
+    map_handles: Query<&Handle<Map<UserData>>>,
+) where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
             let Some(map) = map_materials.get(map_handle) else {
@@ -414,10 +467,13 @@ pub fn configure_loaded_assets(
     } // for ev
 } // configure_loaded_assets()
 
-pub fn log_map_events(
-    mut ev_asset: EventReader<AssetEvent<Map>>,
-    map_handles: Query<&Handle<Map>>,
-) {
+pub fn log_map_events<UserData>(
+    mut ev_asset: EventReader<AssetEvent<Map<UserData>>>,
+    map_handles: Query<&Handle<Map<UserData>>>,
+) where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
             match ev {
@@ -432,14 +488,14 @@ pub fn log_map_events(
 
 /// Check to see if any maps' assets became available
 /// if so.
-pub fn update_loading_maps(
+pub fn update_loading_maps<UserData>(
     images: Res<Assets<Image>>,
-    mut map_materials: ResMut<Assets<Map>>,
+    mut map_materials: ResMut<Assets<Map<UserData>>>,
     mut maps: Query<
         (
             Entity,
             Option<&MapAttributes>,
-            &Handle<Map>,
+            &Handle<Map<UserData>>,
             Option<&MeshManagedByMap>,
         ),
         With<MapLoading>,
@@ -447,7 +503,10 @@ pub fn update_loading_maps(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     time: Res<Time>,
-) {
+) where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
             continue;
@@ -464,10 +523,10 @@ pub fn update_loading_maps(
                 half_size: map.world_size() / 2.0,
             });
 
-            MapAttributes::set_mix_color(attributes, &mut mesh, &map);
+            MapAttributes::set_mix_color(attributes, &mut mesh);
             MapAttributes::set_map_position(attributes, &mut mesh, &map);
-            // TODO XXX animation state
-                // animation_state.resize(l, time.elapsed_seconds_wrapped());
+            MapAttributes::set_animation_state(attributes, &mut mesh, &time);
+
             let mesh = Mesh2dHandle(meshes.add(mesh));
             commands.entity(entity).insert(mesh);
         }
@@ -477,12 +536,12 @@ pub fn update_loading_maps(
 }
 
 /// Update mesh if MapAttributes change
-pub fn update_map_vertex_attributes(
-    map_materials: ResMut<Assets<Map>>,
+pub fn update_map_vertex_attributes<UserData>(
+    map_materials: ResMut<Assets<Map<UserData>>>,
     maps: Query<
         (
             Entity,
-            &Handle<Map>,
+            &Handle<Map<UserData>>,
             &MapAttributes,
             Option<&Mesh2dHandle>,
             Option<&MeshManagedByMap>,
@@ -492,7 +551,10 @@ pub fn update_map_vertex_attributes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     time: Res<Time>,
-) {
+) where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     for (entity, map_handle, attr, mesh_handle, manage_mesh) in maps.iter() {
         let Some(map) = map_materials.get(map_handle) else {
             warn!("No map material");
@@ -507,20 +569,22 @@ pub fn update_map_vertex_attributes(
             meshes.get(mesh_handle.unwrap().0.clone()).unwrap().clone()
         };
 
-        MapAttributes::set_mix_color(Some(attr), &mut mesh, &map);
+        MapAttributes::set_mix_color(Some(attr), &mut mesh);
         MapAttributes::set_map_position(Some(attr), &mut mesh, &map);
-            // TODO XXX animation state
-                // animation_state.resize(l, time.elapsed_seconds_wrapped());
+        MapAttributes::set_animation_state(Some(attr), &mut mesh, &time);
 
         let mesh = Mesh2dHandle(meshes.add(mesh));
         commands.entity(entity).insert(mesh);
     }
 }
 
-pub fn apply_map_transforms(
-    mut maps: Query<(&Handle<Map>, &GlobalTransform), Changed<GlobalTransform>>,
-    mut map_materials: ResMut<Assets<Map>>,
-) {
+pub fn apply_map_transforms<UserData>(
+    mut maps: Query<(&Handle<Map<UserData>>, &GlobalTransform), Changed<GlobalTransform>>,
+    mut map_materials: ResMut<Assets<Map<UserData>>>,
+) where
+    UserData:
+        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+{
     for (map_handle, transform) in &mut maps {
         let Some(map) = map_materials.get_mut(map_handle) else {
             warn!("No map material");
