@@ -56,9 +56,6 @@ struct Map {
     /// [derived] Inverse of global transform of the entity holding the map as transformation matrix & offset.
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
-
-
-    //user_data: UserData,
 };
 
 @group(2) @binding(0)

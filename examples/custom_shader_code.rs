@@ -11,8 +11,7 @@ use bevy::{
 };
 
 use bevy_fast_tilemap::{
-    bundle::MapBundleManaged, map::MapIndexer, CustomFastTileMapPlugin, Map, MapAttributes,
-    AXONOMETRIC,
+    bundle::MapBundleManaged, map::MapIndexer, CustomFastTileMapPlugin, Map, AXONOMETRIC,
 };
 use rand::Rng;
 
