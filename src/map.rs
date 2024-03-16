@@ -345,7 +345,7 @@ where
 // Internally holds a mutable reference to the underlying texture.
 // See [`Map::get_mut`] for a usage example.
 #[derive(Debug)]
-pub struct MapIndexer<'a, UserData>
+pub struct MapIndexer<'a, UserData = DefaultUserData>
 where
     UserData:
         AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
