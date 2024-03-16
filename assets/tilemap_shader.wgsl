@@ -3,7 +3,6 @@
 
 struct UserData {
     //#[user_data_struct]
-    //x: u32,
 }
 
 struct Map {
@@ -134,7 +133,6 @@ fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -
 fn sample_tile(
     map: Map,
     tile_index_: u32,
-    //tile_offset_: vec2<f32>,
     pos: MapPosition,
     animation_state: f32,
 ) -> vec4<f32> {
