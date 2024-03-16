@@ -85,8 +85,6 @@ where
 #[derive(Component, Default, Clone, Debug)]
 pub struct MapAttributes {
     pub mix_color: Vec<Vec4>,
-    pub map_position: Vec<Vec2>,
-    pub animation_state: Vec<f32>,
 }
 
 impl MapAttributes {
@@ -107,7 +105,7 @@ impl MapAttributes {
     }
 
     fn set_map_position<UserData>(
-        attributes: Option<&MapAttributes>,
+        _attributes: Option<&MapAttributes>,
         mesh: &mut Mesh,
         map: &Map<UserData>,
     ) where
@@ -120,7 +118,7 @@ impl MapAttributes {
             + WriteInto
             + ShaderSize,
     {
-        let mut v: Vec<_> = mesh
+        let v: Vec<_> = mesh
             .attribute(Mesh::ATTRIBUTE_POSITION)
             .unwrap()
             .as_float3()
@@ -128,31 +126,12 @@ impl MapAttributes {
             .iter()
             .map(|p| map.world_to_map(Vec2::new(p[0], p[1])))
             .collect();
-
-        if let Some(attr) = attributes {
-            // set the first elements of v to attr.map_position
-            if attr.map_position.len() > v.len() {
-                v.resize(attr.map_position.len(), Vec2::ZERO);
-            }
-            for (i, p) in attr.map_position.iter().enumerate() {
-                v[i] = *p;
-            }
-        }
-
         mesh.insert_attribute(ATTRIBUTE_MAP_POSITION, v);
     }
 
-    fn set_animation_state(attributes: Option<&MapAttributes>, mesh: &mut Mesh, time: &Time) {
+    fn set_animation_state(_attributes: Option<&MapAttributes>, mesh: &mut Mesh, time: &Time) {
         let l = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len();
-        let mut v = vec![time.elapsed_seconds_wrapped(); l];
-        if let Some(attr) = attributes {
-            if attr.animation_state.len() > v.len() {
-                v.resize(attr.animation_state.len(), 0.0);
-            }
-            for (i, s) in attr.animation_state.iter().enumerate() {
-                v[i] = *s;
-            }
-        }
+        let v = vec![time.elapsed_seconds_wrapped(); l];
         mesh.insert_attribute(ATTRIBUTE_ANIMATION_STATE, v);
     }
 }
@@ -538,16 +517,13 @@ pub fn update_loading_maps<UserData>(
 /// Update mesh if MapAttributes change
 pub fn update_map_vertex_attributes<UserData>(
     map_materials: ResMut<Assets<Map<UserData>>>,
-    maps: Query<
-        (
-            Entity,
-            &Handle<Map<UserData>>,
-            &MapAttributes,
-            Option<&Mesh2dHandle>,
-            Option<&MeshManagedByMap>,
-        ),
-        Changed<MapAttributes>,
-    >,
+    maps: Query<(
+        Entity,
+        &Handle<Map<UserData>>,
+        &MapAttributes,
+        Option<&Mesh2dHandle>,
+        Option<&MeshManagedByMap>,
+    )>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     time: Res<Time>,

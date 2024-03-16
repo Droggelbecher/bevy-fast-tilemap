@@ -12,7 +12,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapAttributes, MapBundleManaged};
+use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
@@ -52,7 +52,6 @@ fn main() {
             },
         ))
         .add_systems(Startup, startup)
-        .add_systems(Update, touch_map_attributes)
         .run();
 }
 
@@ -100,18 +99,4 @@ fn startup(
     };
 
     commands.spawn(bundle).insert(AnimationLayer);
-}
-
-fn touch_map_attributes(mut map_query: Query<&mut MapAttributes>) {
-    for mut map in map_query.iter_mut() {
-        // You can of course set your own animation state here,
-        // which can also be different per vertex (and will be interpolated, like all vertex
-        // attributes).
-        //map.animation_state += time.delta_seconds();
-
-        // Fast-tilemap provides a default animation_state which is time.elapsed_seconds_wrapped().
-        // We still need to mark the attributes changed every frame to trigger a re-upload of the vertices to the GPU,
-        // if we intend to use this timing information.
-        map.as_mut();
-    }
 }
