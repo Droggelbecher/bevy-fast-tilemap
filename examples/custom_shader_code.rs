@@ -11,7 +11,8 @@ use bevy::{
 };
 
 use bevy_fast_tilemap::{
-    bundle::MapBundleManaged, map::MapIndexer, FastTileMapPlugin, Map, MapAttributes, AXONOMETRIC,
+    bundle::MapBundleManaged, map::MapIndexer, CustomFastTileMapPlugin, Map, MapAttributes,
+    AXONOMETRIC,
 };
 use rand::Rng;
 
@@ -40,7 +41,7 @@ fn main() {
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
-            FastTileMapPlugin::<UserData> {
+            CustomFastTileMapPlugin::<UserData> {
                 // This is how you can insert custom code snippeds into tilemap_shader.wgsl.
                 // Note that the code is inserted verbatim, so it requires some understanding of
                 // the inner workings of the shader which may also change in the future.
