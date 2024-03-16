@@ -23,9 +23,8 @@ impl MapBuilder {
                     tile_size,
                     ..default()
                 },
-                // TODO XXX Reset perspective defaults to true
-                perspective_overhangs: false,
-                perspective_underhangs: false,
+                perspective_overhangs: true,
+                perspective_underhangs: true,
                 dominance_overhangs: false,
                 ..default()
             },

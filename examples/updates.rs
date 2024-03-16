@@ -55,7 +55,7 @@ fn startup(
 
     let map = Map::builder(
         // Map size
-        uvec2(128, 128),
+        uvec2(1024, 1024),
         // Tile atlas
         tiles_texture,
         // Tile Size
@@ -66,15 +66,12 @@ fn startup(
     commands.spawn(MapBundleManaged::new(map, materials.as_mut()));
 }
 
-/// Update random patches of tile indices in the map
+/// Update random patches of tile indices in the map.
 fn change_map(mut materials: ResMut<Assets<Map>>, maps: Query<&Handle<Map>>) {
     let mut rng = rand::thread_rng();
 
     for map_handle in maps.iter() {
         let map = materials.get_mut(map_handle).unwrap();
-        map.map_uniform
-            .apply_transform(GlobalTransform::from_translation(Vec3::new(0., 0., 0.)));
-        /*
         let mut m = map.indexer_mut();
 
         let k = rng.gen_range(5..50);
@@ -87,6 +84,5 @@ fn change_map(mut materials: ResMut<Assets<Map>>, maps: Query<&Handle<Map>>) {
                 m.set(x, y, i);
             }
         }
-        */
     }
 } // fn change_map
