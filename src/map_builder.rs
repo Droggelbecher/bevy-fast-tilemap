@@ -100,6 +100,7 @@ impl MapBuilder {
 
     /// Build the map component and immediately initialize the map
     /// data with the given initializer callback.
+    /// The callback will receive a mutable reference to a `MapIndexer`.
     pub fn build_and_initialize<F>(mut self, initializer: F) -> Map
     where
         F: FnOnce(&mut MapIndexer),
@@ -119,6 +120,7 @@ impl MapBuilder {
 
     /// Build the map component and immediately initialize the map
     /// data with the given initializer callback.
+    /// The callback will receive a `UVec2` and return a `u32`.
     pub fn build_and_set<F>(self, mut initializer: F) -> Map
     where
         F: FnMut(UVec2) -> u32,

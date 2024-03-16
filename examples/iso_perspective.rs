@@ -47,6 +47,8 @@ fn startup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
+    let mut rng = rand::thread_rng();
+
     let map = Map::builder(
         // Map size
         uvec2(100, 100),
@@ -60,7 +62,7 @@ fn startup(
     // y-axis of their world position (tiles higher up are considered further away).
     .with_projection(AXONOMETRIC)
     .with_perspective_overhang()
-    .build_and_initialize(init_map);
+    .build_and_set(|_| rng.gen_range(1..4));
 
     commands.spawn(MapBundleManaged {
         material: materials.add(map),
@@ -75,20 +77,11 @@ fn startup(
                 Vec4::new(1.0, 1.0, 1.0, 1.0), // color gets multiplied, so this means no change
                 Vec4::new(0.0, 0.0, 1.0, 1.0),
             ],
+            ..default()
         },
-        ..Default::default()
+        ..default()
     });
 } // startup
-
-/// Fill the map with a random pattern
-fn init_map(m: &mut MapIndexer) {
-    let mut rng = rand::thread_rng();
-    for y in 0..m.size().y {
-        for x in 0..m.size().x {
-            m.set(x, y, rng.gen_range(1..4));
-        }
-    }
-}
 
 /// Highlight the currently hovered tile red, reset all other tiles
 fn show_coordinate(

@@ -61,12 +61,12 @@ fn startup(
         // Tile Size
         vec2(16., 16.),
     )
-    .build();
+    .build_and_set(|_| 2);
 
     commands.spawn(MapBundleManaged::new(map, materials.as_mut()));
 }
 
-/// Update random patches of tile indices in the map
+/// Update random patches of tile indices in the map.
 fn change_map(mut materials: ResMut<Assets<Map>>, maps: Query<&Handle<Map>>) {
     let mut rng = rand::thread_rng();
 

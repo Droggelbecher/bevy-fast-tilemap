@@ -48,7 +48,7 @@ fn startup(
     commands.spawn(Camera2dBundle::default());
 
     let map = Map::builder(
-        uvec2(50, 50),
+        uvec2(64, 64),
         asset_server.load("pixel_tiles_16.png"),
         vec2(16., 16.),
     )
@@ -68,7 +68,7 @@ fn startup(
     });
 
     let map = Map::builder(
-        uvec2(50, 50),
+        uvec2(64, 64),
         asset_server.load("pixel_tiles_16.png"),
         vec2(16., 16.),
     )

@@ -43,13 +43,13 @@ struct Map {
     /// [derived] Offset of the projected map in world coordinates
     world_offset: vec2<f32>,
 
-    /// [derived]
+    /// [derived] Number of tiles in atlas
     n_tiles: vec2<u32>,
 
     /// [derived] local world pos -> fractional 2d map index
     inverse_projection: mat2x2<f32>,
 
-    /// [derived] Iverse of global transform of the entity holding the map as transformation matrix & offset.
+    /// [derived] Inverse of global transform of the entity holding the map as transformation matrix & offset.
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
 };
@@ -70,7 +70,8 @@ var atlas_sampler: sampler;
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
-    @location(1) mix_color: vec4<f32>,
+    @location(1) map_position: vec2<f32>,
+    @location(2) mix_color: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -78,7 +79,8 @@ struct VertexOutput {
     // and `frag coord` when used as a fragment stage input
     @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
-    @location(1) mix_color: vec4<f32>,
+    @location(1) map_position: vec2<f32>,
+    @location(2) mix_color: vec4<f32>,
 }
 
 /// Custom vertex shader for passing along the UV coordinate
@@ -91,31 +93,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.position = mesh2d_position_local_to_clip(model, vec4<f32>(v.position, 1.0));
     out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
     out.mix_color = v.mix_color;
+    out.map_position = v.map_position;
     return out;
-}
-
-/// Map position incl fractional part for this position.
-fn world_to_map(map: Map, world_position: vec2<f32>) -> vec2<f32> {
-    // Steps:
-    // - Apply inverse global transform
-    // - Adjust for `map.world_offset` (where in the mesh tile 0,0 should be)
-    // - Scale according to `map.tile_size`
-    // - Apply inverse map projection for tile distortion (eg iso)
-    var local_world_pos = map.global_inverse_transform_matrix * vec3<f32>(world_position, 0.0) + map.global_inverse_transform_translation;
-    var pos = (local_world_pos.xy - map.world_offset) / map.tile_size;
-    return map.inverse_projection * pos;
-}
-
-fn map_to_world(map: Map, map_position: vec2<f32>) -> vec3<f32> {
-    // Steps:
-    // - Apply map projection (to compensate for eg iso view)
-    // - scale according to `map.tile_size`
-    // - Adjust for `map.world_offset` (where in the mesh tile 0,0 should be)
-    // - Apply global transform
-    return map.global_transform_matrix * (
-        (map.projection * vec3<f32>(map_position, 0.0)) * vec3<f32>(map.tile_size, 1.0) +
-        vec3<f32>(map.world_offset, 0.0)
-    ) + map.global_transform_translation;
 }
 
 /// Position (world/pixel units) in tilemap atlas of the top left corner
@@ -177,24 +156,16 @@ fn sample_tile(
     // as it might be used for overhang of a neighbouring tile in the tilemap
     if rect_offset.x < -max_overhang.x
         || rect_offset.y < -max_overhang.y
-        || rect_offset.x > (map.tile_size.x + max_overhang.x)
-        || rect_offset.y > (map.tile_size.y + max_overhang.y)
+        || rect_offset.x >= (map.tile_size.x + max_overhang.x)
+        || rect_offset.y >= (map.tile_size.y + max_overhang.y)
     {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
-/*
     var color = textureSample(
         atlas_texture, atlas_sampler, total_offset / map.atlas_size
     );
-    */
-    // work around uniformity constraints, but doesnt seem to actually speed things up
-    var color = sample(atlas_texture, atlas_sampler, total_offset / map.atlas_size);
 
     return color;
-}
-
-fn sample(atlas_texture: texture_2d<f32>, atlas_sampler: sampler, uv: vec2<f32>) -> vec4<f32> {
-    return textureSample(atlas_texture, atlas_sampler, uv);
 }
 
 /// 2d map tile position and offset in map tile coordinates
@@ -206,29 +177,8 @@ struct MapPosition {
 };
 
 
-/// Figure out where in the map (tile position & offset) this world position is.
-fn world_to_tile_and_offset(
-    world_position: vec2<f32>
-) -> MapPosition {
-    var out: MapPosition;
-
-    // Map position including fractional part
-    var pos = world_to_map(map, world_position);
-
-    // Integer part of map position (tile coordinate)
-    var tile = floor(pos);
-    out.tile = vec2<i32>(tile);
-
-    // World position of tile reference point
-    var world_tile_base = map_to_world(map, tile).xy;
-    out.offset = world_to_tile_offset(world_position, world_tile_base);
-
-    return out;
-}
-
 ///
 fn get_tile_index(map_position: vec2<i32>) -> u32 {
-    //return u32(textureLoad(map_texture, map_position).r);
     return map_texture[map_position.y * i32(map.map_size.x) + map_position.x];
 }
 
@@ -421,10 +371,29 @@ fn fragment(
 ) -> @location(0) vec4<f32> {
     var world_position = in.world_position.xy;
     var color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    var pos = world_to_tile_and_offset(world_position);
-    var index = get_tile_index(pos.tile);
 
-    var sample_color = sample_tile(map, index, pos.offset);
+    var tile = floor(in.map_position);
+    var map_space_offset = in.map_position - tile;
+
+    var world_space_offset = map.global_transform_matrix * (
+        map.projection * vec3<f32>(map_space_offset, 0.0)
+    ) * vec3<f32>(map.tile_size, 1.0);
+
+    var pos: MapPosition;
+    pos.tile = vec2<i32>(tile);
+    pos.offset = vec2<f32>(1.0, -1.0) * world_space_offset.xy;
+
+    var index = get_tile_index(pos.tile);
+    var is_valid = is_valid_tile(map, pos.tile);
+    var sample_color = color;
+
+    if is_valid {
+        sample_color = sample_tile(map, index, pos.offset);
+    }
+    else {
+        // for invalid tile, assume low index so (almost) everything overlaps in dominance rendering
+        index = 0u;
+    }
 
     #ifdef PERSPECTIVE_UNDERHANGS
     if sample_color.a < 1.0 {
@@ -432,7 +401,7 @@ fn fragment(
     }
     #endif // PERSPECTIVE_UNDERHANGS
 
-    if is_valid_tile(map, pos.tile) {
+    if is_valid {
         color = blend(color, sample_color);
     }
 
