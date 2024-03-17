@@ -149,8 +149,11 @@ impl MapUniform {
         }
         self.world_size = high - low;
 
+        // Leave a full tile space on each side so overhangs are not visually cut off
+        let padding = 2.0 * self.tile_size;
+
         // Increase world size by one tile total such that overhangs are fully visible
-        self.world_size += self.tile_size;
+        self.world_size += padding;
 
         // World offset
         //
@@ -158,9 +161,7 @@ impl MapUniform {
         // However after projection we may want the (0, 0) tile to map to a different position than
         // say the top left corner (eg for an iso projection it might be vertically centered).
         // We use `low` from above to figure out how to correctly translate here.
-        //
-        // Move by half a tile so overhangs are not cut off
-        self.world_offset = vec2(-0.5, -0.5) * self.world_size - low + self.tile_size / 2.0;
+        self.world_offset = vec2(-0.5, -0.5) * self.world_size - low + padding / 2.0;
     }
 
     /// Return true iff this update made the uniform ready
@@ -175,7 +176,7 @@ impl MapUniform {
         true
     }
 
-    pub(crate) fn apply_transform(&mut self, transform: GlobalTransform) {
+    pub(crate) fn _apply_transform(&mut self, transform: GlobalTransform) {
         let affine = transform.compute_transform().compute_affine();
         self.global_transform_matrix = affine.matrix3.into();
         self.global_transform_translation = affine.translation.into();

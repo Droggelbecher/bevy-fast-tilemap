@@ -1,6 +1,5 @@
 use crate::map::{
-    apply_map_transforms, configure_loaded_assets, log_map_events, update_loading_maps,
-    update_map_vertex_attributes,
+    configure_loaded_assets, log_map_events, update_loading_maps, update_map_vertex_attributes,
 };
 use bevy::{
     prelude::*,
@@ -63,6 +62,5 @@ where
                 update_map_vertex_attributes::<UserData>,
             ),
         );
-        app.add_systems(Update, apply_map_transforms::<UserData>);
     }
 }
