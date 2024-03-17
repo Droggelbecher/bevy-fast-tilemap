@@ -1,9 +1,26 @@
 #import bevy_sprite::mesh2d_bindings::mesh
 #import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
+// --- User code start ---
+/*
 struct UserData {
-    //#[user_data_struct]
+    dummy: u32;
 }
+
+fn sample_tile(in: ExtractIn) -> vec4<f32> {
+    return sample_tile_at(in.tile_index, in.tile_position, in.tile_offset);
+}
+*/
+// --- User code end ---
+
+struct ExtractIn {
+    tile_index: u32,
+    tile_position: vec2<i32>,
+    tile_offset: vec2<f32>,
+    animation_state: f32,
+};
+
+#[user_code]
 
 struct Map {
     /// Size of the map, in tiles.
@@ -109,7 +126,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
 /// Position (world/pixel units) in tilemap atlas of the top left corner
 /// of the tile with the given index
-fn atlas_index_to_position(map: Map, index: u32) -> vec2<f32> {
+fn atlas_index_to_position(index: u32) -> vec2<f32> {
     var index_f = f32(index);
     var index_y = floor(index_f / f32(map.n_tiles.x));
     var index_x = index_f - index_y * f32(map.n_tiles.x);
@@ -127,41 +144,30 @@ fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -
 /// Sample tile from the tile atlas
 /// tile_index: Index of the tile in the atlas
 /// tile_offset: Offset from tile anchor point in pixel/world coordinates
-fn sample_tile(
-    map: Map,
-    tile_index_: u32,
+fn _sample_tile(
+    tile_index: u32,
     pos: MapPosition,
     animation_state: f32,
 ) -> vec4<f32> {
 
-    /*
+    var e: ExtractIn;
+    e.tile_index = tile_index;
+    e.tile_position = pos.tile;
+    e.tile_offset = pos.offset;
+    e.animation_state = animation_state;
 
-      +-----------+    :    +------------+
-      |           |    :    |            |
-      a           |    :    |            |
-      |           |    :    |            |
-      +-----------+    :    +------------+
-                       :
-      .................:..................
-                       :
-      +-----------+    :    +------------+
-      |           |    :    |            |
-      |           |    :    |            |
-      |           |    :    |            |
-      +-----------+    :    +------------+
+    return sample_tile(e);
+}
 
-      [   TILE    ] Padding [    TILE    ]
+fn sample_tile_at(
+    tile_index: u32,
+    tile_position: vec2<i32>,
+    tile_offset: vec2<f32>,
+) -> vec4<f32> {
+    // Tile start position in the atlas
+    var tile_start = atlas_index_to_position(tile_index);
 
-    */
-
-    // Mutable copy of the parameters so pre_sample_code below can change these if necessary
-    var tile_index = tile_index_;
-    var tile_offset = pos.offset;
-    var tile_position = pos.tile;
-
-    //#[pre_sample_code]
-
-    var tile_start = atlas_index_to_position(map, tile_index);
+    // Offset in pixels from tile_start to sample from
     var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;
     var total_offset = tile_start + rect_offset;
 
@@ -179,13 +185,10 @@ fn sample_tile(
     {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
-    var color = textureSample(
+
+    return textureSample(
         atlas_texture, atlas_sampler, total_offset / map.atlas_size
     );
-
-    //#[post_sample_code]
-
-    return color;
 }
 
 /// 2d map tile position and offset in map tile coordinates
@@ -206,7 +209,7 @@ fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
     return mix(c0, c1, c1.a);
 }
 
-fn is_valid_tile(map: Map, tile: vec2<i32>) -> bool {
+fn is_valid_tile(tile: vec2<i32>) -> bool {
     if tile.x < 0 || tile.y < 0 {
         return false;
     }
@@ -232,7 +235,7 @@ fn sample_neighbor_tile_index(tile_index: u32, pos_: MapPosition, tile_offset: v
     var pos = pos_;
     pos.tile = pos.tile + tile_offset;
     pos.offset = pos.offset + vec2<f32>(1.0, -1.0) * overhang;
-    return sample_tile(map, tile_index, pos, animation_state);
+    return _sample_tile(tile_index, pos, animation_state);
 }
 
 /// pos: The map position to sample
@@ -240,7 +243,7 @@ fn sample_neighbor_tile_index(tile_index: u32, pos_: MapPosition, tile_offset: v
 fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
     // integral position of the neighbouring tile
     var tile = pos.tile + tile_offset;
-    if !is_valid_tile(map, tile) {
+    if !is_valid_tile(tile) {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
@@ -252,7 +255,7 @@ fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>, animation_state: f3
 fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
     // integral position of the neighbouring tile
     var tile = pos.tile + tile_offset;
-    if !is_valid_tile(map, tile) {
+    if !is_valid_tile(tile) {
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
@@ -406,11 +409,11 @@ fn fragment(
     pos.offset = vec2<f32>(1.0, -1.0) * world_space_offset.xy;
 
     var index = get_tile_index(pos.tile);
-    var is_valid = is_valid_tile(map, pos.tile);
+    var is_valid = is_valid_tile(pos.tile);
     var sample_color = color;
 
     if is_valid {
-        sample_color = sample_tile(map, index, pos, in.animation_state);
+        sample_color = _sample_tile(index, pos, in.animation_state);
     }
     else {
         // for invalid tile, assume low index so (almost) everything overlaps in dominance rendering
