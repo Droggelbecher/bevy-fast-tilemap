@@ -553,19 +553,3 @@ pub fn update_map_vertex_attributes<UserData>(
         commands.entity(entity).insert(mesh);
     }
 }
-
-pub fn apply_map_transforms<UserData>(
-    mut maps: Query<(&Handle<Map<UserData>>, &GlobalTransform), Changed<GlobalTransform>>,
-    mut map_materials: ResMut<Assets<Map<UserData>>>,
-) where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-{
-    for (map_handle, transform) in &mut maps {
-        let Some(map) = map_materials.get_mut(map_handle) else {
-            warn!("No map material");
-            continue;
-        };
-        map.map_uniform.apply_transform(transform.clone());
-    }
-}
