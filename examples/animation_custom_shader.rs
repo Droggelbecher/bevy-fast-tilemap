@@ -35,14 +35,26 @@ fn main() {
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
             FastTileMapPlugin {
-                pre_sample_code: Some(
+                user_code: Some(
                     r#"
+                    // wgpu doesnt like this being empty, so the default is to have a dummy u32
+                    // field here.
 
-                    // If the map data says tile 6, animate it by changing the tile index to 6, 7 or 8
-                    // based on the animation state.
-                    if tile_index == 6u {
-                        var offs = u32(round(animation_state * 5.0)) % 3u;
-                        tile_index = 6u + offs;
+                    struct UserData {
+                        dummy: u32,
+                    };
+
+                    fn sample_tile(in: ExtractIn) -> vec4<f32> {
+                        var tile_index = in.tile_index;
+
+                        // If the map data says tile 6, animate it by changing the tile index to 6, 7 or 8
+                        // based on the animation state.
+                        if tile_index == 6u {
+                            var offs = u32(round(in.animation_state * 5.0)) % 3u;
+                            tile_index = 6u + offs;
+                        }
+
+                        return sample_tile_at(tile_index, in.tile_position, in.tile_offset);
                     }
 
                     "#
