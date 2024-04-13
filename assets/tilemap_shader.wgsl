@@ -1,18 +1,6 @@
 #import bevy_sprite::mesh2d_bindings::mesh
 #import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
-// --- User code start ---
-/*
-struct UserData {
-    dummy: u32;
-}
-
-fn sample_tile(in: ExtractIn) -> vec4<f32> {
-    return sample_tile_at(in.tile_index, in.tile_position, in.tile_offset);
-}
-*/
-// --- User code end ---
-
 struct ExtractIn {
     tile_index: u32,
     tile_position: vec2<i32>,

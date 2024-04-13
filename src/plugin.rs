@@ -20,9 +20,6 @@ pub type FastTileMapPlugin = CustomFastTileMapPlugin<DefaultUserData>;
 /// Add this to you app and then spawn one or multiple maps use [`crate::map_builder::MapBuilder`].
 #[derive(Default)]
 pub struct CustomFastTileMapPlugin<UserData = DefaultUserData> {
-    //pub pre_sample_code: Option<String>,
-    //pub post_sample_code: Option<String>,
-    //pub user_data_struct: Option<String>,
     pub user_code: Option<String>,
     pub _user_data: std::marker::PhantomData<UserData>,
 }
@@ -37,10 +34,6 @@ where
         let mut shaders = app.world.resource_mut::<Assets<Shader>>();
 
         let mut code = SHADER_CODE.to_string();
-        //let user_data_struct = self
-        //.user_data_struct
-        //.clone()
-        //.unwrap_or("x: u32,".to_string());
 
         code = code.replace(
             "#[user_code]",
@@ -58,16 +51,6 @@ where
             ),
         );
 
-        /*
-        code = code.replace("//#[user_data_struct]", &user_data_struct);
-
-        if let Some(pre_sample_code) = &self.pre_sample_code {
-            code = code.replace("//#[pre_sample_code]", pre_sample_code);
-        }
-        if let Some(post_sample_code) = &self.post_sample_code {
-            code = code.replace("//#[post_sample_code]", post_sample_code);
-        }
-        */
         shaders.insert(SHADER_HANDLE, Shader::from_wgsl(code, file!()));
 
         app.add_systems(
