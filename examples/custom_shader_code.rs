@@ -45,48 +45,55 @@ fn main() {
                 // Note that the code is inserted verbatim, so it requires some understanding of
                 // the inner workings of the shader which may also change in the future.
 
-                user_data_struct: Some(
+                // If the below looks intimidating, it's because it does a lot of things:
+                // - Defines a user data struct which holds the cursor position
+                // - Extracts a "special" bit from the tile index
+                // - Makes special tiles red & bounce up and down
+                // - Mirrors tiles on the x-axis sometimes
+                // - Adds a white glow to the hovered tile
+
+                user_code: Some(
                     r#"
-                    cursor_position: vec2<u32>,
-                    "#
-                    .to_string(),
-                ),
+                    // This is a custom user data struct that can be used in the shader code.
+                    // It is passed to the shader as a bind group, so it can be used to pass
+                    // additional information to the shader.
+                    struct UserData {
+                        cursor_position: vec2<u32>,
+                    };
 
-                // This code is inserted just before sampling a tile from the texture.
-                // Use this for example to extract some extra information out of the tile index
-                // or change the tile offset to be sampled.
-                // Note that you can even declare variables here to refer to in `post_sample_code`,
-                // as we do with "special".
-                pre_sample_code: Some(
-                    r#"
-                    // Extract the "special bit" from the index
-                    var special = (tile_index & 0x0100) != 0;
+                    fn sample_tile(in: ExtractIn) -> vec4<f32> {
 
-                    // For actual tile index we only need the lowest byte
-                    tile_index = tile_index & 0x00FF;
+                        // extract a "special" bit from the tile index and use it to
+                        // make some tiles bounce up and down.
+                        var special = (in.tile_index & 0x0100) != 0;
 
-                    // Also have the special tiles "bounce" up and down
-                    if special {
-                        tile_offset.y += abs(sin(animation_state * 5.0 + tile_offset.x * 0.002)) * 20.0;
-                    }
+                        // extract the actual tile index
+                        var tile_index = in.tile_index & 0x00FF;
+                        var tile_offset = in.tile_offset;
 
-                    "#
-                    .to_string(),
-                ),
+                        if special {
+                            tile_offset.y += abs(sin(in.animation_state * 5.0 + tile_offset.x * 0.002)) * 20.0;
+                        }
 
-                // After computation of the base color (the actual sampling step), we apply a red tint for "special" tiles.
-                post_sample_code: Some(
-                    r#"
-                    if special {
-                        // Special tiles are tinted red
-                        color = color * vec4(1.0, 0.0, 0.0, 1.0);
-                    }
+                        // Sometimes mirror tile on the x-Axis for some reason :)
+                        if user_data.cursor_position.x % 2 == 0 {
+                            tile_offset.x = 256.0 - tile_offset.x;
+                        }
 
-                    if u32(tile_position.x) == user_data.cursor_position.x && u32(tile_position.y) == user_data.cursor_position.y {
-                        // Highlight the hovered tile ("cursor position") with a white glow
+                        var color = sample_tile_at(tile_index, in.tile_position, tile_offset);
 
-                        var v = (sin(animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
-                        color = color * vec4(v, v, v, 1.0);
+                        // tint "special" tiles red
+                        if special {
+                            color = color * vec4(1.0, 0.0, 0.0, 1.0);
+                        }
+
+                        // Add a white glow to the hovered tile
+                        if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
+                            var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
+                            color = color * vec4(v, v, v, 1.0);
+                        }
+
+                        return color;
                     }
                     "#
                     .to_string(),
@@ -95,7 +102,7 @@ fn main() {
             },
         ))
         .add_systems(Startup, startup)
-        .add_systems(Update, highlight_hovered)
+        .add_systems(Update, update_cursor_position)
         .run();
 }
 
@@ -149,13 +156,13 @@ fn init_map(m: &mut MapIndexer<UserData>) {
     }
 }
 
-/// Highlight the currently hovered tile red, reset all other tiles
-fn highlight_hovered(
+/// Send cursor position to the shader via user data
+fn update_cursor_position(
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut camera_query: Query<(&GlobalTransform, &Camera), With<OrthographicProjection>>,
     maps: Query<&Handle<Map<UserData>>>,
 
-    // We'll actually change the map contents for highlighting
+    // We'll actually change the map (by changing the user data), so we need to get a mutable
     mut materials: ResMut<Assets<Map<UserData>>>,
 ) {
     for event in cursor_moved_events.read() {

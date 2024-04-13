@@ -9,7 +9,7 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_fast_tilemap::{
-    bundle::MapBundleManaged, map::MapIndexer, FastTileMapPlugin, Map, MapAttributes, AXONOMETRIC,
+    bundle::MapBundleManaged, FastTileMapPlugin, Map, MapAttributes, AXONOMETRIC,
 };
 use rand::Rng;
 
