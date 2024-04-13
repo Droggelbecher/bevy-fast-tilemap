@@ -67,15 +67,14 @@ fn main() {
         .run();
 }
 
-#[derive(Component)]
-struct AnimationLayer;
-
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<Map>>,
 ) {
     commands.spawn(Camera2dBundle::default());
+
+    // background tiles layer
 
     let map = Map::builder(
         uvec2(64, 64),
@@ -88,6 +87,8 @@ fn startup(
         material: materials.add(map),
         ..default()
     });
+
+    // animated layer
 
     let (l, h) = (32 - 10, 32 + 10);
 
@@ -106,9 +107,10 @@ fn startup(
 
     let bundle = MapBundleManaged {
         material: materials.add(map),
+        // set positive z value so this is rendered on top of the background layer
         transform: Transform::default().with_translation(vec3(0., 0., 1.)),
         ..default()
     };
 
-    commands.spawn(bundle).insert(AnimationLayer);
+    commands.spawn(bundle);
 }

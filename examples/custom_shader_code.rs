@@ -45,6 +45,13 @@ fn main() {
                 // Note that the code is inserted verbatim, so it requires some understanding of
                 // the inner workings of the shader which may also change in the future.
 
+                // If the below looks intimidating, it's because it does a lot of things:
+                // - Defines a user data struct which holds the cursor position
+                // - Extracts a "special" bit from the tile index
+                // - Makes special tiles red & bounce up and down
+                // - Mirrors tiles on the x-axis sometimes
+                // - Adds a white glow to the hovered tile
+
                 user_code: Some(
                     r#"
                     // This is a custom user data struct that can be used in the shader code.
@@ -95,7 +102,7 @@ fn main() {
             },
         ))
         .add_systems(Startup, startup)
-        .add_systems(Update, highlight_hovered)
+        .add_systems(Update, update_cursor_position)
         .run();
 }
 
@@ -149,13 +156,13 @@ fn init_map(m: &mut MapIndexer<UserData>) {
     }
 }
 
-/// Highlight the currently hovered tile red, reset all other tiles
-fn highlight_hovered(
+/// Send cursor position to the shader via user data
+fn update_cursor_position(
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut camera_query: Query<(&GlobalTransform, &Camera), With<OrthographicProjection>>,
     maps: Query<&Handle<Map<UserData>>>,
 
-    // We'll actually change the map contents for highlighting
+    // We'll actually change the map (by changing the user data), so we need to get a mutable
     mut materials: ResMut<Assets<Map<UserData>>>,
 ) {
     for event in cursor_moved_events.read() {
