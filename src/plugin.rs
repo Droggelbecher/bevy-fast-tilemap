@@ -1,6 +1,4 @@
-use crate::map::{
-    configure_loaded_assets, log_map_events, update_loading_maps, update_map_vertex_attributes,
-};
+use crate::map::{log_map_events, update_loading_maps, update_map_vertex_attributes};
 use bevy::{
     prelude::*,
     render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
@@ -56,12 +54,7 @@ where
         app.add_systems(
             Update,
             (
-                (
-                    configure_loaded_assets::<UserData>,
-                    update_loading_maps::<UserData>,
-                    log_map_events::<UserData>,
-                )
-                    .chain(),
+                (update_loading_maps::<UserData>, log_map_events::<UserData>).chain(),
                 update_map_vertex_attributes::<UserData>,
             ),
         );

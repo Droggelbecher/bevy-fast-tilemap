@@ -123,6 +123,20 @@ where
         self
     }
 
+    /// Specify directions (eg vec2(-1.0, 1.0)) for underhangs.
+    ///
+    /// Use this to manually specify the *under*hang directions you want to use
+    /// (overhangs are implicitly the opposite direction).
+    /// This can be useful if you are using IDENTITY projection but still want some
+    /// over/underhangs other than dominance.
+    pub fn with_forced_underhangs(mut self, underhangs: Vec<Vec2>) -> Self {
+        self.map.dominance_overhangs = false;
+        self.map.perspective_underhangs = true;
+        self.map.perspective_overhangs = true;
+        self.map.force_underhangs = underhangs;
+        self
+    }
+
     pub fn with_overhangs(
         mut self,
         dominance: bool,

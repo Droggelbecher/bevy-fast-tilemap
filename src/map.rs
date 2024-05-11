@@ -56,6 +56,7 @@ where
     pub(crate) perspective_underhangs: bool,
     pub(crate) perspective_overhangs: bool,
     pub(crate) dominance_overhangs: bool,
+    pub(crate) force_underhangs: Vec<Vec2>,
 }
 
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -311,9 +312,22 @@ where
         ];
 
         let mut defs = Vec::new();
-        for (offset, def) in offsets.iter() {
-            if self.map_uniform.map_to_local(offset.extend(0.0)).z < 0.0 {
-                defs.push(format!("PERSPECTIVE_UNDER_{}", def));
+
+        if self.force_underhangs.is_empty() {
+            // Derive underhangs from perspective (z < 0) values
+            for (offset, def) in offsets.iter() {
+                if self.map_uniform.map_to_local(offset.extend(0.0)).z < 0.0 {
+                    defs.push(format!("PERSPECTIVE_UNDER_{}", def));
+                }
+            }
+        } else {
+            // Use forced underhangs
+            for direction in self.force_underhangs.iter() {
+                for (offset, def) in offsets.iter() {
+                    if direction.angle_between(*offset) == 0.0 {
+                        defs.push(format!("PERSPECTIVE_UNDER_{}", def));
+                    }
+                }
             }
         }
         self.perspective_defs = defs;
@@ -398,54 +412,6 @@ where
     }
 }
 
-///
-pub fn configure_loaded_assets<UserData>(
-    map_materials: ResMut<Assets<Map<UserData>>>,
-    mut ev_asset: EventReader<AssetEvent<Image>>,
-    mut images: ResMut<Assets<Image>>,
-    map_handles: Query<&Handle<Map<UserData>>>,
-) where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-{
-    for ev in ev_asset.read() {
-        for map_handle in map_handles.iter() {
-            let Some(map) = map_materials.get(map_handle) else {
-                warn!("Map gone as its atlas finished loading.");
-                continue;
-            };
-
-            match ev {
-                AssetEvent::Added { id } if *id == map.atlas_texture.id() => {
-                    // Set some sampling options for the atlas texture for nicer looks,
-                    // such as avoiding "grid lines" when zooming out or mushy edges.
-                    //
-                    if let Some(atlas) = images.get_mut(&map.atlas_texture) {
-                        // the below seems to crash?
-                        //atlas.texture_descriptor.mip_level_count = 3;
-                        atlas.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-                            // min_filter of linear gives undesired grid lines when zooming out
-                            min_filter: ImageFilterMode::Nearest,
-                            // mag_filter of linear gives mushy edges on tiles in closeup which is
-                            // usually not what we want
-                            mag_filter: ImageFilterMode::Nearest,
-                            mipmap_filter: ImageFilterMode::Linear,
-                            ..default()
-                        });
-
-                        if let Some(ref mut view_descriptor) = atlas.texture_view_descriptor {
-                            view_descriptor.mip_level_count = Some(4);
-                        }
-                    } else {
-                        warn!("Map atlas just added but not found?!");
-                    }
-                }
-                _ => (),
-            } // match ev
-        } // for map
-    } // for ev
-} // configure_loaded_assets()
-
 pub fn log_map_events<UserData>(
     mut ev_asset: EventReader<AssetEvent<Map<UserData>>>,
     map_handles: Query<&Handle<Map<UserData>>>,
@@ -468,7 +434,7 @@ pub fn log_map_events<UserData>(
 /// Check to see if any maps' assets became available
 /// if so.
 pub fn update_loading_maps<UserData>(
-    images: Res<Assets<Image>>,
+    mut images: ResMut<Assets<Image>>,
     mut map_materials: ResMut<Assets<Map<UserData>>>,
     mut maps: Query<
         (
@@ -490,9 +456,19 @@ pub fn update_loading_maps<UserData>(
         let Some(map) = map_materials.get_mut(map_handle) else {
             continue;
         };
-        let Some(_) = images.get(map.atlas_texture.clone()) else {
+        let Some(atlas) = images.get_mut(map.atlas_texture.clone()) else {
             continue;
         };
+
+        atlas.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+            // min_filter of linear gives undesired grid lines when zooming out
+            min_filter: ImageFilterMode::Nearest,
+            // mag_filter of linear gives mushy edges on tiles in closeup which is
+            // usually not what we want
+            mag_filter: ImageFilterMode::Nearest,
+            mipmap_filter: ImageFilterMode::Linear,
+            ..default()
+        });
 
         commands.entity(entity).remove::<MapLoading>();
         map.update(images.as_ref());
