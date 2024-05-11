@@ -483,7 +483,7 @@ pub fn log_map_events<UserData>(
 /// Check to see if any maps' assets became available
 /// if so.
 pub fn update_loading_maps<UserData>(
-    images: Res<Assets<Image>>,
+    mut images: ResMut<Assets<Image>>,
     mut map_materials: ResMut<Assets<Map<UserData>>>,
     mut maps: Query<
         (
@@ -505,9 +505,19 @@ pub fn update_loading_maps<UserData>(
         let Some(map) = map_materials.get_mut(map_handle) else {
             continue;
         };
-        let Some(_) = images.get(map.atlas_texture.clone()) else {
+        let Some(atlas) = images.get_mut(map.atlas_texture.clone()) else {
             continue;
         };
+
+        atlas.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+            // min_filter of linear gives undesired grid lines when zooming out
+            min_filter: ImageFilterMode::Nearest,
+            // mag_filter of linear gives mushy edges on tiles in closeup which is
+            // usually not what we want
+            mag_filter: ImageFilterMode::Nearest,
+            mipmap_filter: ImageFilterMode::Linear,
+            ..default()
+        });
 
         commands.entity(entity).remove::<MapLoading>();
         map.update(images.as_ref());
