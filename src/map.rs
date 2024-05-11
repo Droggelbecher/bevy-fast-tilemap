@@ -56,6 +56,7 @@ where
     pub(crate) perspective_underhangs: bool,
     pub(crate) perspective_overhangs: bool,
     pub(crate) dominance_overhangs: bool,
+    pub(crate) force_underhangs: Vec<Vec2>,
 }
 
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -311,9 +312,22 @@ where
         ];
 
         let mut defs = Vec::new();
-        for (offset, def) in offsets.iter() {
-            if self.map_uniform.map_to_local(offset.extend(0.0)).z < 0.0 {
-                defs.push(format!("PERSPECTIVE_UNDER_{}", def));
+
+        if self.force_underhangs.is_empty() {
+            // Derive underhangs from perspective (z < 0) values
+            for (offset, def) in offsets.iter() {
+                if self.map_uniform.map_to_local(offset.extend(0.0)).z < 0.0 {
+                    defs.push(format!("PERSPECTIVE_UNDER_{}", def));
+                }
+            }
+        } else {
+            // Use forced underhangs
+            for direction in self.force_underhangs.iter() {
+                for (offset, def) in offsets.iter() {
+                    if direction.angle_between(*offset) == 0.0 {
+                        defs.push(format!("PERSPECTIVE_UNDER_{}", def));
+                    }
+                }
             }
         }
         self.perspective_defs = defs;
@@ -432,6 +446,7 @@ pub fn configure_loaded_assets<UserData>(
                             mipmap_filter: ImageFilterMode::Linear,
                             ..default()
                         });
+                        info!("Atlas texture loaded: {:?}", atlas.size());
 
                         if let Some(ref mut view_descriptor) = atlas.texture_view_descriptor {
                             view_descriptor.mip_level_count = Some(4);
