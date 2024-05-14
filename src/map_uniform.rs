@@ -35,16 +35,6 @@ pub struct MapUniform {
     pub(crate) global_transform_matrix: Mat3,
     pub(crate) global_transform_translation: Vec3,
 
-    /// 0=dominance
-    /// 1=perspective
-    //pub(crate) overhang_mode: u32,
-
-    /// For overhang_mode==0
-    pub(crate) max_overhang_levels: u32,
-
-    /// For overhang_mode==1
-    //pub(crate) perspective_overhang_mask: u32,
-
     /// (derived) Size of the map in world units necessary to display
     /// all tiles according to projection.
     pub(crate) world_size: Vec2,
@@ -83,7 +73,6 @@ impl Default for MapUniform {
             projection: IDENTITY.projection,
             global_transform_matrix: default(),
             global_transform_translation: default(),
-            max_overhang_levels: default(),
             world_size: default(),
             world_offset: default(),
             n_tiles: default(),

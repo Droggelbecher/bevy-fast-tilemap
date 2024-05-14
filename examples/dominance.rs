@@ -64,11 +64,7 @@ fn startup(
     // "Dominance" overhang draws the overlap of tiles depending on their index in the tile atlas.
     // Tiles with higher index will be drawn on top of tiles with lower index.
     // For this we draw in the "padding" area of the tile atlas.
-    //
-    // This requires each pixel to be computed once for every level higher than the current one
-    // and for every neighbor which can be a drastic performance hit.
-    // Therefore its a good idea to limit the number of levels looked upwards here.
-    .with_dominance_overhang(3)
+    .with_dominance_overhang()
     .build_and_initialize(init_map);
 
     commands.spawn(MapBundleManaged::new(map, materials.as_mut()));

@@ -101,15 +101,10 @@ where
     /// "Dominance" overhang draws the overlap of tiles depending on their index in the tile atlas.
     /// Tiles with higher index will be drawn on top of tiles with lower index.
     /// For this we draw in the "padding" area of the tile atlas.
-    ///
-    /// This requires each pixel to be computed once for every level higher than the current one
-    /// and for every neighbor which can be a drastic performance hit.
-    /// Therefore its a good idea to limit the number of levels looked upwards here.
-    pub fn with_dominance_overhang(mut self, max_overhang_levels: u32) -> Self {
+    pub fn with_dominance_overhang(mut self) -> Self {
         self.map.dominance_overhangs = true;
         self.map.perspective_overhangs = false;
         self.map.perspective_underhangs = false;
-        self.map.map_uniform.max_overhang_levels = max_overhang_levels;
         self
     }
 

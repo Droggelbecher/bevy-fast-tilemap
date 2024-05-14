@@ -42,8 +42,6 @@ struct Map {
     global_transform_matrix: mat3x3<f32>,
     global_transform_translation: vec3<f32>,
 
-    max_overhang_levels: u32,
-
     // -----
     /// [derived] Size of the map in world units necessary to display
     /// all tiles according to projection.
@@ -193,6 +191,13 @@ fn get_tile_index(map_position: vec2<i32>) -> u32 {
     return map_texture[map_position.y * i32(map.map_size.x) + map_position.x];
 }
 
+fn get_tile_index_checked(map_position: vec2<i32>) -> u32 {
+    if !is_valid_tile(map_position) {
+        return 0u;
+    }
+    return get_tile_index(map_position);
+}
+
 fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
     return mix(c0, c1, c1.a);
 }
@@ -240,45 +245,55 @@ fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>, animation_state: f3
     return sample_neighbor_tile_index(tile_index, pos, tile_offset, animation_state);
 }
 
-fn sample_neighbor_if_ge(index: u32, pos: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
-    // integral position of the neighbouring tile
-    var tile = pos.tile + tile_offset;
-    if !is_valid_tile(tile) {
-        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    }
-
-    // kind of tile being displayed at that position
-    var tile_index = get_tile_index(tile);
-    if tile_index >= index {
-        return sample_neighbor_tile_index(tile_index, pos, tile_offset, animation_state);
-    }
-
-    return vec4<f32>(0.0, 0.0, 0.0, 0.0);
-}
-
 fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition, animation_state: f32) -> vec4<f32> {
-    var max_index = min(map.n_tiles.x * map.n_tiles.y, index + map.max_overhang_levels);
     var c = color;
 
-    // Note: For some reason on OSX, the use of for loops fails silently (produces pure red output
-    // in our case), while a loop { ... } seems to work just fine.
-    var idx = index + u32(1);
-    loop {
-        if idx >= max_index { break; }
+    // We want to render overhangs from all the neighbors where the tile index is greater than the
+    // current tile index. More so we want to render them in order of tile index (from lowest to
+    // highest) to ensure that the overhangs are rendered in the correct order.
 
-        // first render all the diagonal overhangs
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1, -1), animation_state));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  1), animation_state));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1, -1), animation_state));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  1), animation_state));
+    // First, collect all the indices of the neighbors that are greater than the current tile index
+    var neighbor_offsets = array<vec2<i32>, 8>(
+        vec2<i32>(-1, -1),
+        vec2<i32>(-1, 0),
+        vec2<i32>(-1, 1),
+        vec2<i32>(0, 1),
+        vec2<i32>(1, 1),
+        vec2<i32>(1, 0),
+        vec2<i32>(1, -1),
+        vec2<i32>(0, -1),
+    );
+    var neighbors: array<u32, 8> = array<u32, 8>(
+        get_tile_index_checked(pos.tile + neighbor_offsets[0]),
+        get_tile_index_checked(pos.tile + neighbor_offsets[1]),
+        get_tile_index_checked(pos.tile + neighbor_offsets[2]),
+        get_tile_index_checked(pos.tile + neighbor_offsets[3]),
+        get_tile_index_checked(pos.tile + neighbor_offsets[4]),
+        get_tile_index_checked(pos.tile + neighbor_offsets[5]),
+        get_tile_index_checked(pos.tile + neighbor_offsets[6]),
+        get_tile_index_checked(pos.tile + neighbor_offsets[7])
+    );
 
-        // Now all the orthogonal ones
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>(-1,  0), animation_state));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 1,  0), animation_state));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0, -1), animation_state));
-        c = blend(c, sample_neighbor_if_ge(idx, pos, vec2<i32>( 0,  1), animation_state));
+    // Then, sort the neighbors by index
+    for (var i = 0u; i < 8u; i = i + 1u) {
+        for (var j = i + 1u; j < 8u; j = j + 1u) {
+            if neighbors[i] > neighbors[j] {
+                var tmp = neighbors[i];
+                neighbors[i] = neighbors[j];
+                neighbors[j] = tmp;
 
-        idx++;
+                var tmp1 = neighbor_offsets[i];
+                neighbor_offsets[i] = neighbor_offsets[j];
+                neighbor_offsets[j] = tmp1;
+            }
+        }
+    }
+
+    // Finally, render the overhangs in order of index
+    for (var i = 0u; i < 8u; i = i + 1u) {
+        if neighbors[i] > index {
+            c = blend(c, sample_neighbor_tile_index(neighbors[i], pos, neighbor_offsets[i], animation_state));
+        }
     }
 
     return c;
