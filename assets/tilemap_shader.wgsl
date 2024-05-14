@@ -22,6 +22,8 @@ struct Map {
     /// Size of each tile, in pixels.
     tile_size: vec2<f32>,
 
+    atlas_tile_size_factor: i32,
+
     /// Padding between tiles in atlas.
     inner_padding: vec2<f32>,
 
@@ -112,14 +114,26 @@ fn vertex(v: Vertex) -> VertexOutput {
 
 /// Position (world/pixel units) in tilemap atlas of the top left corner
 /// of the tile with the given index
-fn atlas_index_to_position(index: u32) -> vec2<f32> {
+fn atlas_index_to_position(index: u32, tile_position: vec2<i32>) -> vec2<f32> {
     var index_f = f32(index);
     var index_y = floor(index_f / f32(map.n_tiles.x));
     var index_x = index_f - index_y * f32(map.n_tiles.x);
     var index2d = vec2<f32>(index_x, index_y);
 
-    var pos = index2d * (map.tile_size + map.inner_padding) + map.outer_padding_topleft;
-    return pos;
+    if map.atlas_tile_size_factor > 1 {
+        return
+            index2d * (map.tile_size * f32(map.atlas_tile_size_factor) + map.inner_padding)
+            + map.outer_padding_topleft
+            + map.tile_size * vec2<f32>(
+                f32(tile_position.x % map.atlas_tile_size_factor),
+                f32(tile_position.y % map.atlas_tile_size_factor)
+            );
+    }
+    else {
+
+        var pos = index2d * (map.tile_size + map.inner_padding) + map.outer_padding_topleft;
+        return pos;
+    }
 }
 
 /// Compute offset into the tile by world position and world position of tile reference point
@@ -151,7 +165,7 @@ fn sample_tile_at(
     tile_offset: vec2<f32>,
 ) -> vec4<f32> {
     // Tile start position in the atlas
-    var tile_start = atlas_index_to_position(tile_index);
+    var tile_start = atlas_index_to_position(tile_index, tile_position);
 
     // Offset in pixels from tile_start to sample from
     var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;

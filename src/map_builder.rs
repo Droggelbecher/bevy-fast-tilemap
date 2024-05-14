@@ -68,6 +68,11 @@ where
         }
     } // fn new
 
+    pub fn with_atlas_tile_size_factor(mut self, factor: i32) -> Self {
+        self.map.map_uniform.atlas_tile_size_factor = factor;
+        self
+    }
+
     pub fn with_user_data(mut self, new_user_data: UserData) -> Self {
         self.map.user_data = new_user_data;
         self
