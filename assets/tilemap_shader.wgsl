@@ -2,8 +2,11 @@
 #import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
 struct ExtractIn {
+    /// tile_index: Index of the tile in the atlas 0-based, x-axis first
     tile_index: u32,
+    /// 2d logical map position
     tile_position: vec2<i32>,
+    /// offset from the tile anchor point in pixel/world coordinates to render
     tile_offset: vec2<f32>,
     animation_state: f32,
 };
@@ -22,6 +25,7 @@ struct Map {
     /// Size of each tile, in pixels.
     tile_size: vec2<f32>,
 
+    /// Tiles in the atlas are bigger than `tile_size` by this factor to allow a pattern effect
     atlas_tile_size_factor: i32,
 
     /// Padding between tiles in atlas.
