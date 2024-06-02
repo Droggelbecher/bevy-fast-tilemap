@@ -34,6 +34,10 @@ fn main() {
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
             CustomFastTileMapPlugin::<UserData> {
+                // All of the user code you see below has one purpose: to define the shape of the
+                // irregular boundaries between the tiles.
+                // The actual "pattern" logic (to have tiles use textures that are bigger than 1x1
+                // tile) is builtin in bevy_fast_tilemap.
                 user_code: Some(
                     r#"
                     struct UserData {
@@ -222,9 +226,11 @@ fn startup(
         asset_server.load("patterns.png"),
         vec2(64., 64.),
     )
-    // A tile (pattern) in the atlas is NxN map tiles large
+    // A pattern texture in the atlas is NxN map tiles large
     // (i.e. it will repeat every N tiles in any direction)
     .with_atlas_tile_size_factor(4)
+    // bevy_fast_tilemap will automatically calculate the correct texture coordinates so that
+    // adjecent tiles in the map will also have adjecent texture coordinates.
     .build_and_initialize(|m| {
         let mut rng = rand::thread_rng();
 
