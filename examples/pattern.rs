@@ -74,7 +74,7 @@ fn main() {
                         // Bigger means smaller tiles and more fluid borders with eg diagonal
                         // neighbors.
                         //
-                        // doffs > offs() + bw
+                        // doffs >= offs() + bw
                         // must be fulfilled so that the border is drawn correctly.
                         var doffs = 8.0;
 
@@ -146,7 +146,6 @@ fn main() {
                         var is_yborder = abs(in.tile_offset.y - t) <= bw || abs(in.tile_offset.y - b) <= bw;
 
                         // DEBUG: Render offs() instances
-                        var d = 0.02;
                         if abs(in.tile_offset.x - r) <= bw_dbg || abs(in.tile_offset.x - l) <= bw_dbg {
                             return vec4<f32>(0.0, 1.0, 0.0, 1.0);
                         }
