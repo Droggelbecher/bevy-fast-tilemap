@@ -27,12 +27,15 @@ Lightning fast tilemaps for [`bevy`](https://bevyengine.org/).
 ## Screenshots
 
 ![iso_perspective](screenshots/iso_perspective.png)
+
 Isometric perspective rendering.
 
 ![custom_mesh](screenshots/custom_mesh.png)
+
 Meshes don't have to be rectangles.
 
 ![patterns](screenshots/patterns.png)
+
 Tiles can use bigger textures and (through custom shader code) arbitrary boundary shapes.
 
 Checkout ![screenshots/](screenshots/) for more.
@@ -76,6 +79,7 @@ cargo run --example bench
 cargo run --example animation
 cargo run --example iso_perspective
 cargo run --example custom_shader_code
+cargo run --example patterns
 cargo run --example updates
 ...
 ```
