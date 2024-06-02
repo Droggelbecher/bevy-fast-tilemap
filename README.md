@@ -9,20 +9,34 @@ Lightning fast tilemaps for [`bevy`](https://bevyengine.org/).
 ## Features
 
 - Very high rendering performance (hundreds of fps, largely independent of map size).
-- Tilemaps can be very large or have many "layers".
-- Rectangular and isometric (axonometric) tile maps.
-- Coordinate conversion.
+- Multiple layers can be achieved by multiple map instances or custom shader logic
+- Rectangular and axonometric (eg isometric) tile maps.
+- Coordinate conversion for eg computing map position of the mouse cursor.
 - Tiles can overlap either by "dominance" rule or by perspective.
   Perspective mode allows an orthographic camera like 3d look,
   that is, *tiles don't need to be flat but can be isometric "objects"* (see examples).
 - Optional custom mesh for which the map serves as a texture.
 - Color gradient for tinting the whole map.
 - Custom shader code that can apply per-tile effects such as tinting or *animation*.
+- Tiles may use textures bigger than a single tile. (see screenshot below).
+- Arbitrary boundary shapes through custom shader code.
+- Two kinds of "animation" are supported, you can
+  - Update the tile indices regularly from a system (see [Animation Example](examples/animation.rs))
+  - Inject some custom shader code that can animate a tile in whatever way you can express in WGSL.
 
 ## Screenshots
 
 ![iso_perspective](screenshots/iso_perspective.png)
+
+Isometric perspective rendering.
+
 ![custom_mesh](screenshots/custom_mesh.png)
+
+Meshes don't have to be rectangles.
+
+![patterns](screenshots/patterns.png)
+
+Tiles can use bigger textures and (through custom shader code) arbitrary boundary shapes.
 
 Checkout ![screenshots/](screenshots/) for more.
 
@@ -43,12 +57,10 @@ there.
 
 ## Limitations
 
-- Only tested on Windows, no WASM support
-- Two kinds of "animation" are supported, you can
-  - Update the tile indices regularly from a system (see [Animation Example](examples/animation.rs))
-  - Inject some custom shader code that can animate a tile in whatever way you can express in WGSL.
+- Only tested on Windows/WSL, no WASM support
 - Currently no support for rotating or scaling the entity holding the map (it will not look like you'd expect).
   (You can of course still zoom/rotate the camera to achieve any such effect)
+- Currently no support for using maps in a 3d setting.
 
 ## Related work
 
@@ -67,6 +79,7 @@ cargo run --example bench
 cargo run --example animation
 cargo run --example iso_perspective
 cargo run --example custom_shader_code
+cargo run --example patterns
 cargo run --example updates
 ...
 ```
@@ -86,3 +99,4 @@ cargo run --example updates
 |0.13|0.7.2|
 |0.13|0.7.3|
 |0.13|0.7.4|
+|0.13|0.7.5|
