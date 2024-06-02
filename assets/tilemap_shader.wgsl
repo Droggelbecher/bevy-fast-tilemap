@@ -2,8 +2,11 @@
 #import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
 
 struct ExtractIn {
+    /// tile_index: Index of the tile in the atlas 0-based, x-axis first
     tile_index: u32,
+    /// 2d logical map position
     tile_position: vec2<i32>,
+    /// offset from the tile anchor point in pixel/world coordinates to render
     tile_offset: vec2<f32>,
     animation_state: f32,
 };
@@ -21,6 +24,9 @@ struct Map {
 
     /// Size of each tile, in pixels.
     tile_size: vec2<f32>,
+
+    /// Tiles in the atlas are bigger than `tile_size` by this factor to allow a pattern effect
+    atlas_tile_size_factor: i32,
 
     /// Padding between tiles in atlas.
     inner_padding: vec2<f32>,
@@ -112,14 +118,26 @@ fn vertex(v: Vertex) -> VertexOutput {
 
 /// Position (world/pixel units) in tilemap atlas of the top left corner
 /// of the tile with the given index
-fn atlas_index_to_position(index: u32) -> vec2<f32> {
+fn atlas_index_to_position(index: u32, tile_position: vec2<i32>) -> vec2<f32> {
     var index_f = f32(index);
     var index_y = floor(index_f / f32(map.n_tiles.x));
     var index_x = index_f - index_y * f32(map.n_tiles.x);
     var index2d = vec2<f32>(index_x, index_y);
 
-    var pos = index2d * (map.tile_size + map.inner_padding) + map.outer_padding_topleft;
-    return pos;
+    if map.atlas_tile_size_factor > 1 {
+        return
+            index2d * (map.tile_size * f32(map.atlas_tile_size_factor) + map.inner_padding)
+            + map.outer_padding_topleft
+            + map.tile_size * vec2<f32>(
+                f32(tile_position.x % map.atlas_tile_size_factor),
+                f32(tile_position.y % map.atlas_tile_size_factor)
+            );
+    }
+    else {
+
+        var pos = index2d * (map.tile_size + map.inner_padding) + map.outer_padding_topleft;
+        return pos;
+    }
 }
 
 /// Compute offset into the tile by world position and world position of tile reference point
@@ -151,7 +169,7 @@ fn sample_tile_at(
     tile_offset: vec2<f32>,
 ) -> vec4<f32> {
     // Tile start position in the atlas
-    var tile_start = atlas_index_to_position(tile_index);
+    var tile_start = atlas_index_to_position(tile_index, tile_position);
 
     // Offset in pixels from tile_start to sample from
     var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;

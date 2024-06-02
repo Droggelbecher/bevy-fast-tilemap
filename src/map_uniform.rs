@@ -19,6 +19,8 @@ pub struct MapUniform {
     /// Size of each tile, in pixels.
     pub(crate) tile_size: Vec2,
 
+    pub(crate) atlas_tile_size_factor: i32,
+
     /// Padding between tiles in atlas.
     pub(crate) inner_padding: Vec2,
 
@@ -66,6 +68,7 @@ impl Default for MapUniform {
             map_size: default(),
             atlas_size: default(),
             tile_size: default(),
+            atlas_tile_size_factor: 1,
             inner_padding: default(),
             outer_padding_topleft: default(),
             outer_padding_bottomright: default(),
