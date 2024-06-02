@@ -180,7 +180,8 @@ impl MapUniform {
 
     fn update_n_tiles(&mut self) {
         let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;
-        let n_tiles = (inner + self.inner_padding) / (self.inner_padding + self.tile_size);
+        let n_tiles = (inner + self.inner_padding)
+            / (self.inner_padding + self.tile_size * self.atlas_tile_size_factor as f32);
 
         let eps = 0.01;
         if (n_tiles.x - n_tiles.x.round()).abs() > eps
