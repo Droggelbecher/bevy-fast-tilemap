@@ -44,54 +44,120 @@ fn main() {
                         // make sure the frequency is a multiple of the tile size
                         // so the corners of the tiles align
                         var pi = radians(180.0);
-                        return 2.0 * sin(x / pi);
+                        return 1.0 * sin(x * pi / 8.0);
                     }
 
                     fn sample_tile(in: ExtractIn) -> vec4<f32> {
+                        // DEBUG
+                        //if in.tile_offset.x <= 1.0 || in.tile_offset.y <= 1.0 {
+                            //return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+                        //}
+
                         var tile_index = in.tile_index;
-                        var tile_position = in.tile_position;
+
+                        // offs() is shifted this much inwards
+                        var doffs = 2.0;
 
                         // right boundary
-                        var r = map.tile_size.x + offs(f32(in.tile_position.y) * map.tile_size.y + in.tile_offset.y);
+                        var r = map.tile_size.x + offs(f32(in.tile_position.y) * map.tile_size.y + in.tile_offset.y) - doffs;
                         // left boundary
-                        var l = offs(f32(in.tile_position.y) * map.tile_size.y + in.tile_offset.y);
+                        var l = offs(f32(in.tile_position.y) * map.tile_size.y + in.tile_offset.y) + doffs;
                         // top boundary
-                        var t = map.tile_size.y + offs(f32(in.tile_position.x) * map.tile_size.x + in.tile_offset.x);
+                        var t = map.tile_size.y + offs(f32(in.tile_position.x) * map.tile_size.x + in.tile_offset.x) - doffs;
                         // bottom boundary
-                        var b = offs(f32(in.tile_position.x) * map.tile_size.x + in.tile_offset.x);
+                        var b = offs(f32(in.tile_position.x) * map.tile_size.x + in.tile_offset.x) + doffs;
 
-                        var bw = 1.0;
+                        // border width
+                        var bw = 0.2;
 
+                        // are we in a neighbor tile (or in a border to it)?
+                        var tile_offset = vec2<i32>(0, 0);
+
+                        // determine actual tile index to render at this position
                         if in.tile_offset.x > r - bw {
-                            tile_position = tile_position + vec2<i32>(1, 0);
+                            tile_offset = tile_offset + vec2<i32>(1, 0);
                         }
                         else if in.tile_offset.x <= l + bw {
-                            tile_position = tile_position + vec2<i32>(-1, 0);
+                            tile_offset = tile_offset + vec2<i32>(-1, 0);
                         }
-
                         if in.tile_offset.y > t - bw {
-                            tile_position = tile_position + vec2<i32>(0, 1);
+                            tile_offset = tile_offset + vec2<i32>(0, 1);
                         }
                         else if in.tile_offset.y <= b + bw {
-                            tile_position = tile_position + vec2<i32>(0, -1);
+                            tile_offset = tile_offset + vec2<i32>(0, -1);
+                        }
+                        // dominance rule: highest tile index wins
+                        var tile_position = in.tile_position + tile_offset;
+                        tile_index = get_tile_index(tile_position);
+                        var max_index = max(in.tile_index, tile_index);
+
+                        // Figure out border drawing.
+                        // Borders are drawn only between tiles of different indices.
+                        // In the easy case the border is between "this" tile index (in.tile_index)
+                        // and some horizontal/vertical neighbor.
+                        //
+                        // It might however also be between a horizontal/vertical neighbor and a
+                        // diagonal neighbor. In that case we need to compare our neighbors indices
+                        // with each other
+
+                        var is_border = false;
+
+                        var is_xborder = abs(in.tile_offset.x - r) <= bw || abs(in.tile_offset.x - l) <= bw;
+                        var is_yborder = abs(in.tile_offset.y - t) <= bw || abs(in.tile_offset.y - b) <= bw;
+
+                        // diagonal case
+                        if tile_offset.x != 0 && tile_offset.y != 0 {
+
+                            //    ##===+===+===##===========##
+                            //    ||   |   |   ||           ||
+                            //    ||---+---+---||           ||
+                            //    ||   | C |   ||     R     ||
+                            //    ||---+---+---||           ||
+                            //    ||   |   | d ||           ||
+                            //    ##===+===+===##===========##
+                            //    ||           ||           ||
+                            //    ||           ||           ||
+                            //    ||     B     ||     D     ||
+                            //    ||           ||           ||
+                            //    ||           ||           ||
+                            //    ##===========##===========##
+                            //
+
+                            // The dominating tile index in a diagonal sector (d) is the max index of
+                            // the current tile (C) and the three neighbors (R, B, D).
+                            // `max_index` at this point is already max(C, D), so we only need to
+                            // include R & B.
+                            max_index = max(max_index, get_tile_index(in.tile_position + vec2<i32>(tile_offset.x, 0)));
+                            max_index = max(max_index, get_tile_index(in.tile_position + vec2<i32>(0, tile_offset.y)));
+
+
+                            if is_xborder && max(in.tile_index, get_tile_index(in.tile_position + vec2<i32>(0, tile_offset.y))) != max_index {
+                                is_border = true;
+                                //return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+                            }
+                            if is_yborder && max(in.tile_index, get_tile_index(in.tile_position + vec2<i32>(tile_offset.x, 0))) != max_index {
+                                is_border = true;
+                                //return vec4<f32>(1.0, 0.0, 1.0, 1.0);
+                            }
+                        }
+                        else if (is_xborder || is_yborder) && max_index > in.tile_index {
+                                is_border = true;
+                                //return vec4<f32>(0.0, 1.0, 0.0, 1.0);
                         }
 
-                        tile_index = get_tile_index(tile_position);
-
-                        if (abs(in.tile_offset.x - r) <= bw || abs(in.tile_offset.x - l) <= bw
-                            || abs(in.tile_offset.y - t) <= bw || abs(in.tile_offset.y - b) <= bw)
-
-                            // TODO: this condition is too harsh, it should compare the tile index
-                            // with the neighbor independently of whether we would end up sampling
-                            // from it
-                            && (tile_index != in.tile_index)
+                        if is_border
                         {
                             return vec4<f32>(0.0, 0.0, 0.0, 1.0);
                         }
 
-                        var color = sample_tile_at(tile_index, in.tile_position, in.tile_offset);
+                        var color = sample_tile_at(max_index, in.tile_position, in.tile_offset);
                         return color;
                     }
+
+                    fn dominates_index(p: vec2<i32>, index: u32) -> bool {
+                        return get_tile_index(p) > index;
+                    }
+
                     "#.to_string()
                 ),
                 ..default()
