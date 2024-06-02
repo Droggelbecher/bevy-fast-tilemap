@@ -45,9 +45,10 @@ fn main() {
                         return 1.0 * sin(x + cos(x));
                     }
 
+                    // Returns values in the range -1.0 to 1.0
                     fn offs_rocky(x: f32) -> f32 {
                         var pi = radians(180.0);
-                        return 0.7 * (
+                        return 1.25 * (
                               0.1 * sin(x / 3.0)
                             + 0.1 * sin((x+0.1) / 3.2)
                             + 0.1 * sin((x+0.2) / 2.8)
@@ -57,8 +58,9 @@ fn main() {
                             + 0.1 * sin((x+2.3) / 0.3));
                     }
 
+                    // Returns values in the range -6.0 to 6.0
                     fn offs(x: f32) -> f32 {
-                        return 12.0 * offs_rocky(x / 6.0);
+                        return 6.0 * offs_rocky(x / 6.0);
                     }
 
                     // DEBUG: Render tiles flat
@@ -69,8 +71,10 @@ fn main() {
                     fn sample_tile(in: ExtractIn) -> vec4<f32> {
                         // offs() is shifted this much inwards
                         // Bigger means smaller tiles and more fluid borders with eg diagonal
-                        // neighbors. Needs to be big enough so offs()+bw doesnt spill over into the
-                        // neighboring tile.
+                        // neighbors.
+                        //
+                        // doffs > offs() + bw
+                        // must be fulfilled so that the border is drawn correctly.
                         var doffs = 8.0;
 
                         // half the border width
