@@ -61,7 +61,7 @@ fn main() {
                     // Scaled version.
                     // Returns values in the range -6.0 to 6.0
                     fn offs(x: f32) -> f32 {
-                        return 6.0 * offs_rocky(x / 6.0);
+                        return 1.0 * offs_rocky(x / 6.0);
                     }
 
                     // DEBUG: Render tiles flat
@@ -76,10 +76,10 @@ fn main() {
                         //
                         // doffs >= offs() + bw
                         // must be fulfilled so that the border is drawn correctly.
-                        var doffs = 8.0;
+                        var doffs = 2.0;
 
                         // half the border width
-                        var bw = 2.0;
+                        var bw = 0.5;
 
                         // debug borders
                         var bw_dbg = -1.0;
@@ -222,12 +222,12 @@ fn startup(
 
     let map = Map::<UserData>::builder(
         uvec2(16, 16),
-        asset_server.load("patterns.png"),
-        vec2(64., 64.),
+        asset_server.load("pixel_tiles_16.png"),
+        vec2(16., 16.),
     )
     // A pattern texture in the atlas is NxN map tiles large
     // (i.e. it will repeat every N tiles in any direction)
-    .with_atlas_tile_size_factor(4)
+    .with_pattern_tiles(asset_server.load("patterns.png"), 16, 2)
     // bevy_fast_tilemap will automatically calculate the correct texture coordinates so that
     // adjecent tiles in the map will also have adjecent texture coordinates.
     .build_and_initialize(|m| {
@@ -235,7 +235,7 @@ fn startup(
 
         for y in 0..m.size().y {
             for x in 0..m.size().y {
-                m.set(x, y, rng.gen_range(0..4));
+                m.set(x, y, rng.gen_range(0..12));
             }
         }
     });

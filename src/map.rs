@@ -52,6 +52,11 @@ where
     #[sampler(102)]
     pub(crate) atlas_texture: Handle<Image>,
 
+    /// Atlas texture with the individual tiles
+    #[texture(103)]
+    #[sampler(104)]
+    pub(crate) pattern_atlas_texture: Handle<Image>,
+
     pub(crate) perspective_defs: Vec<String>,
     pub(crate) perspective_underhangs: bool,
     pub(crate) perspective_overhangs: bool,
@@ -284,8 +289,17 @@ where
             return false;
         };
 
+        let maybe_pattern_atlas_texture = images.get(&self.pattern_atlas_texture);
+
+        if self.map_uniform.n_pattern_indices > 0 && maybe_pattern_atlas_texture.is_none() {
+            return false;
+        }
+
         self.map_uniform
-            .update_atlas_size(atlas_texture.size().as_vec2())
+            .update_atlas_size(
+                atlas_texture.size().as_vec2(),
+                maybe_pattern_atlas_texture.map(|t| t.size().as_vec2())
+            )
     }
 
     pub(crate) fn update_inverse_projection(&mut self) {
@@ -452,6 +466,8 @@ pub fn update_loading_maps<UserData>(
     UserData:
         AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
 {
+    let images = images.as_mut();
+
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
             continue;
@@ -470,8 +486,18 @@ pub fn update_loading_maps<UserData>(
             ..default()
         });
 
+        if map.map_uniform.n_pattern_indices > 0 {
+            let Some(pattern_atlas) = images.get_mut(map.pattern_atlas_texture.clone()) else { continue; };
+            pattern_atlas.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+                min_filter: ImageFilterMode::Nearest,
+                mag_filter: ImageFilterMode::Nearest,
+                mipmap_filter: ImageFilterMode::Linear,
+                ..default()
+            });
+        }
+
         commands.entity(entity).remove::<MapLoading>();
-        map.update(images.as_ref());
+        map.update(images);
 
         if manage_mesh.is_some() {
             let mut mesh = Mesh::from(Rectangle {

@@ -1,0 +1,434 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'bevy_fast_tilemap'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "bevy_fast_tilemap",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'animation'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=animation",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "animation",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'animation'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=animation",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "animation",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'bench'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=bench",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "bench",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'bench'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=bench",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "bench",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'custom_mesh'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=custom_mesh",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "custom_mesh",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'custom_mesh'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=custom_mesh",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "custom_mesh",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'dominance'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=dominance",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "dominance",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'dominance'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=dominance",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "dominance",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'iso'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=iso",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'iso'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=iso",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'iso2'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=iso2",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso2",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'iso2'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=iso2",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso2",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'iso_dominance'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=iso_dominance",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso_dominance",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'iso_dominance'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=iso_dominance",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso_dominance",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'iso_perspective'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=iso_perspective",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso_perspective",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'iso_perspective'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=iso_perspective",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "iso_perspective",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'layers'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=layers",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "layers",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'layers'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=layers",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "layers",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'mouse_controls_camera'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=mouse_controls_camera",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "mouse_controls_camera",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'mouse_controls_camera'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=mouse_controls_camera",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "mouse_controls_camera",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'updates'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=updates",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "updates",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'updates'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=updates",
+                    "--package=bevy_fast_tilemap"
+                ],
+                "filter": {
+                    "name": "updates",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

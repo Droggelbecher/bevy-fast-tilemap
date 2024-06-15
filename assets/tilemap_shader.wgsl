@@ -68,6 +68,17 @@ struct Map {
     /// [derived] Inverse of global transform of the entity holding the map as transformation matrix & offset.
     global_inverse_transform_matrix: mat3x3<f32>,
     global_inverse_transform_translation: vec3<f32>,
+
+    /// The first this many indices will use the pattern tile atlas,
+    /// the rest will use the normal tile atlas (and have this number substracted before sampling)
+    /// 0 means the pattern functionality is not used.
+    n_pattern_indices: u32,
+
+    /// [derived] Number of tiles in the pattern tile atlas in each direction
+    n_pattern_tiles: vec2<u32>,
+
+    /// [derived]
+    pattern_atlas_size: vec2<f32>,
 };
 
 @group(2) @binding(0)
@@ -85,6 +96,11 @@ var atlas_texture: texture_2d<f32>;
 @group(2) @binding(102)
 var atlas_sampler: sampler;
 
+@group(2) @binding(103)
+var pattern_texture: texture_2d<f32>;
+
+@group(2) @binding(104)
+var pattern_sampler: sampler;
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
@@ -119,28 +135,39 @@ fn vertex(v: Vertex) -> VertexOutput {
     return out;
 }
 
+fn is_pattern_index(index: u32) -> bool {
+    return index < map.n_pattern_indices;
+}
+
 /// Position (world/pixel units) in tilemap atlas of the top left corner
 /// of the tile with the given index
 fn atlas_index_to_position(index: u32, tile_position: vec2<i32>) -> vec2<f32> {
-    var index_f = f32(index);
-    var index_y = floor(index_f / f32(map.n_tiles.x));
-    var index_x = index_f - index_y * f32(map.n_tiles.x);
-    var index2d = vec2<f32>(index_x, index_y);
+    if is_pattern_index(index) {
+        var index_f = f32(index);
+        var index_y = floor(index_f / f32(map.n_pattern_tiles.x));
+        var index_x = index_f - index_y * f32(map.n_pattern_tiles.x);
+        var index2d = vec2<f32>(index_x, index_y);
 
-    if map.atlas_tile_size_factor > 1 {
+        // Note: for pattern tile atlas there is no inner or outer padding
         return
-            index2d * (map.tile_size * f32(map.atlas_tile_size_factor) + map.inner_padding)
-            + map.outer_padding_topleft
+            index2d * (map.tile_size * f32(map.atlas_tile_size_factor))
             + map.tile_size * vec2<f32>(
                 f32(tile_position.x % map.atlas_tile_size_factor),
                 f32(tile_position.y % map.atlas_tile_size_factor)
             );
     }
     else {
+        var idx = index - map.n_pattern_indices;
+
+        var index_f = f32(idx);
+        var index_y = floor(index_f / f32(map.n_tiles.x));
+        var index_x = index_f - index_y * f32(map.n_tiles.x);
+        var index2d = vec2<f32>(index_x, index_y);
 
         var pos = index2d * (map.tile_size + map.inner_padding) + map.outer_padding_topleft;
         return pos;
     }
+
 }
 
 /// Compute offset into the tile by world position and world position of tile reference point
@@ -193,9 +220,16 @@ fn sample_tile_at(
         return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
-    return textureSample(
-        atlas_texture, atlas_sampler, total_offset / map.atlas_size
-    );
+    if is_pattern_index(tile_index) {
+        return textureSample(
+            pattern_texture, pattern_sampler, total_offset / map.pattern_atlas_size
+        );
+    }
+    else {
+        return textureSample(
+            atlas_texture, atlas_sampler, total_offset / map.atlas_size
+        );
+    }
 }
 
 /// 2d map tile position and offset in map tile coordinates

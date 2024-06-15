@@ -68,8 +68,14 @@ where
         }
     } // fn new
 
-    pub fn with_atlas_tile_size_factor(mut self, factor: i32) -> Self {
-        self.map.map_uniform.atlas_tile_size_factor = factor;
+    pub fn with_pattern_tiles(mut self,
+        pattern_atlas: Handle<Image>,
+        size_factor: u32,
+        n_pattern_indices: u32
+    ) -> Self {
+        self.map.map_uniform.atlas_tile_size_factor = size_factor as i32;
+        self.map.pattern_atlas_texture = pattern_atlas;
+        self.map.map_uniform.n_pattern_indices = n_pattern_indices;
         self
     }
 

@@ -60,6 +60,12 @@ pub struct MapUniform {
     /// (derived) global world pos -> fractional 2d map index
     pub(crate) global_inverse_transform_matrix: Mat3,
     pub(crate) global_inverse_transform_translation: Vec3,
+
+    pub(crate) n_pattern_indices: u32,
+
+    // (derived)
+    pub(crate) n_pattern_tiles: UVec2,
+    pub(crate) pattern_atlas_size: Vec2,
 }
 
 impl Default for MapUniform {
@@ -82,6 +88,10 @@ impl Default for MapUniform {
             inverse_projection: default(),
             global_inverse_transform_matrix: default(),
             global_inverse_transform_translation: default(),
+
+            n_pattern_indices: default(),
+            n_pattern_tiles: default(),
+            pattern_atlas_size: default(),
         }
     }
 }
@@ -158,12 +168,16 @@ impl MapUniform {
 
     /// Return true iff this update made the uniform ready
     /// (ie. it was not ready before and is ready now).
-    pub(crate) fn update_atlas_size(&mut self, atlas_size: Vec2) -> bool {
-        if self.atlas_size == atlas_size {
+    pub(crate) fn update_atlas_size(&mut self, atlas_size: Vec2, pattern_atlas_size: Option<Vec2>) -> bool {
+        let pattern_atlas_size = pattern_atlas_size.unwrap_or(Vec2::ZERO);
+
+        if self.atlas_size == atlas_size && pattern_atlas_size == self.pattern_atlas_size {
+            warn!("No change in atlas size, skipping update {:?} {:?}", atlas_size, pattern_atlas_size);
             return false;
         }
 
         self.atlas_size = atlas_size;
+        self.pattern_atlas_size = pattern_atlas_size;
         self.update_n_tiles();
         true
     }
@@ -179,19 +193,42 @@ impl MapUniform {
     }
 
     fn update_n_tiles(&mut self) {
+
+        // "Normal" atlas
+
         let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;
-        let n_tiles = (inner + self.inner_padding)
-            / (self.inner_padding + self.tile_size * self.atlas_tile_size_factor as f32);
+        let n_tiles = (inner + self.inner_padding) / (self.inner_padding + self.tile_size);
 
         let eps = 0.01;
         if (n_tiles.x - n_tiles.x.round()).abs() > eps
             || (n_tiles.y - n_tiles.y.round()).abs() > eps
         {
             panic!(
-                "Expected an integral number of tiles in your atlas, but computes to be {:?}",
+                "Expected an integral number of tiles in normal atlas, but computes to be {:?}",
                 n_tiles
             );
         }
         self.n_tiles = n_tiles.as_uvec2();
+
+        // "Pattern" atlas
+
+        if self.n_pattern_indices == 0 {
+            self.n_pattern_tiles = UVec2::ZERO;
+            return;
+        }
+
+        let inner = self.pattern_atlas_size;
+        let n_tiles = inner / (self.tile_size * self.atlas_tile_size_factor as f32);
+
+        let eps = 0.01;
+        if (n_tiles.x - n_tiles.x.round()).abs() > eps
+            || (n_tiles.y - n_tiles.y.round()).abs() > eps
+        {
+            panic!(
+                "Expected an integral number of tiles in pattern atlas, but computes to be {:?}",
+                n_tiles
+            );
+        }
+        self.n_pattern_tiles = n_tiles.as_uvec2();
     }
 }
