@@ -1,5 +1,8 @@
-#import bevy_sprite::mesh2d_bindings::mesh
-#import bevy_sprite::mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world}
+#import bevy_sprite::{
+    mesh2d_bindings::mesh,
+    mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world},
+}
+#import mesh_view_bindings::globals;
 
 struct ExtractIn {
     /// tile_index: Index of the tile in the atlas 0-based, x-axis first
