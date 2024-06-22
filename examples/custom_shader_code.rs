@@ -1,13 +1,11 @@
-//! This example also demonstrates how to insert custom code into the tilemap shader to
-//! modify the appearance of the tiles. In this case, we add a "special" bit to the tile index
-//! and use it to make some tiles bounce up and down and tint them red.
+/*!
+This example also demonstrates how to insert custom code into the tilemap shader to
+modify the appearance of the tiles. In this case, we add a "special" bit to the tile index
+and use it to make some tiles bounce up and down and tint them red.
+*/
 
 use bevy::{
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    math::{uvec2, vec2},
-    prelude::*,
-    render::render_resource::{AsBindGroup, ShaderType},
-    window::PresentMode,
+    core_pipeline::{bloom::{BloomCompositeMode, BloomSettings}, tonemapping::Tonemapping}, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, math::{uvec2, vec2}, prelude::*, render::render_resource::{AsBindGroup, ShaderType}, window::PresentMode
 };
 
 use bevy_fast_tilemap::{
@@ -84,13 +82,13 @@ fn main() {
 
                         // tint "special" tiles red
                         if special {
-                            color = color * vec4(1.0, 0.0, 0.0, 1.0);
+                            color = color * vec4(10.0, 0.0, 0.0, 1.0);
                         }
 
                         // Add a white glow to the hovered tile
                         if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
                             var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
-                            color = color * vec4(v, v, v, 1.0);
+                            color = color * vec4(v * 10.0, v * 10.0, v * 10.0, 1.0);
                         }
 
                         return color;
@@ -111,7 +109,23 @@ fn startup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<Map<UserData>>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    // The bloom part is completely optional, we just do it to illustrate that
+    // the standard bevy plugins can interact with the custom shader code.
+    commands.spawn((
+        Camera2dBundle {
+            camera: Camera {
+                hdr: true, // 1. HDR is required for bloom
+                ..default()
+            },
+            tonemapping: Tonemapping::TonyMcMapface, // 2. Using a tonemapper that desaturates to white is recommended
+            ..default()
+        },
+        // Optional: To illustrate correct interaction with bevy plugins, we add a BloomSettings
+        BloomSettings {
+            composite_mode: BloomCompositeMode::Additive,
+            ..Default::default()
+        }
+    ));
 
     let map = Map::<UserData>::builder(
         // Map size
