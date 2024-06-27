@@ -12,7 +12,7 @@ use bevy::{
     sprite::{Material2d, Mesh2dHandle},
 };
 
-use crate::{map_builder::MapBuilder, map_uniform::MapUniform, shader::SHADER_HANDLE};
+use crate::{map_builder::MapBuilder, map_uniform::MapUniform, plugin::{Customization, NoCustomization}};
 
 const ATTRIBUTE_MAP_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("MapPosition", 988779054, VertexFormat::Float32x2);
@@ -28,12 +28,9 @@ pub struct DefaultUserData {
 
 /// Map, holding handles to a map texture with the tile data and an atlas texture
 /// with the tile renderings.
-#[derive(Asset, Debug, Clone, Default, Reflect, AsBindGroup)]
+#[derive(Asset, Debug, Clone, Reflect, AsBindGroup)]
 #[bind_group_data(MapKey)]
-pub struct Map<UserData = DefaultUserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+pub struct Map<C: Customization = NoCustomization>
 {
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
@@ -41,7 +38,7 @@ where
     pub(crate) map_uniform: MapUniform,
 
     #[uniform(1)]
-    pub user_data: UserData,
+    pub user_data: C::UserData,
 
     /// Texture containing the tile IDs (one per each pixel)
     #[storage(100, read_only)]
@@ -57,6 +54,26 @@ where
     pub(crate) perspective_overhangs: bool,
     pub(crate) dominance_overhangs: bool,
     pub(crate) force_underhangs: Vec<Vec2>,
+
+    pub(crate) _customization: std::marker::PhantomData<C>
+}
+
+impl<C: Customization> Default for Map<C> {
+    fn default() -> Self {
+        Self {
+            map_uniform: Default::default(),
+            user_data: Default::default(),
+            map_texture: Vec::new(),
+            atlas_texture: Default::default(),
+            perspective_defs: Vec::new(),
+            perspective_underhangs: true,
+            perspective_overhangs: true,
+            dominance_overhangs: false,
+            force_underhangs: Vec::new(),
+            _customization: std::marker::PhantomData,
+        }
+    }
+
 }
 
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -67,12 +84,9 @@ pub struct MapKey {
     pub(crate) dominance_overhangs: bool,
 }
 
-impl<UserData> From<&Map<UserData>> for MapKey
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+impl<C: Customization> From<&Map<C>> for MapKey
 {
-    fn from(map: &Map<UserData>) -> Self {
+    fn from(map: &Map<C>) -> Self {
         MapKey {
             perspective_defs: map.perspective_defs.clone(),
             perspective_underhangs: map.perspective_underhangs,
@@ -105,20 +119,11 @@ impl MapAttributes {
         mesh.insert_attribute(ATTRIBUTE_MIX_COLOR, v);
     }
 
-    fn set_map_position<UserData>(
+    fn set_map_position<C: Customization>(
         _attributes: Option<&MapAttributes>,
         mesh: &mut Mesh,
-        map: &Map<UserData>,
-    ) where
-        UserData: AsBindGroup
-            + Reflect
-            + Clone
-            + Default
-            + TypePath
-            + ShaderType
-            + WriteInto
-            + ShaderSize,
-    {
+        map: &Map<C>,
+    ) {
         let v: Vec<_> = mesh
             .attribute(Mesh::ATTRIBUTE_POSITION)
             .unwrap()
@@ -137,17 +142,19 @@ impl MapAttributes {
     }
 }
 
-impl<UserData> Material2d for Map<UserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+impl<C: Customization> Material2d for Map<C>
 {
     fn vertex_shader() -> ShaderRef {
-        ShaderRef::Handle(SHADER_HANDLE)
+        C::SHADER_HANDLE.into()
+        //SHADER_CODE.replace("#[user_code]", C::CUSTOM_SHADER_CODE).into()
+        // C::CUSTOM_SHADER_CODE.into()
+        // ShaderRef::Handle(self.shader_handle)
     }
 
     fn fragment_shader() -> ShaderRef {
-        ShaderRef::Handle(SHADER_HANDLE)
+        C::SHADER_HANDLE.into()
+        // C::CUSTOM_SHADER_CODE.into()
+        // ShaderRef::Handle(self.shader_handle)
     }
 
     fn specialize(
@@ -216,22 +223,19 @@ pub struct MeshManagedByMap;
 #[reflect(Component)]
 pub struct MapLoading;
 
-impl<UserData> Map<UserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+impl<C: Customization> Map<C>
 {
     /// Create a [`MapBuilder`] for configuring your map.
     pub fn builder(
         map_size: UVec2,
         atlas_texture: Handle<Image>,
         tile_size: Vec2,
-    ) -> MapBuilder<UserData> {
+    ) -> MapBuilder<C> {
         MapBuilder::new(map_size, atlas_texture, tile_size)
     }
 
-    pub fn indexer_mut(&mut self) -> MapIndexer<UserData> {
-        MapIndexer::<UserData> { map: self }
+    pub fn indexer_mut(&mut self) -> MapIndexer<C> {
+        MapIndexer::<C> { map: self }
     }
 
     /// Dimensions of this map in tiles.
@@ -337,19 +341,13 @@ where
 // Indexer into a map.
 // Internally holds a mutable reference to the underlying texture.
 // See [`Map::get_mut`] for a usage example.
-#[derive(Debug)]
-pub struct MapIndexer<'a, UserData = DefaultUserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+// #[derive(Debug)]
+pub struct MapIndexer<'a, C: Customization = NoCustomization>
 {
-    pub(crate) map: &'a mut Map<UserData>,
+    pub(crate) map: &'a mut Map<C>,
 }
 
-impl<'a, UserData> MapIndexer<'a, UserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+impl<'a, C: Customization> MapIndexer<'a, C>
 {
     /// Size of the map being indexed.
     pub fn size(&self) -> UVec2 {
@@ -412,12 +410,10 @@ where
     }
 }
 
-pub fn log_map_events<UserData>(
-    mut ev_asset: EventReader<AssetEvent<Map<UserData>>>,
-    map_handles: Query<&Handle<Map<UserData>>>,
-) where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+pub fn log_map_events<C: Customization>(
+    mut ev_asset: EventReader<AssetEvent<Map<C>>>,
+    map_handles: Query<&Handle<Map<C>>>,
+)
 {
     for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
@@ -433,14 +429,14 @@ pub fn log_map_events<UserData>(
 
 /// Check to see if any maps' assets became available
 /// if so.
-pub fn update_loading_maps<UserData>(
+pub fn update_loading_maps<C: Customization>(
     mut images: ResMut<Assets<Image>>,
-    mut map_materials: ResMut<Assets<Map<UserData>>>,
+    mut map_materials: ResMut<Assets<Map<C>>>,
     mut maps: Query<
         (
             Entity,
             Option<&MapAttributes>,
-            &Handle<Map<UserData>>,
+            &Handle<Map<C>>,
             Option<&MeshManagedByMap>,
         ),
         With<MapLoading>,
@@ -448,9 +444,7 @@ pub fn update_loading_maps<UserData>(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     time: Res<Time>,
-) where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+)
 {
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
@@ -491,11 +485,11 @@ pub fn update_loading_maps<UserData>(
 }
 
 /// Update mesh if MapAttributes change
-pub fn update_map_vertex_attributes<UserData>(
-    map_materials: ResMut<Assets<Map<UserData>>>,
+pub fn update_map_vertex_attributes<C: Customization>(
+    map_materials: ResMut<Assets<Map<C>>>,
     maps: Query<(
         Entity,
-        &Handle<Map<UserData>>,
+        &Handle<Map<C>>,
         &MapAttributes,
         Option<&Mesh2dHandle>,
         Option<&MeshManagedByMap>,
@@ -503,9 +497,7 @@ pub fn update_map_vertex_attributes<UserData>(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     time: Res<Time>,
-) where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
+)
 {
     for (entity, map_handle, attr, mesh_handle, manage_mesh) in maps.iter() {
         let Some(map) = map_materials.get(map_handle) else {

@@ -1,4 +1,7 @@
-use crate::map::{Map, MapAttributes, MapLoading, MeshManagedByMap};
+use crate::{
+    map::{Map, MapAttributes, MapLoading, MeshManagedByMap},
+    plugin::Customization,
+};
 use bevy::{
     prelude::*,
     render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
@@ -6,16 +9,12 @@ use bevy::{
 };
 
 // Bundle of components you should typically have for a map.
-#[derive(Bundle, Clone, Default)]
-pub struct MapBundleUnmanaged<UserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-{
+#[derive(Bundle, Clone)]
+pub struct MapBundleUnmanaged<C: Customization> {
     pub loading: MapLoading,
     pub attributes: MapAttributes,
 
-    pub material: Handle<Map<UserData>>,
+    pub material: Handle<Map<C>>,
     pub mesh: Mesh2dHandle,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
@@ -24,12 +23,24 @@ where
     pub view_visibility: ViewVisibility,
 }
 
-impl<UserData> MapBundleUnmanaged<UserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-{
-    pub fn new(map: Map<UserData>, materials: &mut Assets<Map<UserData>>) -> Self {
+impl<C: Customization> Default for MapBundleUnmanaged<C> {
+    fn default() -> Self {
+        Self {
+            loading: Default::default(),
+            attributes: Default::default(),
+            material: Default::default(),
+            mesh: Default::default(),
+            transform: Default::default(),
+            global_transform: Default::default(),
+            visibility: Default::default(),
+            inherited_visibility: Default::default(),
+            view_visibility: Default::default(),
+        }
+    }
+}
+
+impl<C: Customization> MapBundleUnmanaged<C> {
+    pub fn new(map: Map<C>, materials: &mut Assets<Map<C>>) -> Self {
         Self {
             material: materials.add(map),
             ..default()
@@ -38,16 +49,12 @@ where
 }
 
 // Bundle of components you should typically have for a map.
-#[derive(Bundle, Clone, Default)]
-pub struct MapBundleManaged<UserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-{
+#[derive(Bundle, Clone)]
+pub struct MapBundleManaged<C: Customization> {
     pub loading: MapLoading,
     pub attributes: MapAttributes,
 
-    pub material: Handle<Map<UserData>>,
+    pub material: Handle<Map<C>>,
     pub mesh: Mesh2dHandle,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
@@ -58,12 +65,26 @@ where
     pub mesh_managed_by_map: MeshManagedByMap,
 }
 
-impl<UserData> MapBundleManaged<UserData>
-where
-    UserData:
-        AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-{
-    pub fn new(map: Map<UserData>, materials: &mut Assets<Map<UserData>>) -> Self {
+impl<C: Customization> Default for MapBundleManaged<C> {
+    fn default() -> Self {
+        Self {
+            loading: Default::default(),
+            attributes: Default::default(),
+            material: Default::default(),
+            mesh: Default::default(),
+            transform: Default::default(),
+            global_transform: Default::default(),
+            visibility: Default::default(),
+            inherited_visibility: Default::default(),
+            view_visibility: Default::default(),
+            mesh_managed_by_map: Default::default(),
+        }
+    }
+}
+
+
+impl<C: Customization> MapBundleManaged<C> {
+    pub fn new(map: Map<C>, materials: &mut Assets<Map<C>>) -> Self {
         Self {
             material: materials.add(map),
             ..default()
