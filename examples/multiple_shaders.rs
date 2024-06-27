@@ -1,6 +1,4 @@
-//! This example also demonstrates how to insert custom code into the tilemap shader to
-//! modify the appearance of the tiles. In this case, we add a "special" bit to the tile index
-//! and use it to make some tiles bounce up and down and tint them red.
+//! This example demonstrates how you can use a different custom shader for each layer in your map.
 
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
