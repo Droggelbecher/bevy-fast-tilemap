@@ -10,13 +10,23 @@ use crate::{
     shader::SHADER_CODE,
 };
 
-pub trait Customization: Sync+Send+'static+TypePath+Clone /*+TypePath+AsBindGroup+Reflect+Clone+Default*/ {
+/// Implement this trait to customize the shader code and user data.
+pub trait Customization: Sync + Send + 'static + TypePath + Clone
+{
     const CUSTOM_SHADER_CODE: &'static str;
     const SHADER_HANDLE: Handle<Shader>;
-    type UserData: AsBindGroup + Reflect + Clone + TypePath + ShaderType + WriteInto + ShaderSize + Default;
+    type UserData: AsBindGroup
+        + Reflect
+        + Clone
+        + TypePath
+        + ShaderType
+        + WriteInto
+        + ShaderSize
+        + Default;
 }
 
-#[derive(Clone,TypePath)]
+/// Default custumization that will use the default user data and shader code.
+#[derive(Clone, TypePath, Default)]
 pub struct NoCustomization;
 
 impl Customization for NoCustomization {
@@ -33,7 +43,6 @@ impl Customization for NoCustomization {
     type UserData = DefaultUserData;
 }
 
-
 /// Plugin for fast tilemap.
 /// Add this to you app and then spawn one or multiple maps use [`crate::map_builder::MapBuilder`].
 pub type FastTileMapPlugin = CustomFastTileMapPlugin<NoCustomization>;
@@ -45,39 +54,16 @@ pub struct CustomFastTileMapPlugin<C: Customization = NoCustomization> {
     _customization: std::marker::PhantomData<C>,
 }
 
-// pub const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(15375856360518374895);
-// #[derive(Resource, Debug, Clone)]
-// struct ShaderHandle<UserData>
-// where
-//     UserData:
-//         AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-// {
-//     pub(crate) handle: Handle<Shader>,
-//     _user_data: std::marker::PhantomData<UserData>,
-// }
-
-impl<C: Customization> Plugin for CustomFastTileMapPlugin<C>
-// where
-//     UserData:
-//         AsBindGroup + Reflect + Clone + Default + TypePath + ShaderType + WriteInto + ShaderSize,
-{
+impl<C: Customization> Plugin for CustomFastTileMapPlugin<C> {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<Map<C>>::default());
         let mut shaders = app.world.resource_mut::<Assets<Shader>>();
 
         let mut code = SHADER_CODE.to_string();
 
-        code = code.replace(
-            "#[user_code]",
-            C::CUSTOM_SHADER_CODE
-        );
+        code = code.replace("#[user_code]", C::CUSTOM_SHADER_CODE);
 
         shaders.insert(C::SHADER_HANDLE, Shader::from_wgsl(code, file!()));
-
-        // app.world.insert_resource(ShaderHandle::<UserData> {
-        //     handle,
-        //     _user_data: std::marker::PhantomData,
-        // });
 
         app.add_systems(
             Update,

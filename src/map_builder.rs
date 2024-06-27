@@ -1,11 +1,10 @@
 use crate::{
-    map::{DefaultUserData, Map, MapIndexer},
+    map::{Map, MapIndexer},
     map_uniform::MapUniform, plugin::{Customization, NoCustomization},
 };
 use bevy::{
     math::uvec2,
     prelude::*,
-    render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
 };
 
 use crate::tile_projection::TileProjection;

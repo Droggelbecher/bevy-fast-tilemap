@@ -4,7 +4,7 @@ use bevy::{
     render::{
         mesh::MeshVertexAttribute,
         render_resource::{
-            encase::internal::WriteInto, AsBindGroup, ShaderDefVal, ShaderRef, ShaderSize,
+            AsBindGroup, ShaderDefVal, ShaderRef, 
             ShaderType, VertexFormat,
         },
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},

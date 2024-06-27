@@ -9,7 +9,7 @@ use bevy::{
 };
 
 use bevy_fast_tilemap::{
-    bundle::MapBundleManaged, map::MapIndexer, CustomFastTileMapPlugin, Map, AXONOMETRIC,
+    bundle::MapBundleManaged, map::MapIndexer, plugin::Customization, CustomFastTileMapPlugin, Map, AXONOMETRIC
 };
 use rand::Rng;
 
@@ -20,6 +20,67 @@ use mouse_controls_camera::MouseControlsCameraPlugin;
 #[derive(Debug, Clone, Default, Reflect, AsBindGroup, ShaderType)]
 struct UserData {
     cursor_position: UVec2,
+}
+
+#[derive(Clone, TypePath, Default)]
+struct MyCustomization;
+impl Customization for MyCustomization {
+    const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
+    type UserData = UserData;
+
+    // This is how you can insert custom code snippeds into tilemap_shader.wgsl.
+    // Note that the code is inserted verbatim, so it requires some understanding of
+    // the inner workings of the shader which may also change in the future.
+
+    // If the below looks intimidating, it's because it does a lot of things:
+    // - Defines a user data struct which holds the cursor position
+    // - Extracts a "special" bit from the tile index
+    // - Makes special tiles red & bounce up and down
+    // - Mirrors tiles on the x-axis sometimes
+    // - Adds a white glow to the hovered tile
+    const CUSTOM_SHADER_CODE: &'static str = r#"
+        // This is a custom user data struct that can be used in the shader code.
+        // It is passed to the shader as a bind group, so it can be used to pass
+        // additional information to the shader.
+        struct UserData {
+            cursor_position: vec2<u32>,
+        };
+
+        fn sample_tile(in: ExtractIn) -> vec4<f32> {
+
+            // extract a "special" bit from the tile index and use it to
+            // make some tiles bounce up and down.
+            var special = (in.tile_index & 0x0100) != 0;
+
+            // extract the actual tile index
+            var tile_index = in.tile_index & 0x00FF;
+            var tile_offset = in.tile_offset;
+
+            if special {
+                tile_offset.y += abs(sin(in.animation_state * 5.0 + tile_offset.x * 0.002)) * 20.0;
+            }
+
+            // Sometimes mirror tile on the x-Axis for some reason :)
+            if user_data.cursor_position.x % 2 == 0 {
+                tile_offset.x = 256.0 - tile_offset.x;
+            }
+
+            var color = sample_tile_at(tile_index, in.tile_position, tile_offset);
+
+                        // tint "special" tiles red
+                        if special {
+                            color = color * vec4(10.0, 0.0, 0.0, 1.0);
+                        }
+
+                        // Add a white glow to the hovered tile
+                        if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
+                            var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
+                            color = color * vec4(v * 10.0, v * 10.0, v * 10.0, 1.0);
+                        }
+
+            return color;
+        }
+    "#;
 }
 
 fn main() {
@@ -38,66 +99,7 @@ fn main() {
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
-            CustomFastTileMapPlugin::<UserData> {
-                // This is how you can insert custom code snippeds into tilemap_shader.wgsl.
-                // Note that the code is inserted verbatim, so it requires some understanding of
-                // the inner workings of the shader which may also change in the future.
-
-                // If the below looks intimidating, it's because it does a lot of things:
-                // - Defines a user data struct which holds the cursor position
-                // - Extracts a "special" bit from the tile index
-                // - Makes special tiles red & bounce up and down
-                // - Mirrors tiles on the x-axis sometimes
-                // - Adds a white glow to the hovered tile
-
-                user_code: Some(
-                    r#"
-                    // This is a custom user data struct that can be used in the shader code.
-                    // It is passed to the shader as a bind group, so it can be used to pass
-                    // additional information to the shader.
-                    struct UserData {
-                        cursor_position: vec2<u32>,
-                    };
-
-                    fn sample_tile(in: ExtractIn) -> vec4<f32> {
-
-                        // extract a "special" bit from the tile index and use it to
-                        // make some tiles bounce up and down.
-                        var special = (in.tile_index & 0x0100) != 0;
-
-                        // extract the actual tile index
-                        var tile_index = in.tile_index & 0x00FF;
-                        var tile_offset = in.tile_offset;
-
-                        if special {
-                            tile_offset.y += abs(sin(in.animation_state * 5.0 + tile_offset.x * 0.002)) * 20.0;
-                        }
-
-                        // Sometimes mirror tile on the x-Axis for some reason :)
-                        if user_data.cursor_position.x % 2 == 0 {
-                            tile_offset.x = 256.0 - tile_offset.x;
-                        }
-
-                        var color = sample_tile_at(tile_index, in.tile_position, tile_offset);
-
-                        // tint "special" tiles red
-                        if special {
-                            color = color * vec4(10.0, 0.0, 0.0, 1.0);
-                        }
-
-                        // Add a white glow to the hovered tile
-                        if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
-                            var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
-                            color = color * vec4(v * 10.0, v * 10.0, v * 10.0, 1.0);
-                        }
-
-                        return color;
-                    }
-                    "#
-                    .to_string(),
-                ),
-                ..default()
-            },
+            CustomFastTileMapPlugin::<MyCustomization>::default(),
         ))
         .add_systems(Startup, startup)
         .add_systems(Update, update_cursor_position)
@@ -107,7 +109,7 @@ fn main() {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<Map<UserData>>>,
+    mut materials: ResMut<Assets<Map<MyCustomization>>>,
 ) {
     // The bloom part is completely optional, we just do it to illustrate that
     // the standard bevy plugins can interact with the custom shader code.
@@ -127,7 +129,7 @@ fn startup(
         }
     ));
 
-    let map = Map::<UserData>::builder(
+    let map = Map::<MyCustomization>::builder(
         // Map size
         uvec2(100, 100),
         // Tile atlas
@@ -145,14 +147,14 @@ fn startup(
     .with_perspective_overhang()
     .build_and_initialize(init_map);
 
-    commands.spawn(MapBundleManaged::<UserData> {
+    commands.spawn(MapBundleManaged::<MyCustomization> {
         material: materials.add(map),
         ..Default::default()
     });
 } // startup
 
 /// Fill the map with a random pattern
-fn init_map(m: &mut MapIndexer<UserData>) {
+fn init_map(m: &mut MapIndexer<MyCustomization>) {
     let mut rng = rand::thread_rng();
     for y in 0..m.size().y {
         for x in 0..m.size().x {
@@ -174,10 +176,10 @@ fn init_map(m: &mut MapIndexer<UserData>) {
 fn update_cursor_position(
     mut cursor_moved_events: EventReader<CursorMoved>,
     mut camera_query: Query<(&GlobalTransform, &Camera), With<OrthographicProjection>>,
-    maps: Query<&Handle<Map<UserData>>>,
+    maps: Query<&Handle<Map<MyCustomization>>>,
 
     // We'll actually change the map (by changing the user data), so we need to get a mutable
-    mut materials: ResMut<Assets<Map<UserData>>>,
+    mut materials: ResMut<Assets<Map<MyCustomization>>>,
 ) {
     for event in cursor_moved_events.read() {
         for map_handle in maps.iter() {

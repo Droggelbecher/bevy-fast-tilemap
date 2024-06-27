@@ -12,11 +12,41 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
+use bevy_fast_tilemap::{
+    map::DefaultUserData, plugin::Customization, CustomFastTileMapPlugin, Map, MapBundleManaged
+};
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
 use mouse_controls_camera::MouseControlsCameraPlugin;
+
+#[derive(Clone, TypePath, Default)]
+struct AnimationCustomization;
+impl Customization for AnimationCustomization {
+    const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
+    type UserData = DefaultUserData;
+    const CUSTOM_SHADER_CODE: &'static str = r#"
+        // wgpu doesnt like this being empty, so the default is to have a dummy u32
+        // field here.
+
+        struct UserData {
+            dummy: u32,
+        };
+
+        fn sample_tile(in: ExtractIn) -> vec4<f32> {
+            var tile_index = in.tile_index;
+
+            // If the map data says tile 6, animate it by changing the tile index to 6, 7 or 8
+            // based on the animation state.
+            if tile_index == 6u {
+                var offs = u32(round(in.animation_state * 5.0)) % 3u;
+                tile_index = 6u + offs;
+            }
+
+            return sample_tile_at(tile_index, in.tile_position, in.tile_offset);
+        }
+    "#;
+}
 
 fn main() {
     App::new()
@@ -34,34 +64,7 @@ fn main() {
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             MouseControlsCameraPlugin::default(),
-            FastTileMapPlugin {
-                user_code: Some(
-                    r#"
-                    // wgpu doesnt like this being empty, so the default is to have a dummy u32
-                    // field here.
-
-                    struct UserData {
-                        dummy: u32,
-                    };
-
-                    fn sample_tile(in: ExtractIn) -> vec4<f32> {
-                        var tile_index = in.tile_index;
-
-                        // If the map data says tile 6, animate it by changing the tile index to 6, 7 or 8
-                        // based on the animation state.
-                        if tile_index == 6u {
-                            var offs = u32(round(in.animation_state * 5.0)) % 3u;
-                            tile_index = 6u + offs;
-                        }
-
-                        return sample_tile_at(tile_index, in.tile_position, in.tile_offset);
-                    }
-
-                    "#
-                    .to_string(),
-                ),
-                ..default()
-            },
+            CustomFastTileMapPlugin::<AnimationCustomization>::default(),
         ))
         .add_systems(Startup, startup)
         .run();
@@ -70,7 +73,7 @@ fn main() {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<Map>>,
+    mut materials: ResMut<Assets<Map<AnimationCustomization>>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -83,7 +86,7 @@ fn startup(
     )
     .build_and_set(|p| ((p.x + p.y) % 4 + 1) as u32);
 
-    commands.spawn(MapBundleManaged {
+    commands.spawn(MapBundleManaged::<AnimationCustomization> {
         material: materials.add(map),
         ..default()
     });

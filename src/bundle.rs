@@ -4,7 +4,6 @@ use crate::{
 };
 use bevy::{
     prelude::*,
-    render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
     sprite::Mesh2dHandle,
 };
 
