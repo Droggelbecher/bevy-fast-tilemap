@@ -314,7 +314,11 @@ fn get_tile_index_checked(map_position: vec2<i32>) -> u32 {
 }
 
 fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
-    return mix(c0, c1, c1.a);
+    // See https://de.wikipedia.org/wiki/Alpha_Blending
+    let a_mix = c1.a + (1 - c1.a) * c0.a;
+    var r = (c1 * c1.a + c0 * c0.a * (1 - c1.a)) / a_mix;
+    r.a = a_mix;
+    return r;
 }
 
 fn is_valid_tile(tile: vec2<i32>) -> bool {
