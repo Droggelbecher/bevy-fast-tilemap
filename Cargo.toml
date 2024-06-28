@@ -13,6 +13,7 @@ repository = "https://github.com/Droggelbecher/bevy-fast-tilemap"
 bevy = "0.14.*"
 rand = "0.8.*"
 num = "0.4.*"
+regex = "1.10.*"
 
 [dev-dependencies]
 bevy = "0.14"

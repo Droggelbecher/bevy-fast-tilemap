@@ -65,16 +65,16 @@ impl Customization for MyCustomization {
 
             var color = sample_tile_at(tile_index, in.tile_position, tile_offset);
 
-                        // tint "special" tiles red
-                        if special {
-                            color = color * vec4(10.0, 0.0, 0.0, 1.0);
-                        }
+            // tint "special" tiles red
+            if special {
+                color = color * vec4(10.0, 0.0, 0.0, 1.0);
+            }
 
-                        // Add a white glow to the hovered tile
-                        if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
-                            var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
-                            color = color * vec4(v * 10.0, v * 10.0, v * 10.0, 1.0);
-                        }
+            // Add a white glow to the hovered tile
+            if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
+                var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
+                color = color * vec4(v * 10.0, v * 10.0, v * 10.0, 1.0);
+            }
 
             return color;
         }
