@@ -13,7 +13,7 @@ use crate::{
 /// Implement this trait to customize the shader code and user data.
 pub trait Customization: Sync + Send + 'static + TypePath + Clone
 {
-    const CUSTOM_SHADER_CODE: &'static str;
+    // const CUSTOM_SHADER_CODE: &'static str;
     const SHADER_HANDLE: Handle<Shader>;
     type UserData: AsBindGroup
         + Reflect
@@ -23,6 +23,7 @@ pub trait Customization: Sync + Send + 'static + TypePath + Clone
         + WriteInto
         + ShaderSize
         + Default;
+    fn custom_shader_code() -> String;
 }
 
 /// Default custumization that will use the default user data and shader code.
@@ -30,7 +31,7 @@ pub trait Customization: Sync + Send + 'static + TypePath + Clone
 pub struct NoCustomization;
 
 impl Customization for NoCustomization {
-    const CUSTOM_SHADER_CODE: &'static str = r#"
+    fn custom_shader_code() -> String { r#"
         struct UserData {
             dummy: u32,
         };
@@ -38,7 +39,8 @@ impl Customization for NoCustomization {
         fn sample_tile(in: ExtractIn) -> vec4<f32> {
             return sample_tile_at(in.tile_index, in.tile_position, in.tile_offset);
         }
-    "#;
+    "#.to_string()
+}
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(15375856360518374895);
     type UserData = DefaultUserData;
 }
@@ -61,7 +63,7 @@ impl<C: Customization> Plugin for CustomFastTileMapPlugin<C> {
 
         let mut code = SHADER_CODE.to_string();
 
-        code = code.replace("#[user_code]", C::CUSTOM_SHADER_CODE);
+        code = code.replace("#[user_code]", C::custom_shader_code().as_str());
 
         shaders.insert(C::SHADER_HANDLE, Shader::from_wgsl(code, file!()));
 
