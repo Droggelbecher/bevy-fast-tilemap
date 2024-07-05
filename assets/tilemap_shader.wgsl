@@ -1,6 +1,6 @@
 #import bevy_sprite::{
     mesh2d_bindings::mesh,
-    mesh2d_functions::{get_model_matrix, mesh2d_position_local_to_clip, mesh2d_position_local_to_world},
+    mesh2d_functions::{get_world_from_local, mesh2d_position_local_to_clip, mesh2d_position_local_to_world},
 }
 #import mesh_view_bindings::globals;
 
@@ -109,7 +109,7 @@ struct VertexOutput {
 fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
-    var model: mat4x4<f32> = get_model_matrix(v.instance_index);
+    var model: mat4x4<f32> = get_world_from_local(v.instance_index);
 
     out.position = mesh2d_position_local_to_clip(model, vec4<f32>(v.position, 1.0));
     out.world_position = mesh2d_position_local_to_world(model, vec4<f32>(v.position, 1.0));
