@@ -25,9 +25,12 @@ pub mod plugin;
 pub mod shader;
 pub mod tile_projection;
 
-pub use crate::{
-    bundle::{MapBundleManaged, MapBundleUnmanaged},
-    map::{Map, MapAttributes, MapIndexer, MeshManagedByMap},
-    plugin::{CustomFastTileMapPlugin, FastTileMapPlugin},
-    tile_projection::{TileProjection, AXONOMETRIC, IDENTITY},
-};
+pub mod prelude {
+    pub use super::bundle::*;
+    pub use super::map::*;
+    pub use super::map_builder::*;
+    pub use super::map_uniform::*;
+    pub use super::plugin::*;
+    pub use super::tile_projection::*;
+
+}

@@ -3,16 +3,17 @@ use bevy::{
     prelude::*,
     render::{
         mesh::MeshVertexAttribute,
-        render_resource::{
-            AsBindGroup, ShaderDefVal, ShaderRef, 
-            ShaderType, VertexFormat,
-        },
+        render_resource::{AsBindGroup, ShaderDefVal, ShaderRef, ShaderType, VertexFormat},
         texture::{ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     },
     sprite::{Material2d, Mesh2dHandle},
 };
 
-use crate::{map_builder::MapBuilder, map_uniform::MapUniform, plugin::{Customization, NoCustomization}};
+use super::{
+    map_builder::MapBuilder,
+    map_uniform::MapUniform,
+    plugin::{Customization, NoCustomization},
+};
 
 const ATTRIBUTE_MAP_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("MapPosition", 988779054, VertexFormat::Float32x2);
@@ -30,8 +31,7 @@ pub struct DefaultUserData {
 /// with the tile renderings.
 #[derive(Asset, Debug, Clone, Reflect, AsBindGroup)]
 #[bind_group_data(MapKey)]
-pub struct Map<C: Customization = NoCustomization>
-{
+pub struct Map<C: Customization = NoCustomization> {
     /// Stores all the data that goes into the shader uniform,
     /// such as projection data, offsets, sizes, etc..
     #[uniform(0)]
@@ -55,7 +55,7 @@ pub struct Map<C: Customization = NoCustomization>
     pub(crate) dominance_overhangs: bool,
     pub(crate) force_underhangs: Vec<Vec2>,
 
-    pub(crate) _customization: std::marker::PhantomData<C>
+    pub(crate) _customization: std::marker::PhantomData<C>,
 }
 
 impl<C: Customization> Default for Map<C> {
@@ -73,7 +73,6 @@ impl<C: Customization> Default for Map<C> {
             _customization: std::marker::PhantomData,
         }
     }
-
 }
 
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -84,8 +83,7 @@ pub struct MapKey {
     pub(crate) dominance_overhangs: bool,
 }
 
-impl<C: Customization> From<&Map<C>> for MapKey
-{
+impl<C: Customization> From<&Map<C>> for MapKey {
     fn from(map: &Map<C>) -> Self {
         MapKey {
             perspective_defs: map.perspective_defs.clone(),
@@ -142,8 +140,7 @@ impl MapAttributes {
     }
 }
 
-impl<C: Customization> Material2d for Map<C>
-{
+impl<C: Customization> Material2d for Map<C> {
     fn vertex_shader() -> ShaderRef {
         C::SHADER_HANDLE.into()
         //SHADER_CODE.replace("#[user_code]", C::CUSTOM_SHADER_CODE).into()
@@ -159,10 +156,10 @@ impl<C: Customization> Material2d for Map<C>
 
     fn specialize(
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
-        layout: &bevy::render::mesh::MeshVertexBufferLayout,
+        layout: &bevy::render::mesh::MeshVertexBufferLayoutRef,
         key: bevy::sprite::Material2dKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
-        let vertex_layout = layout.get_layout(&[
+        let vertex_layout = layout.0.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             ATTRIBUTE_MAP_POSITION.at_shader_location(1),
             ATTRIBUTE_MIX_COLOR.at_shader_location(2),
@@ -223,8 +220,7 @@ pub struct MeshManagedByMap;
 #[reflect(Component)]
 pub struct MapLoading;
 
-impl<C: Customization> Map<C>
-{
+impl<C: Customization> Map<C> {
     /// Create a [`MapBuilder`] for configuring your map.
     pub fn builder(
         map_size: UVec2,
@@ -342,13 +338,11 @@ impl<C: Customization> Map<C>
 // Internally holds a mutable reference to the underlying texture.
 // See [`Map::get_mut`] for a usage example.
 // #[derive(Debug)]
-pub struct MapIndexer<'a, C: Customization = NoCustomization>
-{
+pub struct MapIndexer<'a, C: Customization = NoCustomization> {
     pub(crate) map: &'a mut Map<C>,
 }
 
-impl<'a, C: Customization> MapIndexer<'a, C>
-{
+impl<'a, C: Customization> MapIndexer<'a, C> {
     /// Size of the map being indexed.
     pub fn size(&self) -> UVec2 {
         self.map.map_size()
@@ -413,8 +407,7 @@ impl<'a, C: Customization> MapIndexer<'a, C>
 pub fn log_map_events<C: Customization>(
     mut ev_asset: EventReader<AssetEvent<Map<C>>>,
     map_handles: Query<&Handle<Map<C>>>,
-)
-{
+) {
     for ev in ev_asset.read() {
         for map_handle in map_handles.iter() {
             match ev {
@@ -444,13 +437,12 @@ pub fn update_loading_maps<C: Customization>(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     time: Res<Time>,
-)
-{
+) {
     for (entity, attributes, map_handle, manage_mesh) in maps.iter_mut() {
         let Some(map) = map_materials.get_mut(map_handle) else {
             continue;
         };
-        let Some(atlas) = images.get_mut(map.atlas_texture.clone()) else {
+        let Some(atlas) = images.get_mut(&map.atlas_texture) else {
             continue;
         };
 
@@ -497,8 +489,7 @@ pub fn update_map_vertex_attributes<C: Customization>(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     time: Res<Time>,
-)
-{
+) {
     for (entity, map_handle, attr, mesh_handle, manage_mesh) in maps.iter() {
         let Some(map) = map_materials.get(map_handle) else {
             warn!("No map material");
@@ -510,7 +501,7 @@ pub fn update_map_vertex_attributes<C: Customization>(
                 half_size: map.world_size() / 2.0,
             })
         } else {
-            meshes.get(mesh_handle.unwrap().0.clone()).unwrap().clone()
+            meshes.get(&mesh_handle.unwrap().0).unwrap().clone()
         };
 
         MapAttributes::set_mix_color(Some(attr), &mut mesh);

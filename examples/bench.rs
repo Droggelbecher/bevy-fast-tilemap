@@ -10,7 +10,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
+use bevy_fast_tilemap::prelude::*;
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;

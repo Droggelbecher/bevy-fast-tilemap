@@ -5,7 +5,7 @@ use bevy::{
     render::render_resource::{AsBindGroup, ShaderType},
     window::PresentMode,
 };
-use bevy_fast_tilemap::{plugin::Customization, CustomFastTileMapPlugin, Map, MapBundleManaged};
+use bevy_fast_tilemap::prelude::*;
 use rand::Rng;
 
 #[path = "common/mouse_controls_camera.rs"]

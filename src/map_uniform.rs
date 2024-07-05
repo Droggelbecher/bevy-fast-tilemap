@@ -4,7 +4,7 @@ use bevy::{
     render::render_resource::{AsBindGroup, ShaderType},
 };
 
-use crate::tile_projection::IDENTITY;
+use super::prelude::*;
 
 #[derive(ShaderType, Clone, Debug, Reflect, AsBindGroup)]
 pub struct MapUniform {
