@@ -1,18 +1,17 @@
-use crate::map::{log_map_events, update_loading_maps, update_map_vertex_attributes};
+use super::map::{log_map_events, update_loading_maps, update_map_vertex_attributes};
 use bevy::{
     prelude::*,
     render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
     sprite::Material2dPlugin,
 };
 
-use crate::{
+use super::{
     map::{DefaultUserData, Map},
     shader::SHADER_CODE,
 };
 
 /// Implement this trait to customize the shader code and user data.
-pub trait Customization: Sync + Send + 'static + TypePath + Clone
-{
+pub trait Customization: Sync + Send + 'static + TypePath + Clone {
     const CUSTOM_SHADER_CODE: &'static str;
     const SHADER_HANDLE: Handle<Shader>;
     type UserData: AsBindGroup
@@ -57,13 +56,13 @@ pub struct CustomFastTileMapPlugin<C: Customization = NoCustomization> {
 impl<C: Customization> Plugin for CustomFastTileMapPlugin<C> {
     fn build(&self, app: &mut App) {
         app.add_plugins(Material2dPlugin::<Map<C>>::default());
-        let mut shaders = app.world.resource_mut::<Assets<Shader>>();
+        let mut shaders = app.world_mut().resource_mut::<Assets<Shader>>();
 
         let mut code = SHADER_CODE.to_string();
 
         code = code.replace("#[user_code]", C::CUSTOM_SHADER_CODE);
 
-        shaders.insert(C::SHADER_HANDLE, Shader::from_wgsl(code, file!()));
+        shaders.insert(&C::SHADER_HANDLE, Shader::from_wgsl(code, file!()));
 
         app.add_systems(
             Update,

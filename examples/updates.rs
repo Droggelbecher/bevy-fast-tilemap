@@ -12,7 +12,7 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use bevy_fast_tilemap::{FastTileMapPlugin, Map, MapBundleManaged};
+use bevy_fast_tilemap::prelude::*;
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 

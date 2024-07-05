@@ -8,9 +8,7 @@ use bevy::{
     window::PresentMode,
 };
 
-use bevy_fast_tilemap::{
-    bundle::MapBundleManaged, map::MapIndexer, plugin::Customization, CustomFastTileMapPlugin, Map,
-};
+use bevy_fast_tilemap::prelude::*;
 use rand::Rng;
 
 #[path = "common/mouse_controls_camera.rs"]

@@ -1,6 +1,6 @@
 [package]
 name = "bevy_fast_tilemap"
-version = "0.7.6"
+version = "0.8.0"
 edition = "2021"
 description = "A GPU accelerated tilemap for bevy"
 license = "MIT"
@@ -10,12 +10,12 @@ repository = "https://github.com/Droggelbecher/bevy-fast-tilemap"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.13.*"
+bevy = "0.14.*"
 rand = "0.8.*"
 num = "0.4.*"
 
 [dev-dependencies]
-bevy = "0.13"
+bevy = "0.14"
 bevy-inspector-egui = { version = ">=0.22", default-features = false }
 
 [lib]

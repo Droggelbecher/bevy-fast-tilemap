@@ -1,11 +1,5 @@
-use crate::{
-    map::{Map, MapAttributes, MapLoading, MeshManagedByMap},
-    plugin::Customization,
-};
-use bevy::{
-    prelude::*,
-    sprite::Mesh2dHandle,
-};
+use super::prelude::*;
+use bevy::{prelude::*, sprite::Mesh2dHandle};
 
 // Bundle of components you should typically have for a map.
 #[derive(Bundle, Clone)]
@@ -80,7 +74,6 @@ impl<C: Customization> Default for MapBundleManaged<C> {
         }
     }
 }
-
 
 impl<C: Customization> MapBundleManaged<C> {
     pub fn new(map: Map<C>, materials: &mut Assets<Map<C>>) -> Self {

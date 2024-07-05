@@ -8,9 +8,7 @@ use bevy::{
     core_pipeline::{bloom::{BloomCompositeMode, BloomSettings}, tonemapping::Tonemapping}, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, math::{uvec2, vec2}, prelude::*, render::render_resource::{AsBindGroup, ShaderType}, window::PresentMode
 };
 
-use bevy_fast_tilemap::{
-    bundle::MapBundleManaged, map::MapIndexer, plugin::Customization, CustomFastTileMapPlugin, Map, AXONOMETRIC
-};
+use bevy_fast_tilemap::prelude::*;
 use rand::Rng;
 
 #[path = "common/mouse_controls_camera.rs"]

@@ -1,22 +1,14 @@
-use crate::{
-    map::{Map, MapIndexer},
-    map_uniform::MapUniform, plugin::{Customization, NoCustomization},
-};
-use bevy::{
-    math::uvec2,
-    prelude::*,
-};
+use super::prelude::*;
+use bevy::{math::uvec2, prelude::*};
 
-use crate::tile_projection::TileProjection;
+use super::tile_projection::TileProjection;
 
 /// Builder for constructing a map component. This is usually the preferred way of constructing.
-pub struct MapBuilder<C: Customization = NoCustomization>
-{
+pub struct MapBuilder<C: Customization = NoCustomization> {
     map: Map<C>,
 }
 
-impl<C: Customization> MapBuilder<C>
-{
+impl<C: Customization> MapBuilder<C> {
     /// Create a builder for the given map size (number of tiles in each dimension),
     /// the given atlas texture and the tile size (in the atlas).
     pub fn new(map_size: UVec2, atlas_texture: Handle<Image>, tile_size: Vec2) -> Self {
