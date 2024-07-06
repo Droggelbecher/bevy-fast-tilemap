@@ -893,7 +893,6 @@ dependencies = [
  "bevy-inspector-egui",
  "num",
  "rand",
- "regex",
 ]
 
 [[package]]
