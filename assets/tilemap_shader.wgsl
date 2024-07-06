@@ -4,9 +4,11 @@
 }
 #import mesh_view_bindings::globals;
 
+alias Tile = u32;
+
 struct ExtractIn {
     /// tile_index: Index of the tile in the atlas 0-based, x-axis first
-    tile_index: u32,
+    tile_index: Tile,
     /// 2d logical map position
     tile_position: vec2<i32>,
     /// offset from the tile anchor point in pixel/world coordinates to render
@@ -77,7 +79,7 @@ var<uniform> map: Map;
 var<uniform> user_data: UserData;
 
 @group(2) @binding(100)
-var<storage> map_texture: array<u32>;
+var<storage> map_texture: array<Tile>;
 
 @group(2) @binding(101)
 var atlas_texture: texture_2d<f32>;
@@ -121,7 +123,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
 /// Position (world/pixel units) in tilemap atlas of the top left corner
 /// of the tile with the given index
-fn atlas_index_to_position(index: u32, tile_position: vec2<i32>) -> vec2<f32> {
+fn atlas_index_to_position(index: Tile, tile_position: vec2<i32>) -> vec2<f32> {
     var index_f = f32(index);
     var index_y = floor(index_f / f32(map.n_tiles.x));
     var index_x = index_f - index_y * f32(map.n_tiles.x);
@@ -145,7 +147,7 @@ fn atlas_index_to_position(index: u32, tile_position: vec2<i32>) -> vec2<f32> {
 
 /// Same as atlas_index_to_position, but allow control of all the parameters
 fn atlas_index_to_position_direct(
-    index: u32,
+    index: Tile,
     tile_position: vec2<i32>,
     map_n_tiles: vec2<u32>,
     map_atlas_tile_size_factor: i32,
@@ -183,7 +185,7 @@ fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -
 /// tile_index: Index of the tile in the atlas
 /// tile_offset: Offset from tile anchor point in pixel/world coordinates
 fn _sample_tile(
-    tile_index: u32,
+    tile_index: Tile,
     pos: MapPosition,
     animation_state: f32,
 ) -> vec4<f32> {
@@ -198,7 +200,7 @@ fn _sample_tile(
 }
 
 fn sample_tile_at(
-    tile_index: u32,
+    tile_index: Tile,
     tile_position: vec2<i32>,
     tile_offset: vec2<f32>,
 ) -> vec4<f32> {
