@@ -143,15 +143,10 @@ impl MapAttributes {
 impl<C: Customization> Material2d for Map<C> {
     fn vertex_shader() -> ShaderRef {
         C::SHADER_HANDLE.into()
-        //SHADER_CODE.replace("#[user_code]", C::CUSTOM_SHADER_CODE).into()
-        // C::CUSTOM_SHADER_CODE.into()
-        // ShaderRef::Handle(self.shader_handle)
     }
 
     fn fragment_shader() -> ShaderRef {
         C::SHADER_HANDLE.into()
-        // C::CUSTOM_SHADER_CODE.into()
-        // ShaderRef::Handle(self.shader_handle)
     }
 
     fn specialize(
@@ -242,6 +237,10 @@ impl<C: Customization> Map<C> {
     /// Size of the map contents bounding box in world coordinates
     pub fn world_size(&self) -> Vec2 {
         self.map_uniform.world_size()
+    }
+
+    pub fn tile_size(&self) -> Vec2 {
+        self.map_uniform.tile_size
     }
 
     /// Convert map position in `[(0.0, 0.0) .. self.size)`

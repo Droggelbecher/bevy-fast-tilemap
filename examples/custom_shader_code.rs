@@ -5,7 +5,15 @@ and use it to make some tiles bounce up and down and tint them red.
 */
 
 use bevy::{
-    core_pipeline::{bloom::{BloomCompositeMode, BloomSettings}, tonemapping::Tonemapping}, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}, math::{uvec2, vec2}, prelude::*, render::render_resource::{AsBindGroup, ShaderType}, window::PresentMode
+    core_pipeline::{
+        bloom::{BloomCompositeMode, BloomSettings},
+        tonemapping::Tonemapping,
+    },
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    math::{uvec2, vec2},
+    prelude::*,
+    render::render_resource::{AsBindGroup, ShaderType},
+    window::PresentMode,
 };
 
 use bevy_fast_tilemap::prelude::*;
@@ -22,6 +30,7 @@ struct UserData {
 
 #[derive(Clone, TypePath, Default)]
 struct MyCustomization;
+
 impl Customization for MyCustomization {
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
     type UserData = UserData;
@@ -36,7 +45,8 @@ impl Customization for MyCustomization {
     // - Makes special tiles red & bounce up and down
     // - Mirrors tiles on the x-axis sometimes
     // - Adds a white glow to the hovered tile
-    const CUSTOM_SHADER_CODE: &'static str = r#"
+    fn custom_shader_code() -> String {
+        r#"
         // This is a custom user data struct that can be used in the shader code.
         // It is passed to the shader as a bind group, so it can be used to pass
         // additional information to the shader.
@@ -65,20 +75,21 @@ impl Customization for MyCustomization {
 
             var color = sample_tile_at(tile_index, in.tile_position, tile_offset);
 
-                        // tint "special" tiles red
-                        if special {
-                            color = color * vec4(10.0, 0.0, 0.0, 1.0);
-                        }
+            // tint "special" tiles red
+            if special {
+                color = color * vec4(10.0, 0.0, 0.0, 1.0);
+            }
 
-                        // Add a white glow to the hovered tile
-                        if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
-                            var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
-                            color = color * vec4(v * 10.0, v * 10.0, v * 10.0, 1.0);
-                        }
+            // Add a white glow to the hovered tile
+            if u32(in.tile_position.x) == user_data.cursor_position.x && u32(in.tile_position.y) == user_data.cursor_position.y {
+                var v = (sin(in.animation_state * 3.0) + 1.5) * (tile_offset.y + 64.0) / 40.0;
+                color = color * vec4(v * 10.0, v * 10.0, v * 10.0, 1.0);
+            }
 
             return color;
         }
-    "#;
+    "#.to_string()
+    }
 }
 
 fn main() {
@@ -124,7 +135,7 @@ fn startup(
         BloomSettings {
             composite_mode: BloomCompositeMode::Additive,
             ..Default::default()
-        }
+        },
     ));
 
     let map = Map::<MyCustomization>::builder(

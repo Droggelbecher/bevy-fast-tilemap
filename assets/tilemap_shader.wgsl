@@ -143,6 +143,37 @@ fn atlas_index_to_position(index: u32, tile_position: vec2<i32>) -> vec2<f32> {
     }
 }
 
+/// Same as atlas_index_to_position, but allow control of all the parameters
+fn atlas_index_to_position_direct(
+    index: u32,
+    tile_position: vec2<i32>,
+    map_n_tiles: vec2<u32>,
+    map_atlas_tile_size_factor: i32,
+    map_inner_padding: vec2<f32>,
+    map_outer_padding_topleft: vec2<f32>,
+    map_tile_size: vec2<f32>,
+) -> vec2<f32> {
+    var index_f = f32(index);
+    var index_y = floor(index_f / f32(map_n_tiles.x));
+    var index_x = index_f - index_y * f32(map_n_tiles.x);
+    var index2d = vec2<f32>(index_x, index_y);
+
+    if map_atlas_tile_size_factor > 1 {
+        return
+            index2d * (map_tile_size * f32(map_atlas_tile_size_factor) + map_inner_padding)
+            + map_outer_padding_topleft
+            + map_tile_size * vec2<f32>(
+                f32(tile_position.x % map_atlas_tile_size_factor),
+                f32(tile_position.y % map_atlas_tile_size_factor)
+            );
+    }
+    else {
+
+        var pos = index2d * (map_tile_size + map_inner_padding) + map_outer_padding_topleft;
+        return pos;
+    }
+}
+
 /// Compute offset into the tile by world position and world position of tile reference point
 fn world_to_tile_offset(world_position: vec2<f32>, world_tile_base: vec2<f32>) -> vec2<f32> {
     return vec2<f32>(1.0, -1.0) * (world_position - world_tile_base);
@@ -198,6 +229,69 @@ fn sample_tile_at(
     );
 }
 
+/// Same as sample_tile_at, but allow control of all the parameters
+fn sample_tile_direct(
+    /// The tile index to render
+    tile_index: u32,
+    /// Will be used for the correct offset for pattern tiles
+    tile_position: vec2<i32>,
+    /// Offset from the tile anchor point in pixel/world coordinates to render
+    tile_offset: vec2<f32>,
+    /// Tile anchor point. When in doubt, use map.tile_anchor_point.
+    map_tile_anchor_point: vec2<f32>,
+    /// Tile size in pixels. When in doubt, use map.tile_size.
+    map_tile_size: vec2<f32>,
+    /// Size of the atlas in tiles. When in doubt, use map.n_tiles.
+    map_n_tiles: vec2<u32>,
+    /// Size of the atlas in pixels. When in doubt, use map.atlas_size.
+    map_atlas_size: vec2<f32>,
+    /// Inner padding in the tile atlas. When in doubt, use map.inner_padding.
+    map_inner_padding: vec2<f32>,
+    /// Outer padding at atlas top/left. When in doubt, use map.outer_padding_topleft.
+    map_outer_padding_topleft: vec2<f32>,
+    /// Tile size factor. When in doubt, use map.atlas_tile_size_factor.
+    map_atlas_tile_size_factor: i32,
+    /// Texture
+    atlas_texture: texture_2d<f32>,
+    /// Sampler
+    atlas_sampler: sampler,
+) -> vec4<f32> {
+
+    // Tile start position in the atlas
+    var tile_start = atlas_index_to_position_direct(
+        tile_index,
+        tile_position,
+        map_n_tiles,
+        map_atlas_tile_size_factor,
+        map_inner_padding,
+        map_outer_padding_topleft,
+        map_tile_size
+    );
+
+    // Offset in pixels from tile_start to sample from
+    var rect_offset = tile_offset + map_tile_anchor_point * map_tile_size;
+    var total_offset = tile_start + rect_offset;
+
+    // At most half of the inner "padding" is still rendered
+    // as overhang of any given tile.
+    // Outer padding is not taken into account
+    var max_overhang = map_inner_padding / 2.0;
+
+    // Outside of "our" part of the padding, dont render anything as part of this tile,
+    // as it might be used for overhang of a neighbouring tile in the tilemap
+    if rect_offset.x < -max_overhang.x
+        || rect_offset.y < -max_overhang.y
+        || rect_offset.x >= (map_tile_size.x + max_overhang.x)
+        || rect_offset.y >= (map_tile_size.y + max_overhang.y)
+    {
+        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
+
+    return textureSample(
+        atlas_texture, atlas_sampler, total_offset / map_atlas_size
+    );
+}
+
 /// 2d map tile position and offset in map tile coordinates
 struct MapPosition {
     /// The 2d tile position on the map
@@ -219,8 +313,20 @@ fn get_tile_index_checked(map_position: vec2<i32>) -> u32 {
     return get_tile_index(map_position);
 }
 
+/// Blend c1 on top of c0
 fn blend(c0: vec4<f32>, c1: vec4<f32>) -> vec4<f32> {
-    return mix(c0, c1, c1.a);
+    // See https://de.wikipedia.org/wiki/Alpha_Blending
+
+    if c0.a == 0.0 && c1.a == 0.0 {
+        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
+
+    // If c1.a = 1, this is 1, if c1.a = 0, this is c0.a
+    // That is if c1 is fully opaque, we take c1, otherwise we let some of c0 shine through
+    let a_mix = c1.a + (1 - c1.a) * c0.a;
+    var r = (c1 * c1.a + c0 * c0.a * (1 - c1.a)) / a_mix;
+    r.a = a_mix;
+    return r;
 }
 
 fn is_valid_tile(tile: vec2<i32>) -> bool {
