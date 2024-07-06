@@ -23,22 +23,24 @@ struct UserDataA {
 #[derive(Clone, TypePath, Default)]
 struct CustomizationA;
 impl Customization for CustomizationA {
-    const CUSTOM_SHADER_CODE: &'static str = r#"
-        // This is a custom user data struct that can be used in the shader code.
-        // It is passed to the shader as a bind group, so it can be used to pass
-        // additional information to the shader.
-        struct UserData {
-            color: vec4<f32>,
-        };
+    fn custom_shader_code() -> String {
+        r#"
+            // This is a custom user data struct that can be used in the shader code.
+            // It is passed to the shader as a bind group, so it can be used to pass
+            // additional information to the shader.
+            struct UserData {
+                color: vec4<f32>,
+            };
 
-        fn sample_tile(in: ExtractIn) -> vec4<f32> {
-            if in.tile_index == 0 {
-                return vec4(0.0, 0.0, 0.0, 0.0);
+            fn sample_tile(in: ExtractIn) -> vec4<f32> {
+                if in.tile_index == 0 {
+                    return vec4(0.0, 0.0, 0.0, 0.0);
+                }
+
+                return user_data.color * sample_tile_at(in.tile_index, in.tile_position, in.tile_offset);
             }
-
-            return user_data.color * sample_tile_at(in.tile_index, in.tile_position, in.tile_offset);
-        }
-    "#;
+        "#.to_string()
+    }
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
     type UserData = UserDataA;
 }
@@ -51,23 +53,25 @@ struct UserDataB {
 #[derive(Clone, TypePath, Default)]
 struct CustomizationB;
 impl Customization for CustomizationB {
-    const CUSTOM_SHADER_CODE: &'static str = r#"
-        struct UserData {
-            frequency: f32,
-        };
+    fn custom_shader_code() -> String {
+        r#"
+            struct UserData {
+                frequency: f32,
+            };
 
-        fn sample_tile(in: ExtractIn) -> vec4<f32> {
-            if in.tile_index == 0 {
-                return vec4(0.0, 0.0, 0.0, 0.0);
+            fn sample_tile(in: ExtractIn) -> vec4<f32> {
+                if in.tile_index == 0 {
+                    return vec4(0.0, 0.0, 0.0, 0.0);
+                }
+
+                var offs = in.tile_offset;
+                let r = 1.5;
+                offs.x += sin(f32(in.tile_offset.y) + user_data.frequency * in.animation_state) * r;
+                offs.y += cos(f32(in.tile_offset.x) + user_data.frequency * in.animation_state) * r;
+                return sample_tile_at(in.tile_index, in.tile_position, offs);
             }
-
-            var offs = in.tile_offset;
-            let r = 1.5;
-            offs.x += sin(f32(in.tile_offset.y) + user_data.frequency * in.animation_state) * r;
-            offs.y += cos(f32(in.tile_offset.x) + user_data.frequency * in.animation_state) * r;
-            return sample_tile_at(in.tile_index, in.tile_position, offs);
-        }
-    "#;
+        "#.to_string()
+    }
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1f);
     type UserData = UserDataB;
 }

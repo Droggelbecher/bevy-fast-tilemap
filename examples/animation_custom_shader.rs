@@ -23,27 +23,29 @@ struct AnimationCustomization;
 impl Customization for AnimationCustomization {
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
     type UserData = DefaultUserData;
-    const CUSTOM_SHADER_CODE: &'static str = r#"
-        // wgpu doesnt like this being empty, so the default is to have a dummy u32
-        // field here.
+    fn custom_shader_code() -> String {
+        r#"
+            // wgpu doesnt like this being empty, so the default is to have a dummy u32
+            // field here.
 
-        struct UserData {
-            dummy: u32,
-        };
+            struct UserData {
+                dummy: u32,
+            };
 
-        fn sample_tile(in: ExtractIn) -> vec4<f32> {
-            var tile_index = in.tile_index;
+            fn sample_tile(in: ExtractIn) -> vec4<f32> {
+                var tile_index = in.tile_index;
 
-            // If the map data says tile 6, animate it by changing the tile index to 6, 7 or 8
-            // based on the animation state.
-            if tile_index == 6u {
-                var offs = u32(round(in.animation_state * 5.0)) % 3u;
-                tile_index = 6u + offs;
+                // If the map data says tile 6, animate it by changing the tile index to 6, 7 or 8
+                // based on the animation state.
+                if tile_index == 6u {
+                    var offs = u32(round(in.animation_state * 5.0)) % 3u;
+                    tile_index = 6u + offs;
+                }
+
+                return sample_tile_at(tile_index, in.tile_position, in.tile_offset);
             }
-
-            return sample_tile_at(tile_index, in.tile_position, in.tile_offset);
-        }
-    "#;
+        "#.to_string()
+    }
 }
 
 fn main() {
