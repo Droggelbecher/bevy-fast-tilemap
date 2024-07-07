@@ -42,7 +42,7 @@ pub struct Map<C: Customization = NoCustomization> {
 
     /// Texture containing the tile IDs (one per each pixel)
     #[storage(100, read_only)]
-    pub(crate) map_texture: Vec<u32>,
+    pub(crate) map_texture: Vec<C::Tile>,
 
     /// Atlas texture with the individual tiles
     #[texture(101)]
@@ -348,32 +348,32 @@ impl<'a, C: Customization> MapIndexer<'a, C> {
     }
 
     /// Get tile at given position.
-    pub fn at_ivec(&self, i: IVec2) -> u32 {
+    pub fn at_ivec(&self, i: IVec2) -> C::Tile {
         self.at(i.x as u32, i.y as u32)
     }
 
     /// Get tile at given position.
-    pub fn at_uvec(&self, i: UVec2) -> u32 {
+    pub fn at_uvec(&self, i: UVec2) -> C::Tile {
         self.at(i.x, i.y)
     }
 
     /// Get tile at given position.
-    pub fn at(&self, x: u32, y: u32) -> u32 {
+    pub fn at(&self, x: u32, y: u32) -> C::Tile {
         // ensure x/y do not go out of bounds individually
         if x >= self.size().x || y >= self.size().y {
-            return 0;
+            return C::Tile::default();
         }
         let idx = y as usize * self.size().x as usize + x as usize;
         self.map.map_texture[idx]
     }
 
     /// Set tile at given position.
-    pub fn set_uvec(&mut self, i: UVec2, v: u32) {
+    pub fn set_uvec(&mut self, i: UVec2, v: C::Tile) {
         self.set(i.x, i.y, v)
     }
 
     /// Set tile at given position.
-    pub fn set(&mut self, x: u32, y: u32, v: u32) {
+    pub fn set(&mut self, x: u32, y: u32, v: C::Tile) {
         // ensure x/y do not go out of bounds individually (even if the final index is in-bounds)
         if x >= self.size().x || y >= self.size().y {
             return;

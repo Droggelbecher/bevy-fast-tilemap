@@ -34,6 +34,7 @@ struct MyCustomization;
 impl Customization for MyCustomization {
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
     type UserData = UserData;
+    type Tile = u32;
 
     // This is how you can insert custom code snippeds into tilemap_shader.wgsl.
     // Note that the code is inserted verbatim, so it requires some understanding of
@@ -53,6 +54,8 @@ impl Customization for MyCustomization {
         struct UserData {
             cursor_position: vec2<u32>,
         };
+
+        alias Tile = u32;
 
         fn sample_tile(in: ExtractIn) -> vec4<f32> {
 

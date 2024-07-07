@@ -23,6 +23,7 @@ struct AnimationCustomization;
 impl Customization for AnimationCustomization {
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
     type UserData = DefaultUserData;
+    type Tile = u64;
     fn custom_shader_code() -> String {
         r#"
             // wgpu doesnt like this being empty, so the default is to have a dummy u32
@@ -31,6 +32,8 @@ impl Customization for AnimationCustomization {
             struct UserData {
                 dummy: u32,
             };
+
+            alias Tile = u64;
 
             fn sample_tile(in: ExtractIn) -> vec4<f32> {
                 var tile_index = in.tile_index;

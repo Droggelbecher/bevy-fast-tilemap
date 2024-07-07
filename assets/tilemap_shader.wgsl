@@ -4,8 +4,6 @@
 }
 #import mesh_view_bindings::globals;
 
-alias Tile = u32;
-
 struct ExtractIn {
     /// tile_index: Index of the tile in the atlas 0-based, x-axis first
     tile_index: Tile,
@@ -234,7 +232,7 @@ fn sample_tile_at(
 /// Same as sample_tile_at, but allow control of all the parameters
 fn sample_tile_direct(
     /// The tile index to render
-    tile_index: u32,
+    tile_index: Tile,
     /// Will be used for the correct offset for pattern tiles
     tile_position: vec2<i32>,
     /// Offset from the tile anchor point in pixel/world coordinates to render
@@ -304,11 +302,11 @@ struct MapPosition {
 
 
 ///
-fn get_tile_index(map_position: vec2<i32>) -> u32 {
+fn get_tile_index(map_position: vec2<i32>) -> Tile {
     return map_texture[map_position.y * i32(map.map_size.x) + map_position.x];
 }
 
-fn get_tile_index_checked(map_position: vec2<i32>) -> u32 {
+fn get_tile_index_checked(map_position: vec2<i32>) -> Tile {
     if !is_valid_tile(map_position) {
         return 0u;
     }
@@ -347,7 +345,7 @@ fn is_valid_tile(tile: vec2<i32>) -> bool {
 /// tile_index: Tile index in the atlas
 /// pos: The original map position
 /// tile_offset: The offset of the tile (in number of whole tiles) to sample from
-fn sample_neighbor_tile_index(tile_index: u32, pos_: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
+fn sample_neighbor_tile_index(tile_index: Tile, pos_: MapPosition, tile_offset: vec2<i32>, animation_state: f32) -> vec4<f32> {
     // Position in the neighboring tile (in world coordinates),
     // that matches 'pos' in the original tile
 
@@ -374,7 +372,7 @@ fn sample_neighbor(pos: MapPosition, tile_offset: vec2<i32>, animation_state: f3
     return sample_neighbor_tile_index(tile_index, pos, tile_offset, animation_state);
 }
 
-fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition, animation_state: f32) -> vec4<f32> {
+fn render_dominance_overhangs(color: vec4<f32>, index: Tile, pos: MapPosition, animation_state: f32) -> vec4<f32> {
     var c = color;
 
     // We want to render overhangs from all the neighbors where the tile index is greater than the
@@ -392,7 +390,7 @@ fn render_dominance_overhangs(color: vec4<f32>, index: u32, pos: MapPosition, an
         vec2<i32>(1, -1),
         vec2<i32>(0, -1),
     );
-    var neighbors: array<u32, 8> = array<u32, 8>(
+    var neighbors: array<Tile, 8> = array<Tile, 8>(
         get_tile_index_checked(pos.tile + neighbor_offsets[0]),
         get_tile_index_checked(pos.tile + neighbor_offsets[1]),
         get_tile_index_checked(pos.tile + neighbor_offsets[2]),

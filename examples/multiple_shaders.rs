@@ -10,6 +10,7 @@ use bevy::{
 
 use bevy_fast_tilemap::prelude::*;
 use rand::Rng;
+use num::traits::FromPrimitive;
 
 #[path = "common/mouse_controls_camera.rs"]
 mod mouse_controls_camera;
@@ -32,6 +33,8 @@ impl Customization for CustomizationA {
                 color: vec4<f32>,
             };
 
+            alias Tile = u32;
+
             fn sample_tile(in: ExtractIn) -> vec4<f32> {
                 if in.tile_index == 0 {
                     return vec4(0.0, 0.0, 0.0, 0.0);
@@ -43,6 +46,7 @@ impl Customization for CustomizationA {
     }
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
     type UserData = UserDataA;
+    type Tile = u32;
 }
 
 #[derive(Debug, Clone, Default, Reflect, AsBindGroup, ShaderType)]
@@ -59,6 +63,8 @@ impl Customization for CustomizationB {
                 frequency: f32,
             };
 
+            alias Tile = u32;
+
             fn sample_tile(in: ExtractIn) -> vec4<f32> {
                 if in.tile_index == 0 {
                     return vec4(0.0, 0.0, 0.0, 0.0);
@@ -74,6 +80,7 @@ impl Customization for CustomizationB {
     }
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1f);
     type UserData = UserDataB;
+    type Tile = u32;
 }
 
 fn main() {
@@ -148,11 +155,12 @@ fn startup(
 } // startup
 
 /// Fill the map with a random pattern
-fn init_map<C: Customization>(m: &mut MapIndexer<C>) {
+fn init_map<C: Customization>(m: &mut MapIndexer<C>)
+{
     let mut rng = rand::thread_rng();
     for y in 0..m.size().y {
         for x in 0..m.size().x {
-            let v = rng.gen_range(0..2);
+            let v = C::Tile::from_u64(rng.gen_range(0..2)).unwrap();
             m.set(x, y, v);
         }
     }

@@ -21,12 +21,15 @@ struct UserData {
 struct PatternCustomization;
 impl Customization for PatternCustomization {
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(0x1d1e1e1e1e1e1e1e);
+    type Tile = u32;
     type UserData = UserData;
     fn custom_shader_code() -> String {
         r#"
             struct UserData {
                 x: u32,
             };
+
+            alias Tile = u32;
 
             // Simple 1d function that defines the irregular boundary shape
             // Returns values in the range -1.0 to 1.0

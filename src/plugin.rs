@@ -4,6 +4,8 @@ use bevy::{
     render::render_resource::{encase::internal::WriteInto, AsBindGroup, ShaderSize, ShaderType},
     sprite::Material2dPlugin,
 };
+use num::{FromPrimitive, PrimInt};
+use rand::distributions::uniform::SampleUniform;
 
 use super::{
     map::{DefaultUserData, Map},
@@ -23,6 +25,7 @@ pub trait Customization: Sync + Send + 'static + TypePath + Clone
         + ShaderSize
         + Default;
     fn custom_shader_code() -> String;
+    type Tile: PrimInt + FromPrimitive + Default + Clone + Copy + TypePath + ShaderType + WriteInto + ShaderSize + Sync + Send + SampleUniform;
 }
 
 /// Default custumization that will use the default user data and shader code.
@@ -31,17 +34,20 @@ pub struct NoCustomization;
 
 impl Customization for NoCustomization {
     fn custom_shader_code() -> String { r#"
-        struct UserData {
-            dummy: u32,
-        };
+            struct UserData {
+                dummy: u32,
+            };
 
-        fn sample_tile(in: ExtractIn) -> vec4<f32> {
-            return sample_tile_at(in.tile_index, in.tile_position, in.tile_offset);
-        }
-    "#.to_string()
-}
+            alias Tile = u32;
+
+            fn sample_tile(in: ExtractIn) -> vec4<f32> {
+                return sample_tile_at(in.tile_index, in.tile_position, in.tile_offset);
+            }
+        "#.to_string()
+    }
     const SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(15375856360518374895);
     type UserData = DefaultUserData;
+    type Tile = u32;
 }
 
 /// Plugin for fast tilemap.

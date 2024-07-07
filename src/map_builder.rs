@@ -148,7 +148,7 @@ impl<C: Customization> MapBuilder<C> {
     {
         self.map.map_texture.resize(
             (self.map.map_size().x * self.map.map_size().y) as usize,
-            0u32,
+            C::Tile::default(),
         );
 
         initializer(&mut MapIndexer::<C> { map: &mut self.map });
@@ -161,10 +161,10 @@ impl<C: Customization> MapBuilder<C> {
 
     /// Build the map component and immediately initialize the map
     /// data with the given initializer callback.
-    /// The callback will receive a `UVec2` and return a `u32`.
+    /// The callback will receive a `UVec2` and return a `C::Tile`.
     pub fn build_and_set<F>(self, mut initializer: F) -> Map<C>
     where
-        F: FnMut(UVec2) -> u32,
+        F: FnMut(UVec2) -> C::Tile,
     {
         let sx = self.map.map_size().x;
         let sy = self.map.map_size().y;
