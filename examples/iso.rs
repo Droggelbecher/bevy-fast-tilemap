@@ -65,7 +65,7 @@ fn startup(
 } // startup
 
 /// Fill the map with a chessboard pattern.
-fn reset_map(m: &mut MapIndexer) {
+fn reset_map(m: &mut MapIndexerMut) {
     for y in 0..m.size().y {
         for x in 0..m.size().x {
             m.set(x, y, (((x + y) % 2) + 1) as u32);

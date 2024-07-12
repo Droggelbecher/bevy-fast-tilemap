@@ -86,7 +86,7 @@ fn startup(
     commands.spawn(bundle).insert(mesh);
 }
 
-fn initialize_layer1(m: &mut MapIndexer) {
+fn initialize_layer1(m: &mut MapIndexerMut) {
     // Define some sub-rectangle in the center of the map
     // and set tile to index 11 for all of these
 

@@ -225,7 +225,11 @@ impl<C: Customization> Map<C> {
         MapBuilder::new(map_size, atlas_texture, tile_size)
     }
 
-    pub fn indexer_mut(&mut self) -> MapIndexer<C> {
+    pub fn indexer_mut(&mut self) -> MapIndexerMut<C> {
+        MapIndexerMut::<C> { map: self }
+    }
+
+    pub fn indexer(&self) -> MapIndexer<C> {
         MapIndexer::<C> { map: self }
     }
 
@@ -334,14 +338,68 @@ impl<C: Customization> Map<C> {
 } // impl Map
 
 // Indexer into a map.
+// Indexer into a map.
 // Internally holds a mutable reference to the underlying texture.
 // See [`Map::get_mut`] for a usage example.
 // #[derive(Debug)]
 pub struct MapIndexer<'a, C: Customization = NoCustomization> {
-    pub(crate) map: &'a mut Map<C>,
+    pub(crate) map: &'a Map<C>,
 }
 
 impl<'a, C: Customization> MapIndexer<'a, C> {
+    /// Size of the map being indexed.
+    pub fn size(&self) -> UVec2 {
+        self.map.map_size()
+    }
+
+    /// Get tile at given position.
+    pub fn at_ivec(&self, i: IVec2) -> u32 {
+        self.at(i.x as u32, i.y as u32)
+    }
+
+    /// Get tile at given position.
+    pub fn at_uvec(&self, i: UVec2) -> u32 {
+        self.at(i.x, i.y)
+    }
+
+    /// Get tile at given position.
+    pub fn at(&self, x: u32, y: u32) -> u32 {
+        // ensure x/y do not go out of bounds individually
+        if x >= self.size().x || y >= self.size().y {
+            return 0;
+        }
+        let idx = y as usize * self.size().x as usize + x as usize;
+        self.map.map_texture[idx]
+    }
+
+    pub fn world_to_map(&self, world: Vec2) -> Vec2 {
+        self.map.world_to_map(world)
+    }
+
+    pub fn map_to_world_3d(&self, map_position: Vec3) -> Vec3 {
+        self.map.map_to_world_3d(map_position)
+    }
+
+    pub fn map_to_local_3d(&self, map_position: Vec3) -> Vec3 {
+        self.map.map_to_local_3d(map_position)
+    }
+
+    pub fn map_to_local(&self, map_position: Vec2) -> Vec2 {
+        self.map.map_to_local(map_position)
+    }
+
+    pub fn world_to_map_3d(&self, world: Vec3) -> Vec3 {
+        self.map.world_to_map_3d(world)
+    }
+}
+// Internally holds a mutable reference to the underlying texture.
+// See [`Map::get_mut`] for a usage example.
+// #[derive(Debug)]
+pub struct MapIndexerMut<'a, C: Customization = NoCustomization> {
+    pub(crate) map: &'a mut Map<C>,
+}
+
+impl<'a, C: Customization> MapIndexerMut<'a, C> {
     /// Size of the map being indexed.
     pub fn size(&self) -> UVec2 {
         self.map.map_size()

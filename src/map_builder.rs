@@ -144,14 +144,14 @@ impl<C: Customization> MapBuilder<C> {
     /// The callback will receive a mutable reference to a `MapIndexer`.
     pub fn build_and_initialize<F>(mut self, initializer: F) -> Map<C>
     where
-        F: FnOnce(&mut MapIndexer<C>),
+        F: FnOnce(&mut MapIndexerMut<C>),
     {
         self.map.map_texture.resize(
             (self.map.map_size().x * self.map.map_size().y) as usize,
             0u32,
         );
 
-        initializer(&mut MapIndexer::<C> { map: &mut self.map });
+        initializer(&mut MapIndexerMut::<C> { map: &mut self.map });
 
         self.map.update_inverse_projection();
         self.map.map_uniform.update_world_size();
@@ -169,7 +169,7 @@ impl<C: Customization> MapBuilder<C> {
         let sx = self.map.map_size().x;
         let sy = self.map.map_size().y;
 
-        self.build_and_initialize(|m: &mut MapIndexer<C>| {
+        self.build_and_initialize(|m: &mut MapIndexerMut<C>| {
             for y in 0..sy {
                 for x in 0..sx {
                     m.set(x, y, initializer(uvec2(x, y)));

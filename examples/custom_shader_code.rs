@@ -163,7 +163,7 @@ fn startup(
 } // startup
 
 /// Fill the map with a random pattern
-fn init_map(m: &mut MapIndexer<MyCustomization>) {
+fn init_map(m: &mut MapIndexerMut<MyCustomization>) {
     let mut rng = rand::thread_rng();
     for y in 0..m.size().y {
         for x in 0..m.size().x {
