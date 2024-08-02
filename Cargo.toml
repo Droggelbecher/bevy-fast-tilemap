@@ -16,7 +16,7 @@ num = "0.4.*"
 
 [dev-dependencies]
 bevy = "0.14"
-bevy-inspector-egui = { version = ">=0.22", default-features = false }
+bevy-inspector-egui = { version = ">=0.25", default-features = false }
 
 [lib]
 name = "bevy_fast_tilemap"
