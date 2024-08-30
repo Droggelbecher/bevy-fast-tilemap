@@ -56,7 +56,7 @@ fn startup(
         // Initialize using a closure
         // Set all tiles in layer 0 to index 4
         for y in 0..m.size().y {
-            for x in 0..m.size().y {
+            for x in 0..m.size().x {
                 m.set(x, y, ((x + y) % 4 + 1) as u32);
             }
         }
