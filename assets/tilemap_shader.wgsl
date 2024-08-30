@@ -125,6 +125,11 @@ fn atlas_index_to_position(index: u32, tile_position: vec2<i32>) -> vec2<f32> {
     var index_f = f32(index);
     var index_y = floor(index_f / f32(map.n_tiles.x));
     var index_x = index_f - index_y * f32(map.n_tiles.x);
+
+    // var indexf = f32(index) / f32(map.n_tiles.x);
+    // var index_y = 2.0; //trunc(indexf);
+    // var index_x = 2.0; //trunc((indexf - index_y) * f32(map.n_tiles.x));
+
     var index2d = vec2<f32>(index_x, index_y);
 
     if map.atlas_tile_size_factor > 1 {
@@ -206,6 +211,7 @@ fn sample_tile_at(
     var tile_start = atlas_index_to_position(tile_index, tile_position);
 
     // Offset in pixels from tile_start to sample from
+    // let DBG_tile_offset = vec2<f32>(0.0, 0.0);
     var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;
     var total_offset = tile_start + rect_offset;
 
@@ -221,8 +227,23 @@ fn sample_tile_at(
         || rect_offset.x >= (map.tile_size.x + max_overhang.x)
         || rect_offset.y >= (map.tile_size.y + max_overhang.y)
     {
-        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+        return vec4<f32>(0.0, 1.0, 0.0, 1.0);
     }
+
+    // TODO: Remove below
+    // Learnings:
+    // - It has nothing to do with mipmap (also happens at forced mip level 0.0)
+    // - It has nothing to do with rect_offset part above.
+    // - Weirdly, passing 2.0/3.0 directly into textureSample
+    //   which is expected to equal the beginning of pixel 64.0
+    //   seems to show pixel number 63.0 instead, same for 64.0 / 96.0.
+    //   same for tile_start but not for tile_start + rect_offset.
+    // - However when letting the code above calculate x coordinate (using tile_offset),
+    //   it looks *mostly* ok, except for x>y and cam at a .5 pos
+    // - Happens mostly on x-axis for world_pos.x > world_pos.y for some reason
+    //   -> does this have something to do with the mesh?
+    // - Happens mostly at camera at .5 positions for some reason
+
 
     return textureSample(
         atlas_texture, atlas_sampler, total_offset / map.atlas_size
@@ -569,6 +590,13 @@ fn fragment(
     #endif
 
     color = color * in.mix_color;
+
+    // TODO: Remove
+    // We can generally provoke full grid lines but most often for cam offsets at .5 positions
+    // we'll encounter vertical lines only and only where world_pos.x > world_pos.y for some reason
+    // if world_position.x > world_position.y {
+    //     color += vec4<f32>(1.0, 0.0, 0.0, 0.0);
+    // }
 
     return color;
 }

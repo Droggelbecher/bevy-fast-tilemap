@@ -158,13 +158,16 @@ impl MapUniform {
 
     /// Return true iff this update made the uniform ready
     /// (ie. it was not ready before and is ready now).
-    pub(crate) fn update_atlas_size(&mut self, atlas_size: Vec2) -> bool {
+    pub(crate) fn update_atlas_size(&mut self, atlas_size: Vec2, force_n_tiles: Option<UVec2>) -> bool {
         if self.atlas_size == atlas_size {
             return false;
         }
 
         self.atlas_size = atlas_size;
-        self.update_n_tiles();
+        match force_n_tiles {
+            Some(n_tiles) => self.n_tiles = n_tiles,
+            None => self.update_n_tiles(),
+        }
         true
     }
 
@@ -179,7 +182,9 @@ impl MapUniform {
     }
 
     fn update_n_tiles(&mut self) {
+        // area after removing outer padding
         let inner = self.atlas_size - self.outer_padding_topleft - self.outer_padding_bottomright;
+
         let n_tiles = (inner + self.inner_padding)
             / (self.inner_padding + self.tile_size * self.atlas_tile_size_factor as f32);
 
@@ -187,10 +192,11 @@ impl MapUniform {
         if (n_tiles.x - n_tiles.x.round()).abs() > eps
             || (n_tiles.y - n_tiles.y.round()).abs() > eps
         {
-            panic!(
-                "Expected an integral number of tiles in your atlas, but computes to be {:?}",
-                n_tiles
-            );
+            // TODO
+            // panic!(
+            //     "Expected an integral number of tiles in your atlas, but computes to be {:?}",
+            //     n_tiles
+            // );
         }
         self.n_tiles = n_tiles.as_uvec2();
     }

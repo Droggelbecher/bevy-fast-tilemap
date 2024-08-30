@@ -71,6 +71,16 @@ impl<C: Customization> MapBuilder<C> {
         self
     }
 
+    /// None: Automatically calculate number of tiles in rows/columns of the atlas
+    ///       from atlas image size and tile size.
+    /// Some(UVec2): Force the number of tiles in rows/columns of the atlas.
+    ///              This can be useful if you have a tile atlas with a lot of empty space
+    ///              or one that doesn't line up with the tile size / padding for some reason.
+    pub fn with_n_tiles(mut self, force_n_tiles: Option<UVec2>) -> Self {
+        self.map.force_n_tiles = force_n_tiles;
+        self
+    }
+
     /// Specify the padding in the `atlas_texture`.
     /// `inner`: Padding between the tiles,
     /// `topleft`: Padding to top and left of the tile atlas,
