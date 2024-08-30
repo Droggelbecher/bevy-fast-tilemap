@@ -192,11 +192,10 @@ impl MapUniform {
         if (n_tiles.x - n_tiles.x.round()).abs() > eps
             || (n_tiles.y - n_tiles.y.round()).abs() > eps
         {
-            // TODO
-            // panic!(
-            //     "Expected an integral number of tiles in your atlas, but computes to be {:?}",
-            //     n_tiles
-            // );
+            warn!(
+                "Expected an integral number of tiles in your atlas, but computes to be {:?}, use `.with_n_tiles()` in MapBuilder if that is intentional.",
+                n_tiles
+            );
         }
         self.n_tiles = n_tiles.as_uvec2();
     }

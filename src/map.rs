@@ -560,9 +560,12 @@ pub fn update_map_vertex_attributes<C: Customization>(
         };
 
         let mut mesh = if manage_mesh.is_some() {
-            Mesh::from(Rectangle {
-                half_size: map.world_size() / 2.0,
-            })
+            let p = map.world_size() / 2.0;
+            Mesh::from(Triangle2d::new(
+                vec2(-p.x, p.y),
+                vec2(-p.x, -3.0 * p.y),
+                vec2(3.0 * p.x, p.y),
+            ))
         } else {
             meshes.get(&mesh_handle.unwrap().0).unwrap().clone()
         };
