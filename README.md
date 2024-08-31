@@ -38,7 +38,7 @@ Meshes don't have to be rectangles.
 
 Tiles can use bigger textures and (through custom shader code) arbitrary boundary shapes.
 
-Checkout ![screenshots/](screenshots/) for more.
+Checkout [screenshots/](screenshots/) for more.
 
 ## How it works
 
@@ -57,10 +57,12 @@ there.
 
 ## Limitations
 
-- Only tested on Windows/WSL, no WASM support
-- Currently no support for rotating or scaling the entity holding the map (it will not look like you'd expect).
+- Only tested on Windows, no WASM support
+- No support for rotating or scaling the entity holding the map (it will not look like you'd expect).
   (You can of course still zoom/rotate the camera to achieve any such effect)
-- Currently no support for using maps in a 3d setting.
+- No support for using maps in a 3d setting.
+
+See [Troubleshooting](docs/Troubleshooting.md) for common problems and their mitigations.
 
 ## Related work
 
@@ -93,3 +95,4 @@ cargo run --example updates
 |0.12|0.6.0|
 |0.13|0.7.0 - 0.7.6|
 |0.14|0.8.0|
+|0.14|0.8.1|

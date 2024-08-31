@@ -1,6 +1,6 @@
 [package]
 name = "bevy_fast_tilemap"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 description = "A GPU accelerated tilemap for bevy"
 license = "MIT"
