@@ -48,12 +48,9 @@ padding so you can have your tiles at 0, 64, 128, etc..
 ### Stay clear of weird camera zoom values
 
 More precisely, "weird" values for the scale factors of the camera2d transform.
-Zoom factors like 3.129
-(which is not precisely presentable in float32) seem to be one cause of these issues.
+Zoom factors like 3.129 seem to be one cause of these issues.
 Again, stick to "nice" numbers if you can such as powers of two or at least numbers that
-are representable precisely in float32.
-(see eg [this stackoverflow question](https://stackoverflow.com/questions/28634461/determine-if-a-number-can-be-precisely-represented-in-float-double-format) if you are unsure
-what that means).
+have few odd prime factors.
 
 ### Use unobtrusive padding
 
