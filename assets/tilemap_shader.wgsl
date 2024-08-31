@@ -207,7 +207,6 @@ fn sample_tile_at(
     var tile_start = atlas_index_to_position(tile_index, tile_position);
 
     // Offset in pixels from tile_start to sample from
-    // let DBG_tile_offset = vec2<f32>(0.0, 0.0);
     var rect_offset = tile_offset + map.tile_anchor_point * map.tile_size;
     var total_offset = tile_start + rect_offset;
 
@@ -223,7 +222,7 @@ fn sample_tile_at(
         || rect_offset.x >= (map.tile_size.x + max_overhang.x)
         || rect_offset.y >= (map.tile_size.y + max_overhang.y)
     {
-        return vec4<f32>(0.0, 1.0, 0.0, 1.0);
+        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
     return textureSample(
