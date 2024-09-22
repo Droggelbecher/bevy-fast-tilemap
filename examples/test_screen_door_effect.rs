@@ -55,12 +55,12 @@ fn startup(
         uvec2(640, 640),
         // Due to its odd size, this atlas may lead to occasional "screen door"
         // effect, (horizontal or vertical lines) depending on the zoom level.
-        asset_server.load("debug_32x32_pad_1x1.png"),
+        // asset_server.load("debug_32x32_pad_1x1.png"),
 
         // Padding the atlas to a power of two sizes solves this for most occasions.
         // This may make it not contain a whole number of tiles so you should
         // use .with_n_tiles(...) below to specify the number of tiles you want to acutally use.
-        // asset_server.load("debug_32x32_pad_1x1_resized.png"),
+        asset_server.load("debug_32x32_pad_1x1_resized.png"),
         vec2(32., 32.),
     )
     // This is necessary for the "resized" (padded) atlas to work
