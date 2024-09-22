@@ -71,7 +71,7 @@ impl<C: Customization> Plugin for CustomFastTileMapPlugin<C> {
             (
                 (update_loading_maps::<C>, log_map_events::<C>).chain(),
                 update_map_vertex_attributes::<C>,
-            ),
+            )
         );
     }
 }
